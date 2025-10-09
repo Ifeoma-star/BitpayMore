@@ -10,36 +10,30 @@ contract_id = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-deposit'
 
 [[project.requirements]]
 contract_id = 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control'
-path = 'contracts/bitpay-access-control.clar'
 [contracts.bitpay-access-control]
 path = 'contracts/bitpay-access-control.clar'
 clarity_version = 3
 epoch = 3.1
-
-# [contracts.bitpay-analytics]
-# path = 'contracts/bitpay-analytics.clar'
-# clarity_version = 3
-# epoch = 3.1
 
 [contracts.bitpay-core]
 path = 'contracts/bitpay-core.clar'
 clarity_version = 3
 epoch = 3.1
 
-# [contracts.bitpay-emergency]
-# path = 'contracts/bitpay-emergency.clar'
-# clarity_version = 3
-# epoch = 3.1
+[contracts.bitpay-nft]
+path = 'contracts/bitpay-nft.clar'
+clarity_version = 3
+epoch = 3.1
 
-# [contracts.bitpay-sbtc-integration]
-# path = 'contracts/bitpay-sbtc-integration.clar'
-# clarity_version = 3
-# epoch = 3.1
+[contracts.bitpay-sbtc-trait]
+path = 'contracts/bitpay-sbtc-trait.clar'
+clarity_version = 3
+epoch = 3.1
 
-# [contracts.bitpay-treasury]
-# path = 'contracts/bitpay-treasury.clar'
-# clarity_version = 3
-# epoch = 3.1
+[contracts.bitpay-treasury]
+path = 'contracts/bitpay-treasury.clar'
+clarity_version = 3
+epoch = 3.1
 [repl.analysis]
 passes = ['check_checker']
 
