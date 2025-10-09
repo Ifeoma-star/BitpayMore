@@ -1,5 +1,5 @@
 
-;; title: bitpay-sbtc-trait
+;; title: bitpay-sbtc-helper
 ;; version:
 ;; summary:
 ;; description:
