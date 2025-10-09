@@ -37,12 +37,13 @@
 
         ;; Transfer sBTC from sender to this contract
         ;; Using contract-call? to interact with sBTC token contract
-        (match (contract-call? SBTC_CONTRACT transfer amount sender
-            (as-contract tx-sender) none
-        )
+        (match (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer
+            amount
+            sender
+            (as-contract tx-sender)
+            none)
             success (ok true)
-            error
-            ERR_SBTC_TRANSFER_FAILED
+            error ERR_SBTC_TRANSFER_FAILED
         )
     )
 )
@@ -62,10 +63,13 @@
 
         ;; Transfer sBTC from contract vault to recipient
         ;; Using as-contract to execute transfer from contract's context
-        (match (as-contract (contract-call? SBTC_CONTRACT transfer amount tx-sender recipient none))
+        (match (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer
+            amount
+            tx-sender
+            recipient
+            none))
             success (ok true)
-            error
-            ERR_SBTC_TRANSFER_FAILED
+            error ERR_SBTC_TRANSFER_FAILED
         )
     )
 )
