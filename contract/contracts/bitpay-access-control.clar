@@ -37,10 +37,23 @@
 ;;
 
 ;; Admin roles mapping
-(define-map admins principal bool)
+(define-map admins
+    principal
+    bool
+)
 
 ;; Operator roles mapping (can perform certain operations but not admin functions)
-(define-map operators principal bool)
+(define-map operators
+    principal
+    bool
+)
+
+;; Authorized protocol contracts that can perform privileged operations
+;; This prevents unauthorized contracts from calling sensitive functions
+(define-map authorized-contracts
+    principal
+    bool
+)
 
 ;; Initialize contract owner as first admin
 (map-set admins CONTRACT_OWNER true)
@@ -71,7 +84,8 @@
     (begin
         ;; Only contract owner or the admin themselves can remove admin role
         (asserts! (or (is-eq tx-sender CONTRACT_OWNER) (is-eq tx-sender admin))
-            ERR_NOT_CONTRACT_OWNER)
+            ERR_NOT_CONTRACT_OWNER
+        )
 
         ;; Check if target is actually an admin
         (asserts! (is-admin admin) ERR_NOT_ADMIN)
@@ -107,6 +121,44 @@
     )
 )
 
+;; Authorize a contract to perform privileged operations
+;; @param contract: Contract principal to authorize
+;; @returns: (ok true) on success
+(define-public (authorize-contract (contract principal))
+    (begin
+        ;; Only admins can authorize contracts
+        (asserts! (is-admin tx-sender) ERR_UNAUTHORIZED)
+
+        ;; Grant authorization
+        (map-set authorized-contracts contract true)
+        (print {
+            event: "contract-authorized",
+            contract: contract,
+            authorized-by: tx-sender,
+        })
+        (ok true)
+    )
+)
+
+;; Revoke contract authorization
+;; @param contract: Contract principal to revoke authorization from
+;; @returns: (ok true) on success
+(define-public (revoke-contract (contract principal))
+    (begin
+        ;; Only admins can revoke contract authorization
+        (asserts! (is-admin tx-sender) ERR_UNAUTHORIZED)
+
+        ;; Revoke authorization
+        (map-delete authorized-contracts contract)
+        (print {
+            event: "contract-revoked",
+            contract: contract,
+            revoked-by: tx-sender,
+        })
+        (ok true)
+    )
+)
+
 ;; Pause the protocol (emergency function)
 ;; Prevents stream creation but allows withdrawals
 ;; @returns: (ok true) on success
@@ -120,7 +172,10 @@
 
         ;; Set paused state
         (var-set protocol-paused true)
-        (print {event: "protocol-paused", paused-by: tx-sender})
+        (print {
+            event: "protocol-paused",
+            paused-by: tx-sender,
+        })
         (ok true)
     )
 )
@@ -137,7 +192,10 @@
 
         ;; Set unpaused state
         (var-set protocol-paused false)
-        (print {event: "protocol-unpaused", unpaused-by: tx-sender})
+        (print {
+            event: "protocol-unpaused",
+            unpaused-by: tx-sender,
+        })
         (ok true)
     )
 )
@@ -155,7 +213,7 @@
         (print {
             event: "admin-transfer-initiated",
             from: CONTRACT_OWNER,
-            to: new-admin
+            to: new-admin,
         })
         (ok true)
     )
@@ -170,7 +228,9 @@
             (asserts! (is-some pending) ERR_PENDING_ADMIN_NOT_SET)
 
             ;; Check caller is the pending admin
-            (asserts! (is-eq tx-sender (unwrap-panic pending)) ERR_NOT_PENDING_ADMIN)
+            (asserts! (is-eq tx-sender (unwrap-panic pending))
+                ERR_NOT_PENDING_ADMIN
+            )
 
             ;; Grant admin role to new admin
             (map-set admins tx-sender true)
@@ -178,7 +238,10 @@
             ;; Clear pending admin
             (var-set pending-admin none)
 
-            (print {event: "admin-transfer-completed", new-admin: tx-sender})
+            (print {
+                event: "admin-transfer-completed",
+                new-admin: tx-sender,
+            })
             (ok true)
         )
     )
@@ -255,5 +318,19 @@
     )
 )
 
-;; private functions
-;;
+;; Check if a contract is authorized
+;; @param contract: Principal to check
+;; @returns: true if authorized, false otherwise
+(define-read-only (is-authorized-contract (contract principal))
+    (default-to false (map-get? authorized-contracts contract))
+)
+
+;; Assert contract is authorized (for use by other contracts)
+;; @param contract: Principal to check
+;; @returns: (ok true) if authorized, error otherwise
+(define-read-only (assert-authorized-contract (contract principal))
+    (if (is-authorized-contract contract)
+        (ok true)
+        ERR_UNAUTHORIZED
+    )
+)

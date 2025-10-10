@@ -37,19 +37,19 @@
 
         ;; Transfer sBTC from sender to this contract
         ;; Using contract-call? to interact with sBTC token contract
-        (match (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer
-            amount
-            sender
-            (as-contract tx-sender)
-            none)
+        (match (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+            transfer amount sender (as-contract tx-sender) none
+        )
             success (ok true)
-            error ERR_SBTC_TRANSFER_FAILED
+            error
+            ERR_SBTC_TRANSFER_FAILED
         )
     )
 )
 
 ;; Transfer sBTC from contract vault to recipient (used for withdrawals)
 ;; This releases streamed sBTC from the vault to the recipient
+;; SECURITY: Only authorized contracts (bitpay-core, bitpay-treasury) can call this
 ;; @param amount: Amount of sBTC (in sats) to transfer from vault
 ;; @param recipient: Principal receiving the sBTC
 ;; @returns: (ok true) on success, error on failure
@@ -58,18 +58,22 @@
         (recipient principal)
     )
     (begin
+        ;; SECURITY CHECK: Only authorized protocol contracts can withdraw from vault
+        ;; This prevents malicious contracts from draining the vault
+        (try! (contract-call? .bitpay-access-control
+            assert-authorized-contract contract-caller))
+
         ;; Validate amount is greater than zero
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)
 
         ;; Transfer sBTC from contract vault to recipient
         ;; Using as-contract to execute transfer from contract's context
-        (match (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer
-            amount
-            tx-sender
-            recipient
-            none))
+        (match (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+            transfer amount tx-sender recipient none
+        ))
             success (ok true)
-            error ERR_SBTC_TRANSFER_FAILED
+            error
+            ERR_SBTC_TRANSFER_FAILED
         )
     )
 )
