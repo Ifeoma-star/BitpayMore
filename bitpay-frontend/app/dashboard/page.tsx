@@ -4,17 +4,17 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowUpRight, 
-  Plus, 
-  TrendingUp, 
+import {
+  ArrowUpRight,
+  Plus,
+  TrendingUp,
   Wallet,
   Activity,
   Bitcoin,
   RefreshCw,
   Loader2
 } from "lucide-react";
-import { 
+import {
   LineChart,
   Line,
   XAxis,
@@ -24,114 +24,92 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
-
-interface Stream {
-  _id: string;
-  recipient: string;
-  totalAmount: number;
-  streamedAmount: number;
-  status: 'active' | 'paused' | 'completed' | 'cancelled';
-  startDate: string;
-  description: string;
-  streamRate: number;
-}
-
-interface Transaction {
-  _id: string;
-  streamId: string;
-  amount: number;
-  timestamp: string;
-  status: 'pending' | 'confirmed' | 'failed';
-  txHash?: string;
-}
+import walletService from "@/lib/wallet/wallet-service";
+import { useUserStreams } from "@/hooks/use-bitpay-read";
+import { useBlockHeight } from "@/hooks/use-block-height";
+import { microToDisplay, StreamStatus } from "@/lib/contracts/config";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
+  const [userAddress, setUserAddress] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<bigint>(BigInt(0));
+
+  // Get current block height
+  const { blockHeight, isLoading: blockLoading } = useBlockHeight(30000); // Poll every 30 seconds
+
+  // Get user's streams from contract
+  const { data: streams, isLoading: streamsLoading, refetch } = useUserStreams(userAddress);
 
   useEffect(() => {
-    fetchDashboardData();
+    const loadWalletData = async () => {
+      try {
+        const address = await walletService.getCurrentAddress();
+        setUserAddress(address);
+
+        if (address) {
+          const balance = await walletService.getStxBalance();
+          setWalletBalance(balance);
+        }
+      } catch (error) {
+        console.error('Error loading wallet data:', error);
+      }
+    };
+
+    loadWalletData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    try {
-      // Fetch streams
-      const streamsResponse = await fetch('/api/streams');
-      if (streamsResponse.ok) {
-        const streamsData = await streamsResponse.json();
-        setStreams(streamsData.streams || []);
-      }
-
-      // Fetch recent transactions
-      const transactionsResponse = await fetch('/api/transactions?limit=5');
-      if (transactionsResponse.ok) {
-        const transactionsData = await transactionsResponse.json();
-        setRecentTransactions(transactionsData.transactions || []);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Calculate stats from real data
-  const totalStreamed = streams.reduce((sum, stream) => sum + stream.streamedAmount, 0);
-  const activeStreams = streams.filter(stream => stream.status === 'active').length;
-  const monthlyVolume = streams.reduce((sum, stream) => sum + stream.totalAmount, 0);
-  const pendingWithdrawals = recentTransactions
-    .filter(tx => tx.status === 'confirmed')
-    .reduce((sum, tx) => sum + tx.amount, 0);
+  // Calculate stats from blockchain data
+  const activeStreams = streams?.filter(s => s.status === StreamStatus.ACTIVE).length || 0;
+  const completedStreams = streams?.filter(s => s.status === StreamStatus.COMPLETED).length || 0;
+  const totalStreamed = streams?.reduce((sum, stream) => sum + stream.vestedAmount, BigInt(0)) || BigInt(0);
+  const totalVolume = streams?.reduce((sum, stream) => sum + stream.amount, BigInt(0)) || BigInt(0);
+  const availableToWithdraw = streams?.reduce((sum, stream) => sum + stream.withdrawableAmount, BigInt(0)) || BigInt(0);
 
   const stats = [
     {
       title: "Total Streamed",
-      value: `${totalStreamed.toFixed(6)} sBTC`,
-      change: "+12.5% from last month",
-      changeType: "positive" as const,
+      value: `${microToDisplay(totalStreamed)} sBTC`,
+      change: `${completedStreams} completed`,
+      changeType: "neutral" as const,
       icon: Bitcoin,
     },
     {
       title: "Active Streams",
       value: activeStreams.toString(),
-      change: `${streams.length} Total`,
+      change: `${streams?.length || 0} Total`,
       changeType: "neutral" as const,
       icon: Activity,
     },
     {
-      title: "Monthly Volume",
-      value: `${monthlyVolume.toFixed(6)} sBTC`,
-      change: "+8.2% from last month",
-      changeType: "positive" as const,
+      title: "Total Volume",
+      value: `${microToDisplay(totalVolume)} sBTC`,
+      change: "All streams combined",
+      changeType: "neutral" as const,
       icon: TrendingUp,
     },
     {
-      title: "Available Balance",
-      value: `${pendingWithdrawals.toFixed(6)} sBTC`,
+      title: "Available to Withdraw",
+      value: `${microToDisplay(availableToWithdraw)} sBTC`,
       change: "Ready for withdrawal",
       changeType: "neutral" as const,
       icon: Wallet,
     },
   ];
 
-  // Mock chart data for portfolio overview
-  const chartData = [
-    { date: 'Jan 1', balance: 0 },
-    { date: 'Jan 8', balance: totalStreamed * 0.2 },
-    { date: 'Jan 15', balance: totalStreamed * 0.4 },
-    { date: 'Jan 22', balance: totalStreamed * 0.7 },
-    { date: 'Jan 29', balance: totalStreamed },
-  ];
+  // Chart data based on actual vesting progress
+  const chartData = streams && streams.length > 0 ?
+    streams.slice(0, 5).map((stream, i) => ({
+      date: `Stream ${i + 1}`,
+      balance: Number(microToDisplay(stream.vestedAmount)),
+    })) : [];
 
-  if (loading) {
+  const loading = blockLoading || streamsLoading;
+
+  if (loading && !blockHeight) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-3 text-muted-foreground">Loading blockchain data...</p>
       </div>
     );
   }
@@ -148,26 +126,28 @@ export default function DashboardPage() {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
-            onClick={fetchDashboardData}
-            disabled={updating}
+            onClick={() => refetch()}
+            disabled={loading}
           >
-            {updating ? (
+            {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="mr-2 h-4 w-4" />
             )}
-            {updating ? 'Updating...' : 'Refresh Data'}
+            {loading ? 'Updating...' : 'Refresh Data'}
           </Button>
-          
-          <Button asChild className="bg-brand-pink hover:bg-brand-pink/90 text-white">
-            <Link href="/dashboard/streams/create">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Stream
-            </Link>
-          </Button>
+
+          {userAddress && (
+            <Button asChild className="bg-brand-pink hover:bg-brand-pink/90 text-white">
+              <Link href="/dashboard/streams/create">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Stream
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -190,14 +170,7 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
                 <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                  <Badge 
-                    variant={stat.changeType === 'positive' ? 'default' : 'secondary'}
-                    className={
-                      stat.changeType === 'positive' 
-                        ? 'bg-brand-teal text-white' 
-                        : ''
-                    }
-                  >
+                  <Badge variant="secondary">
                     {stat.change}
                   </Badge>
                 </div>
@@ -218,36 +191,40 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentTransactions.length > 0 ? (
-                recentTransactions.map((transaction, index) => (
-                  <div key={transaction._id} className="flex items-center justify-between p-3 rounded-lg border">
+              {streams && streams.length > 0 ? (
+                streams.slice(0, 5).map((stream) => (
+                  <Link
+                    key={stream.id.toString()}
+                    href={`/dashboard/streams/${stream.id}`}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:border-brand-pink/50 transition-colors"
+                  >
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-brand-pink/10 rounded-full">
                         <Activity className="h-4 w-4 text-brand-pink" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">
-                          Stream Payment
+                          Stream #{stream.id.toString()}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {transaction.txHash?.slice(0, 8)}...{transaction.txHash?.slice(-6)}
+                          {stream.recipient.slice(0, 8)}...{stream.recipient.slice(-6)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-brand-teal">
-                        +{transaction.amount.toFixed(6)} sBTC
+                        {microToDisplay(stream.vestedAmount)} sBTC
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(transaction.timestamp).toLocaleDateString()}
-                      </p>
+                      <Badge variant={stream.status === StreamStatus.ACTIVE ? 'default' : 'secondary'} className="text-xs">
+                        {stream.status}
+                      </Badge>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
                   <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No recent transactions</p>
+                  <p>No streams yet</p>
                   <p className="text-xs">Create your first stream to see activity</p>
                 </div>
               )}
@@ -283,26 +260,15 @@ export default function DashboardPage() {
                   Manage Streams
                 </Link>
               </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                asChild
-              >
-                <Link href="/dashboard/analytics">
-                  <TrendingUp className="mr-2 h-4 w-4" />
-                  View Analytics
-                </Link>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                asChild
-              >
-                <Link href="/dashboard/wallets">
-                  <Wallet className="mr-2 h-4 w-4" />
-                  Wallet Management
-                </Link>
-              </Button>
+              {userAddress && (
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">Connected Wallet</p>
+                  <p className="text-sm font-mono">{userAddress.slice(0, 12)}...{userAddress.slice(-8)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Block Height: {blockHeight || '...'}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -364,7 +330,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* Getting Started Card (for new users) */}
-      {streams.length === 0 && (
+      {(!streams || streams.length === 0) && userAddress && (
         <Card className="border-brand-pink/20 bg-brand-pink/5">
           <CardHeader>
             <CardTitle className="text-brand-pink">🚀 Get Started with BitPay</CardTitle>

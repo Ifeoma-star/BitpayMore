@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
+import { TurnkeyLoginButton } from "@/components/auth/TurnkeyLoginButton";
 
 export function Header() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -91,6 +92,9 @@ export function Header() {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Turnkey Wallet Connect */}
+            <TurnkeyLoginButton />
+
             {/* Theme Toggle */}
             <SimpleThemeToggle />
 
@@ -245,6 +249,11 @@ export function Header() {
 
                 {/* Mobile Actions */}
                 <div className="flex flex-col space-y-3 pt-4 border-t">
+                  {/* Turnkey Wallet Connect */}
+                  <div className="px-3">
+                    <TurnkeyLoginButton />
+                  </div>
+
                   {/* Theme Toggle */}
                   <div className="flex items-center justify-start px-3 py-2">
                     <span className="mr-2 text-sm">Theme:</span>

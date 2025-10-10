@@ -9,8 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Loader2, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { walletService } from "@/lib/wallet/wallet-service";
 import { useAuth } from "@/hooks/use-auth";
+import walletService from "@/lib/wallet/wallet-service";
 
 interface AuthModalProps {
   isOpen: boolean;

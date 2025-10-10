@@ -1,0 +1,72 @@
+{
+  "chainhooks": [
+    {
+      "uuid": "bitpay-stream-events",
+      "name": "BitPay Stream Events",
+      "version": 1,
+      "chain": "stacks",
+      "networks": {
+        "testnet": {
+          "if_this": {
+            "scope": "contract_call",
+            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-core",
+            "method": ["create-stream", "withdraw-from-stream", "cancel-stream"]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "https://your-domain.com/api/webhooks/chainhook",
+              "authorization_header": "Bearer YOUR_SECRET_TOKEN_HERE"
+            }
+          }
+        },
+        "mainnet": {
+          "if_this": {
+            "scope": "contract_call",
+            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-core",
+            "method": ["create-stream", "withdraw-from-stream", "cancel-stream"]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "https://your-production-domain.com/api/webhooks/chainhook",
+              "authorization_header": "Bearer YOUR_PRODUCTION_SECRET_TOKEN_HERE"
+            }
+          }
+        }
+      }
+    },
+    {
+      "uuid": "bitpay-print-events",
+      "name": "BitPay Print Events",
+      "version": 1,
+      "chain": "stacks",
+      "networks": {
+        "testnet": {
+          "if_this": {
+            "scope": "print_event",
+            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-core",
+            "contains": ["stream-created", "stream-withdrawal", "stream-cancelled"]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "https://your-domain.com/api/webhooks/chainhook",
+              "authorization_header": "Bearer YOUR_SECRET_TOKEN_HERE"
+            }
+          }
+        },
+        "mainnet": {
+          "if_this": {
+            "scope": "print_event",
+            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-core",
+            "contains": ["stream-created", "stream-withdrawal", "stream-cancelled"]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "https://your-production-domain.com/api/webhooks/chainhook",
+              "authorization_header": "Bearer YOUR_PRODUCTION_SECRET_TOKEN_HERE"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

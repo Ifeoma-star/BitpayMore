@@ -7,7 +7,6 @@ import {
   CreateSubOrgParams,
 } from "@turnkey/react-wallet-kit";
 import { toast } from "sonner";
-import { TurnkeyErrorCodes } from "@turnkey/core";
 
 // Stacks wallet configuration for sub-organizations
 const stacksWalletConfig: CreateSubOrgParams = {
@@ -79,33 +78,44 @@ const turnkeyConfig: TurnkeyProviderConfig = {
     },
   },
 
-  // UI customization to match your design
+  // UI customization to match BitPay design
   ui: {
-    darkMode: true, // Match BitPay dark theme
+    darkMode: true,
 
-    // Custom colors matching the screenshots
+    // Custom colors matching BitPay design
     colors: {
-      light: {
-        primary: "#da14c3", // Pink/magenta accent
-        modalBackground: "#ffffff",
-      },
       dark: {
-        primary: "#da14c3", // Pink/magenta accent
-        modalBackground: "#0b0b0b", // Dark background from screenshot
+        // Primary pink color
+        primary: "#da14c3",
+        primaryText: "#ffffff",
+
+        // Modal background
+        modalBackground: "#0a0a0a",
+        modalText: "#ffffff",
+
+        // Button color
+        button: "#da14c3",
+
+        // Icon styling
+        iconBackground: "#1a1a1a",
+        iconText: "#ffffff",
+
+        // Status colors
+        success: "#22c55e",
+        successText: "#ffffff",
+        danger: "#ef4444",
+        dangerText: "#ffffff",
       },
     },
 
-    // Border radius from screenshot
-    borderRadius: 20,
+    // Border radius - less rounded for cleaner look
+    borderRadius: 8,
 
-    // Background blur effect
+    // Background blur
     backgroundBlur: 10,
 
-    // Render modal in provider for better font inheritance
+    // Render in provider
     renderModalInProvider: true,
-
-    // Suppress the Tailwind CSS layer error (Tailwind v3 compatibility)
-    supressMissingStylesError: true,
   },
 };
 
@@ -118,20 +128,9 @@ export function TurnkeyProvider({ children }: TurnkeyProviderProps) {
   const handleError = (error: any) => {
     console.error("Turnkey Error:", error);
 
-    // Handle specific error codes
-    switch (error.code) {
-      case TurnkeyErrorCodes.ACCOUNT_ALREADY_EXISTS:
-        toast.error("This account is already associated with another login method");
-        break;
-      case TurnkeyErrorCodes.INVALID_CREDENTIALS:
-        toast.error("Invalid credentials. Please try again");
-        break;
-      case TurnkeyErrorCodes.SESSION_EXPIRED:
-        toast.error("Your session has expired. Please log in again");
-        break;
-      default:
-        toast.error(error.message || "An authentication error occurred");
-    }
+    // Show user-friendly error message
+    const errorMessage = error?.message || "An authentication error occurred";
+    toast.error(errorMessage);
   };
 
   // Authentication success callback

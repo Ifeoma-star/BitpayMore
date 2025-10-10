@@ -19,7 +19,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Menu,
   Home,
   Wallet,
@@ -33,7 +33,11 @@ import {
   Copy,
   Check,
   Zap,
-  Plus
+  Plus,
+  Image,
+  DollarSign,
+  FileText,
+  Upload
 } from "lucide-react";
 import { SimpleThemeToggle } from "@/components/ui/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
@@ -134,21 +138,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const sidebarItems = [
     { icon: Home, label: "Overview", href: "/dashboard", active: pathname === "/dashboard" },
-    { 
-      icon: Zap, 
-      label: "Streams", 
-      href: "/dashboard/streams", 
+    {
+      icon: Zap,
+      label: "Streams",
+      href: "/dashboard/streams",
       active: pathname.startsWith("/dashboard/streams"),
       hasSubmenu: true,
       submenu: [
         { label: "All Streams", href: "/dashboard/streams" },
         { label: "Create Stream", href: "/dashboard/streams/create", icon: Plus },
+        { label: "Bulk Create", href: "/dashboard/bulk", icon: Upload },
       ]
     },
-    { icon: Wallet, label: "Wallets", href: "/dashboard/wallets", active: pathname === "/dashboard/wallets" },
+    { icon: FileText, label: "Templates", href: "/dashboard/templates", active: pathname === "/dashboard/templates" },
+    { icon: Image, label: "NFT Gallery", href: "/dashboard/nfts", active: pathname === "/dashboard/nfts" },
     { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics", active: pathname === "/dashboard/analytics" },
     ...(user?.role === 'admin' ? [
-      { icon: Users, label: "Users", href: "/dashboard/users", active: pathname === "/dashboard/users" }
+      { icon: DollarSign, label: "Treasury", href: "/dashboard/treasury", active: pathname === "/dashboard/treasury" }
     ] : []),
     { icon: Settings, label: "Settings", href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
   ];
