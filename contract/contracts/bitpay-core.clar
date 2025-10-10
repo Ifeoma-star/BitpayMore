@@ -11,6 +11,7 @@
 (define-constant ERR_NOTHING_TO_WITHDRAW (err u305))
 (define-constant ERR_INVALID_RECIPIENT (err u306))
 (define-constant ERR_START_BLOCK_IN_PAST (err u307))
+(define-constant ERR_STREAM_CANCELLED (err u308))
 
 ;; Minimum stream duration (10 blocks ~100 minutes on Bitcoin)
 (define-constant MIN_STREAM_DURATION u10)
@@ -120,6 +121,12 @@
 
             ;; Increment stream ID counter
             (var-set next-stream-id (+ stream-id u1))
+
+            ;; Mint recipient NFT (soul-bound proof of receipt)
+            (try! (contract-call? .bitpay-nft mint stream-id recipient))
+
+            ;; Mint obligation NFT for sender (transferable payment obligation)
+            (try! (contract-call? .bitpay-obligation-nft mint stream-id tx-sender))
 
             (print {
                 event: "stream-created",
@@ -241,6 +248,41 @@
                 cancellation-fee: cancellation-fee,
                 vested-paid: owed-to-recipient,
                 cancelled-at-block: stacks-block-height,
+            })
+
+            (ok true)
+        )
+    )
+)
+
+;; Update stream sender when obligation NFT is transferred
+;; SECURITY: Only current stream sender can call this (must own obligation NFT before transferring it)
+;; The caller should be the OLD sender who is transferring the obligation
+;; @param stream-id: ID of the stream
+;; @param new-sender: New sender (obligation holder)
+;; @returns: (ok true) on success
+(define-public (update-stream-sender
+        (stream-id uint)
+        (new-sender principal)
+    )
+    (let ((stream (unwrap! (map-get? streams stream-id) ERR_STREAM_NOT_FOUND)))
+        (begin
+            ;; Verify caller is current stream sender
+            (asserts! (is-eq tx-sender (get sender stream)) ERR_UNAUTHORIZED)
+
+            ;; Cannot update sender of cancelled stream
+            (asserts! (not (get cancelled stream)) ERR_STREAM_CANCELLED)
+
+            ;; Update the sender (obligation holder)
+            (map-set streams stream-id (merge stream {
+                sender: new-sender
+            }))
+
+            (print {
+                event: "stream-sender-updated",
+                stream-id: stream-id,
+                old-sender: (get sender stream),
+                new-sender: new-sender
             })
 
             (ok true)
