@@ -16,6 +16,7 @@
 (define-data-var fee-bps uint DEFAULT_FEE_BPS)
 (define-data-var total-fees-collected uint u0)
 (define-data-var admin principal CONTRACT_OWNER)
+(define-data-var pending-admin (optional principal) none)
 
 ;; Maps
 (define-map fee-recipients
@@ -148,12 +149,59 @@
     )
 )
 
-;; Transfer admin role
-(define-public (transfer-admin (new-admin principal))
+;; Propose admin transfer (step 1 of 2)
+(define-public (propose-admin-transfer (new-admin principal))
     (begin
         (asserts! (is-admin) ERR_UNAUTHORIZED)
-        (var-set admin new-admin)
+        (asserts! (not (is-eq new-admin (var-get admin))) ERR_INVALID_AMOUNT)
+
+        (var-set pending-admin (some new-admin))
+
+        (print {
+            event: "admin-transfer-proposed",
+            current-admin: (var-get admin),
+            proposed-admin: new-admin
+        })
+
         (ok new-admin)
+    )
+)
+
+;; Accept admin transfer (step 2 of 2)
+(define-public (accept-admin-transfer)
+    (let ((pending (var-get pending-admin)))
+        (asserts! (is-some pending) ERR_UNAUTHORIZED)
+        (asserts! (is-eq tx-sender (unwrap-panic pending)) ERR_UNAUTHORIZED)
+
+        (let ((old-admin (var-get admin)))
+            (var-set admin tx-sender)
+            (var-set pending-admin none)
+
+            (print {
+                event: "admin-transfer-completed",
+                old-admin: old-admin,
+                new-admin: tx-sender
+            })
+
+            (ok tx-sender)
+        )
+    )
+)
+
+;; Cancel pending admin transfer
+(define-public (cancel-admin-transfer)
+    (begin
+        (asserts! (is-admin) ERR_UNAUTHORIZED)
+        (asserts! (is-some (var-get pending-admin)) ERR_INVALID_AMOUNT)
+
+        (var-set pending-admin none)
+
+        (print {
+            event: "admin-transfer-cancelled",
+            cancelled-by: tx-sender
+        })
+
+        (ok true)
     )
 )
 
@@ -173,6 +221,10 @@
 
 (define-read-only (get-admin)
     (ok (var-get admin))
+)
+
+(define-read-only (get-pending-admin)
+    (ok (var-get pending-admin))
 )
 
 (define-read-only (get-recipient-total (recipient principal))
