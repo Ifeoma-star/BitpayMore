@@ -18,7 +18,10 @@
 (define-data-var admin principal CONTRACT_OWNER)
 
 ;; Maps
-(define-map fee-recipients principal uint)
+(define-map fee-recipients
+    principal
+    uint
+)
 
 ;; Authorization check
 (define-private (is-admin)
@@ -59,8 +62,43 @@
     )
 )
 
+;; Collect cancellation fee from vault (called by bitpay-core after stream cancellation)
+;; This transfers sBTC from the vault to treasury and updates accounting
+;; @param amount: Amount of cancellation fee to collect from vault
+;; @returns: (ok amount) on success
+(define-public (collect-cancellation-fee (amount uint))
+    (begin
+        (try! (check-not-paused))
+        (asserts! (> amount u0) ERR_INVALID_AMOUNT)
+
+        ;; Only authorized contracts (bitpay-core) can collect cancellation fees
+        (try! (contract-call? .bitpay-access-control assert-authorized-contract
+            contract-caller
+        ))
+
+        ;; Transfer sBTC from vault to this treasury contract
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper transfer-from-vault amount tx-sender)))
+
+        ;; Update treasury balance
+        (var-set treasury-balance (+ (var-get treasury-balance) amount))
+        (var-set total-fees-collected (+ (var-get total-fees-collected) amount))
+
+        (print {
+            event: "cancellation-fee-collected",
+            amount: amount,
+            caller: contract-caller,
+            new-balance: (var-get treasury-balance),
+        })
+
+        (ok amount)
+    )
+)
+
 ;; Withdraw from treasury (admin only)
-(define-public (withdraw (amount uint) (recipient principal))
+(define-public (withdraw
+        (amount uint)
+        (recipient principal)
+    )
     (begin
         (asserts! (is-admin) ERR_UNAUTHORIZED)
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)
@@ -77,7 +115,10 @@
 )
 
 ;; Distribute fees to recipients
-(define-public (distribute-to-recipient (recipient principal) (amount uint))
+(define-public (distribute-to-recipient
+        (recipient principal)
+        (amount uint)
+    )
     (begin
         (asserts! (is-admin) ERR_UNAUTHORIZED)
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)

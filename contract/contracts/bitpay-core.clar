@@ -15,6 +15,11 @@
 ;; Minimum stream duration (10 blocks ~100 minutes on Bitcoin)
 (define-constant MIN_STREAM_DURATION u10)
 
+;; Cancellation fee in basis points (100 = 1%, 50 = 0.5%)
+;; This fee discourages frivolous cancellations and compensates recipients
+;; Fee is charged on the unvested amount being returned to sender
+(define-constant CANCELLATION_FEE_BPS u100) ;; 1% cancellation fee
+
 ;; data vars
 ;;
 
@@ -168,7 +173,8 @@
     )
 )
 
-;; Cancel a stream and return unvested funds to sender
+;; Cancel a stream and return unvested funds to sender (minus cancellation fee)
+;; A 1% cancellation fee is charged on unvested amount to discourage frivolous cancellations
 ;; @param stream-id: ID of the stream to cancel
 ;; @returns: (ok true) on success
 (define-public (cancel-stream (stream-id uint))
@@ -178,6 +184,9 @@
             (already-withdrawn (get withdrawn stream))
             (unvested (- (get amount stream) vested))
             (owed-to-recipient (- vested already-withdrawn))
+            ;; Calculate cancellation fee (charged on unvested amount)
+            (cancellation-fee (/ (* unvested CANCELLATION_FEE_BPS) u10000))
+            (unvested-after-fee (- unvested cancellation-fee))
         )
         (begin
             ;; Only sender can cancel
@@ -186,10 +195,23 @@
             ;; Check not already cancelled
             (asserts! (not (get cancelled stream)) ERR_STREAM_ALREADY_CANCELLED)
 
-            ;; Transfer unvested back to sender
-            (if (> unvested u0)
-                (try! (contract-call? .bitpay-sbtc-helper transfer-from-vault unvested
-                    tx-sender
+            ;; Transfer cancellation fee to treasury and update accounting
+            (if (> cancellation-fee u0)
+                (begin
+                    ;; 1. Transfer sBTC from vault to treasury contract via helper
+                    ;; The treasury contract will receive the sBTC in its own balance
+                    (try! (contract-call? .bitpay-treasury collect-cancellation-fee
+                        cancellation-fee
+                    ))
+                    true
+                )
+                true
+            )
+
+            ;; Transfer unvested (minus fee) back to sender
+            (if (> unvested-after-fee u0)
+                (try! (contract-call? .bitpay-sbtc-helper transfer-from-vault
+                    unvested-after-fee tx-sender
                 ))
                 true
             )
@@ -215,7 +237,8 @@
                 event: "stream-cancelled",
                 stream-id: stream-id,
                 sender: tx-sender,
-                unvested-returned: unvested,
+                unvested-returned: unvested-after-fee,
+                cancellation-fee: cancellation-fee,
                 vested-paid: owed-to-recipient,
                 cancelled-at-block: stacks-block-height,
             })
@@ -322,6 +345,3 @@
         false
     )
 )
-
-;; private functions
-;;
