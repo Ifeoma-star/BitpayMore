@@ -9,6 +9,7 @@
 
 ;; Data vars
 (define-data-var last-token-id uint u0)
+(define-data-var base-token-uri (string-ascii 256) "")
 
 ;; Constants
 (define-constant CONTRACT_OWNER tx-sender)
@@ -18,10 +19,16 @@
 (define-constant ERR_UNAUTHORIZED (err u403))
 
 ;; Map token ID to stream ID
-(define-map token-to-stream uint uint)
+(define-map token-to-stream
+    uint
+    uint
+)
 
 ;; Map stream ID to token ID
-(define-map stream-to-token uint uint)
+(define-map stream-to-token
+    uint
+    uint
+)
 
 ;; SIP-009 required functions
 
@@ -30,28 +37,39 @@
 )
 
 (define-read-only (get-token-uri (token-id uint))
-    (ok none)
+    (if (> (len (var-get base-token-uri)) u0)
+        (ok (some (var-get base-token-uri)))
+        (ok none)
+    )
 )
 
 (define-read-only (get-owner (token-id uint))
     (ok (nft-get-owner? stream-nft token-id))
 )
 
-(define-public (transfer (token-id uint) (sender principal) (recipient principal))
-    (begin
-        (asserts! (is-eq tx-sender sender) ERR_NOT_TOKEN_OWNER)
-        (nft-transfer? stream-nft token-id sender recipient)
+;; Transfer is DISABLED - Recipient NFTs are soul-bound (non-transferable)
+;; They serve as proof of receipt and cannot be traded
+(define-public (transfer
+        (token-id uint)
+        (sender principal)
+        (recipient principal)
     )
+    ;; Soul-bound: recipient NFTs cannot be transferred
+    ERR_UNAUTHORIZED
 )
 
 ;; Custom functions for stream NFT integration
 
 ;; Mint NFT for a stream (called by bitpay-core)
-(define-public (mint (stream-id uint) (recipient principal))
-    (let
-        (
-            (token-id (+ (var-get last-token-id) u1))
-        )
+;; SECURITY: Only bitpay-core can mint NFTs to prevent fake stream NFTs
+(define-public (mint
+        (stream-id uint)
+        (recipient principal)
+    )
+    (let ((token-id (+ (var-get last-token-id) u1)))
+        ;; Only bitpay-core contract can mint stream NFTs
+        (asserts! (is-eq contract-caller .bitpay-core) ERR_UNAUTHORIZED)
+
         (try! (nft-mint? stream-nft token-id recipient))
         (var-set last-token-id token-id)
         (map-set token-to-stream token-id stream-id)
@@ -61,12 +79,20 @@
 )
 
 ;; Burn NFT when stream is fully withdrawn or cancelled
-(define-public (burn (token-id uint) (owner principal))
+(define-public (burn
+        (token-id uint)
+        (owner principal)
+    )
     (begin
-        (asserts! (is-eq (some tx-sender) (nft-get-owner? stream-nft token-id)) ERR_NOT_TOKEN_OWNER)
-        (map-delete token-to-stream token-id)
+        (asserts! (is-eq (some tx-sender) (nft-get-owner? stream-nft token-id))
+            ERR_NOT_TOKEN_OWNER
+        )
+        ;; Get stream ID before deleting the mapping
         (match (map-get? token-to-stream token-id)
-            stream-id (map-delete stream-to-token stream-id)
+            stream-id (begin
+                (map-delete token-to-stream token-id)
+                (map-delete stream-to-token stream-id)
+            )
             true
         )
         (nft-burn? stream-nft token-id owner)
@@ -81,4 +107,13 @@
 ;; Get token ID from stream ID
 (define-read-only (get-token-id (stream-id uint))
     (ok (map-get? stream-to-token stream-id))
+)
+
+;; Set base token URI (owner only)
+(define-public (set-base-token-uri (uri (string-ascii 256)))
+    (begin
+        (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_OWNER_ONLY)
+        (var-set base-token-uri uri)
+        (ok true)
+    )
 )

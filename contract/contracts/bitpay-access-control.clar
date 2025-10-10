@@ -2,12 +2,6 @@
 ;; Role-based access control and emergency controls for BitPay protocol
 ;; Manages admin privileges, pausing, and authorization for all protocol contracts
 
-;; traits
-;;
-
-;; token definitions
-;;
-
 ;; constants
 ;;
 
