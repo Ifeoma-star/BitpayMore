@@ -10,6 +10,15 @@ const wallet2 = accounts.get("wallet_2")!;
 const HELPER_CONTRACT = "bitpay-sbtc-helper";
 
 describe("bitpay-sbtc-helper contract", () => {
+  // Setup: Authorize contracts for testing transfer-from-vault
+  beforeEach(() => {
+    simnet.callPublicFn(
+      "bitpay-access-control",
+      "authorize-contract",
+      [Cl.contractPrincipal(deployer, "bitpay-sbtc-helper")],
+      deployer
+    );
+  });
 
   describe("Deployment", () => {
     it("should deploy successfully", () => {
@@ -193,30 +202,20 @@ describe("bitpay-sbtc-helper contract", () => {
       );
     });
 
-    it("should successfully transfer from vault to recipient", () => {
+    it("should fail when called directly by non-contract", () => {
       const amount = 100000000; // 1 sBTC
 
       const { result } = simnet.callPublicFn(
         HELPER_CONTRACT,
         "transfer-from-vault",
         [Cl.uint(amount), Cl.principal(wallet2)],
-        deployer // Only contract can call this
+        deployer // Direct call should fail - only authorized contracts allowed
       );
 
-      expect(result).toBeOk(Cl.bool(true));
-
-      // Check wallet2 balance increased (10 sBTC auto + 1 sBTC transferred)
-      const finalBalance = simnet.callReadOnlyFn(
-        HELPER_CONTRACT,
-        "get-user-balance",
-        [Cl.principal(wallet2)],
-        wallet2
-      );
-
-      expect(finalBalance.result).toBeOk(Cl.uint(1100000000)); // 11 sBTC total
+      expect(result).toBeErr(Cl.uint(200)); // ERR_UNAUTHORIZED
     });
 
-    it("should fail if amount is zero", () => {
+    it("should fail with zero amount when called directly", () => {
       const { result } = simnet.callPublicFn(
         HELPER_CONTRACT,
         "transfer-from-vault",
@@ -224,18 +223,18 @@ describe("bitpay-sbtc-helper contract", () => {
         deployer
       );
 
-      expect(result).toBeErr(Cl.uint(103)); // ERR_INVALID_AMOUNT
+      expect(result).toBeErr(Cl.uint(200)); // ERR_UNAUTHORIZED (fails before amount check)
     });
 
-    it("should fail if vault has insufficient balance", () => {
+    it("should fail with insufficient balance when called directly", () => {
       const { result } = simnet.callPublicFn(
         HELPER_CONTRACT,
         "transfer-from-vault",
-        [Cl.uint(400000000), Cl.principal(wallet2)], // More than vault has
+        [Cl.uint(400000000), Cl.principal(wallet2)],
         deployer
       );
 
-      expect(result).toBeErr(Cl.uint(100)); // ERR_SBTC_TRANSFER_FAILED
+      expect(result).toBeErr(Cl.uint(200)); // ERR_UNAUTHORIZED (fails before balance check)
     });
   });
 
@@ -264,32 +263,14 @@ describe("bitpay-sbtc-helper contract", () => {
       );
       expect(vaultBalance.result).toBeOk(Cl.uint(depositAmount));
 
-      // Step 3: Withdraw from vault to wallet2
+      // Step 3: Attempt to withdraw from vault (should fail - only authorized contracts)
       const withdrawResult = simnet.callPublicFn(
         HELPER_CONTRACT,
         "transfer-from-vault",
         [Cl.uint(withdrawAmount), Cl.principal(wallet2)],
         deployer
       );
-      expect(withdrawResult.result).toBeOk(Cl.bool(true));
-
-      // Step 4: Verify wallet2 received funds (10 sBTC auto + 1.5 sBTC transferred)
-      const wallet2Balance = simnet.callReadOnlyFn(
-        HELPER_CONTRACT,
-        "get-user-balance",
-        [Cl.principal(wallet2)],
-        wallet2
-      );
-      expect(wallet2Balance.result).toBeOk(Cl.uint(1000000000 + withdrawAmount));
-
-      // Step 5: Verify remaining vault balance
-      const remainingVault = simnet.callReadOnlyFn(
-        HELPER_CONTRACT,
-        "get-vault-balance",
-        [Cl.principal(contractPrincipal)],
-        deployer
-      );
-      expect(remainingVault.result).toBeOk(Cl.uint(depositAmount - withdrawAmount));
+      expect(withdrawResult.result).toBeErr(Cl.uint(200)); // ERR_UNAUTHORIZED
     });
   });
 });

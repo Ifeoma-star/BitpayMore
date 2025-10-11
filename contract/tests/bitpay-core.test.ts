@@ -10,6 +10,21 @@ const wallet3 = accounts.get("wallet_3")!;
 const CONTRACT = "bitpay-core";
 
 describe("bitpay-core contract", () => {
+  // Setup: Authorize bitpay-core and bitpay-treasury contracts
+  beforeEach(() => {
+    simnet.callPublicFn(
+      "bitpay-access-control",
+      "authorize-contract",
+      [Cl.contractPrincipal(deployer, "bitpay-core")],
+      deployer
+    );
+    simnet.callPublicFn(
+      "bitpay-access-control",
+      "authorize-contract",
+      [Cl.contractPrincipal(deployer, "bitpay-treasury")],
+      deployer
+    );
+  });
 
   describe("Stream Creation", () => {
     it("should create a stream successfully", () => {
@@ -710,10 +725,11 @@ describe("bitpay-core contract", () => {
       );
       const finalValue = Number(((finalBalance.result as any).value as any).value);
 
-      // Should have gotten back ~50 million sats
+      // Should have gotten back ~50 million sats minus 1% cancellation fee
+      // 50M unvested - 1% fee (500K) = ~49.5M, but allow for rounding
       const returned = finalValue - (initialValue - amount);
-      expect(returned).toBeGreaterThanOrEqual(49000000);
-      expect(returned).toBeLessThanOrEqual(51000000);
+      expect(returned).toBeGreaterThanOrEqual(48000000); // Allow for fee + rounding
+      expect(returned).toBeLessThanOrEqual(50000000);
     });
   });
 

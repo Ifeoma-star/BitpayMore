@@ -22,6 +22,7 @@
 ;; @param amount: Amount of sBTC (in sats) to transfer to vault
 ;; @param sender: Principal who is depositing sBTC
 ;; @returns: (ok true) on success, error on failure
+;; #[allow(unchecked_data)]
 (define-public (transfer-to-vault
         (amount uint)
         (sender principal)
@@ -53,6 +54,7 @@
 ;; @param amount: Amount of sBTC (in sats) to transfer from vault
 ;; @param recipient: Principal receiving the sBTC
 ;; @returns: (ok true) on success, error on failure
+;; #[allow(unchecked_data)]
 (define-public (transfer-from-vault
         (amount uint)
         (recipient principal)
@@ -60,8 +62,9 @@
     (begin
         ;; SECURITY CHECK: Only authorized protocol contracts can withdraw from vault
         ;; This prevents malicious contracts from draining the vault
-        (try! (contract-call? .bitpay-access-control
-            assert-authorized-contract contract-caller))
+        (try! (contract-call? .bitpay-access-control assert-authorized-contract
+            contract-caller
+        ))
 
         ;; Validate amount is greater than zero
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)

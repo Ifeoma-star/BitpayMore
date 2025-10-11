@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import { Cl } from "@stacks/transactions";
 
 const accounts = simnet.getAccounts();
@@ -10,6 +10,15 @@ const wallet3 = accounts.get("wallet_3")!;
 const CONTRACT = "bitpay-treasury";
 
 describe("bitpay-treasury contract", () => {
+  // Setup: Authorize bitpay-treasury contract to call transfer-from-vault
+  beforeEach(() => {
+    simnet.callPublicFn(
+      "bitpay-access-control",
+      "authorize-contract",
+      [Cl.contractPrincipal(deployer, "bitpay-treasury")],
+      deployer
+    );
+  });
 
   describe("Initialization", () => {
     it("should initialize with zero balance", () => {
@@ -373,10 +382,10 @@ describe("bitpay-treasury contract", () => {
   });
 
   describe("Admin Transfer", () => {
-    it("should allow admin to transfer role", () => {
+    it("should allow admin to propose transfer", () => {
       const { result } = simnet.callPublicFn(
         CONTRACT,
-        "transfer-admin",
+        "propose-admin-transfer",
         [Cl.principal(wallet1)],
         deployer
       );
@@ -384,9 +393,12 @@ describe("bitpay-treasury contract", () => {
       expect(result).toBeOk(Cl.principal(wallet1));
     });
 
-    it("should update admin after transfer", () => {
-      // Transfer admin to wallet1
-      simnet.callPublicFn(CONTRACT, "transfer-admin", [Cl.principal(wallet1)], deployer);
+    it("should update admin after two-step transfer", () => {
+      // Step 1: Propose transfer to wallet1
+      simnet.callPublicFn(CONTRACT, "propose-admin-transfer", [Cl.principal(wallet1)], deployer);
+
+      // Step 2: wallet1 accepts the transfer
+      simnet.callPublicFn(CONTRACT, "accept-admin-transfer", [], wallet1);
 
       const { result } = simnet.callReadOnlyFn(
         CONTRACT,
@@ -398,13 +410,14 @@ describe("bitpay-treasury contract", () => {
       expect(result).toBeOk(Cl.principal(wallet1));
 
       // Transfer back to deployer for other tests
-      simnet.callPublicFn(CONTRACT, "transfer-admin", [Cl.principal(deployer)], wallet1);
+      simnet.callPublicFn(CONTRACT, "propose-admin-transfer", [Cl.principal(deployer)], wallet1);
+      simnet.callPublicFn(CONTRACT, "accept-admin-transfer", [], deployer);
     });
 
-    it("should reject admin transfer from non-admin", () => {
+    it("should reject admin transfer proposal from non-admin", () => {
       const { result } = simnet.callPublicFn(
         CONTRACT,
-        "transfer-admin",
+        "propose-admin-transfer",
         [Cl.principal(wallet2)],
         wallet1
       );

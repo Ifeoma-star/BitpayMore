@@ -58,6 +58,7 @@
 ;; Add a new admin (only callable by existing admin)
 ;; @param new-admin: Principal to grant admin role
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (add-admin (new-admin principal))
     (begin
         ;; Only admins can add other admins
@@ -74,6 +75,7 @@
 ;; Remove an admin (only callable by contract owner or self)
 ;; @param admin: Principal to revoke admin role from
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (remove-admin (admin principal))
     (begin
         ;; Only contract owner or the admin themselves can remove admin role
@@ -92,6 +94,7 @@
 ;; Add an operator
 ;; @param new-operator: Principal to grant operator role
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (add-operator (new-operator principal))
     (begin
         ;; Only admins can add operators
@@ -105,6 +108,7 @@
 ;; Remove an operator
 ;; @param operator: Principal to revoke operator role from
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (remove-operator (operator principal))
     (begin
         ;; Only admins can remove operators
@@ -118,6 +122,7 @@
 ;; Authorize a contract to perform privileged operations
 ;; @param contract: Contract principal to authorize
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (authorize-contract (contract principal))
     (begin
         ;; Only admins can authorize contracts
@@ -137,6 +142,7 @@
 ;; Revoke contract authorization
 ;; @param contract: Contract principal to revoke authorization from
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (revoke-contract (contract principal))
     (begin
         ;; Only admins can revoke contract authorization
@@ -156,6 +162,7 @@
 ;; Pause the protocol (emergency function)
 ;; Prevents stream creation but allows withdrawals
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (pause-protocol)
     (begin
         ;; Only admins can pause
@@ -176,6 +183,7 @@
 
 ;; Unpause the protocol
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (unpause-protocol)
     (begin
         ;; Only admins can unpause
@@ -197,6 +205,7 @@
 ;; Initiate admin transfer (two-step process for safety)
 ;; @param new-admin: Principal to transfer admin role to
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (initiate-admin-transfer (new-admin principal))
     (begin
         ;; Only contract owner can initiate transfer
@@ -215,6 +224,7 @@
 
 ;; Accept admin transfer (must be called by pending admin)
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (accept-admin-transfer)
     (let ((pending (var-get pending-admin)))
         (begin

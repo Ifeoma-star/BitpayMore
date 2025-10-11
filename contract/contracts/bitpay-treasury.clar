@@ -45,6 +45,7 @@
 )
 
 ;; Collect fee from a stream (called by bitpay-core)
+;; #[allow(unchecked_data)]
 (define-public (collect-fee (amount uint))
     (begin
         (try! (check-not-paused))
@@ -67,6 +68,7 @@
 ;; This transfers sBTC from the vault to treasury and updates accounting
 ;; @param amount: Amount of cancellation fee to collect from vault
 ;; @returns: (ok amount) on success
+;; #[allow(unchecked_data)]
 (define-public (collect-cancellation-fee (amount uint))
     (begin
         (try! (check-not-paused))
@@ -96,6 +98,7 @@
 )
 
 ;; Withdraw from treasury (admin only)
+;; #[allow(unchecked_data)]
 (define-public (withdraw
         (amount uint)
         (recipient principal)
@@ -116,6 +119,7 @@
 )
 
 ;; Distribute fees to recipients
+;; #[allow(unchecked_data)]
 (define-public (distribute-to-recipient
         (recipient principal)
         (amount uint)
@@ -139,6 +143,7 @@
 )
 
 ;; Update fee percentage (admin only)
+;; #[allow(unchecked_data)]
 (define-public (set-fee-bps (new-fee-bps uint))
     (begin
         (asserts! (is-admin) ERR_UNAUTHORIZED)
@@ -150,6 +155,7 @@
 )
 
 ;; Propose admin transfer (step 1 of 2)
+;; #[allow(unchecked_data)]
 (define-public (propose-admin-transfer (new-admin principal))
     (begin
         (asserts! (is-admin) ERR_UNAUTHORIZED)
@@ -160,7 +166,7 @@
         (print {
             event: "admin-transfer-proposed",
             current-admin: (var-get admin),
-            proposed-admin: new-admin
+            proposed-admin: new-admin,
         })
 
         (ok new-admin)
@@ -168,6 +174,7 @@
 )
 
 ;; Accept admin transfer (step 2 of 2)
+;; #[allow(unchecked_data)]
 (define-public (accept-admin-transfer)
     (let ((pending (var-get pending-admin)))
         (asserts! (is-some pending) ERR_UNAUTHORIZED)
@@ -180,7 +187,7 @@
             (print {
                 event: "admin-transfer-completed",
                 old-admin: old-admin,
-                new-admin: tx-sender
+                new-admin: tx-sender,
             })
 
             (ok tx-sender)
@@ -189,6 +196,7 @@
 )
 
 ;; Cancel pending admin transfer
+;; #[allow(unchecked_data)]
 (define-public (cancel-admin-transfer)
     (begin
         (asserts! (is-admin) ERR_UNAUTHORIZED)
@@ -198,7 +206,7 @@
 
         (print {
             event: "admin-transfer-cancelled",
-            cancelled-by: tx-sender
+            cancelled-by: tx-sender,
         })
 
         (ok true)

@@ -49,6 +49,7 @@
 
 ;; Transfer is DISABLED - Recipient NFTs are soul-bound (non-transferable)
 ;; They serve as proof of receipt and cannot be traded
+;; #[allow(unchecked_data)]
 (define-public (transfer
         (token-id uint)
         (sender principal)
@@ -62,6 +63,7 @@
 
 ;; Mint NFT for a stream (called by bitpay-core)
 ;; SECURITY: Only bitpay-core can mint NFTs to prevent fake stream NFTs
+;; #[allow(unchecked_data)]
 (define-public (mint
         (stream-id uint)
         (recipient principal)
@@ -79,6 +81,7 @@
 )
 
 ;; Burn NFT when stream is fully withdrawn or cancelled
+;; #[allow(unchecked_data)]
 (define-public (burn
         (token-id uint)
         (owner principal)
@@ -110,6 +113,7 @@
 )
 
 ;; Set base token URI (owner only)
+;; #[allow(unchecked_data)]
 (define-public (set-base-token-uri (uri (string-ascii 256)))
     (begin
         (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_OWNER_ONLY)

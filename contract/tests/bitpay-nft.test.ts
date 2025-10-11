@@ -1,15 +1,25 @@
-import { describe, expect, it } from "vitest";
-import { Cl } from "@stacks/transactions";
+import { describe, expect, it, beforeEach } from "vitest";
+import { Cl, ClarityType } from "@stacks/transactions";
 
 const accounts = simnet.getAccounts();
 const deployer = accounts.get("deployer")!;
-const wallet1 = accounts.get("wallet_1")!;
-const wallet2 = accounts.get("wallet_2")!;
+const sender = accounts.get("wallet_1")!;
+const recipient = accounts.get("wallet_2")!;
 const wallet3 = accounts.get("wallet_3")!;
 
 const CONTRACT = "bitpay-nft";
+const CORE_CONTRACT = "bitpay-core";
 
 describe("bitpay-nft contract", () => {
+  // Setup: Authorize bitpay-core contract
+  beforeEach(() => {
+    simnet.callPublicFn(
+      "bitpay-access-control",
+      "authorize-contract",
+      [Cl.contractPrincipal(deployer, "bitpay-core")],
+      deployer
+    );
+  });
 
   describe("SIP-009 NFT Trait Functions", () => {
     it("should return initial last-token-id as 0", () => {
@@ -46,65 +56,41 @@ describe("bitpay-nft contract", () => {
     });
   });
 
-  describe("Minting Stream NFTs", () => {
-    it("should mint NFT for a stream", () => {
-      const streamId = 1;
+  describe("Minting Stream NFTs via Stream Creation", () => {
+    it("should mint NFT when stream is created", () => {
+      const startBlock = simnet.blockHeight + 1;
 
-      const { result } = simnet.callPublicFn(
+      // Create stream - this should mint recipient NFT
+      const createResult = simnet.callPublicFn(
+        CORE_CONTRACT,
+        "create-stream",
+        [
+          Cl.principal(recipient),
+          Cl.uint(100000000),
+          Cl.uint(startBlock),
+          Cl.uint(startBlock + 100)
+        ],
+        sender
+      );
+
+      expect(createResult.result).toBeOk(expect.any(Object));
+      const streamId = Number((createResult.result as any).value.value);
+
+      // Check that NFT was minted
+      const tokenResult = simnet.callReadOnlyFn(
         CONTRACT,
-        "mint",
-        [Cl.uint(streamId), Cl.principal(wallet1)],
+        "get-token-id",
+        [Cl.uint(streamId)],
         deployer
       );
 
-      expect(result).toBeOk(Cl.uint(1)); // First token ID
+      expect(tokenResult.result).toHaveClarityType(ClarityType.ResponseOk);
     });
 
-    it("should increment token ID on successive mints", () => {
-      // Mint first NFT
-      const first = simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(1), Cl.principal(wallet1)],
-        deployer
-      );
-      const firstId = Number((first.result as any).value.value);
+    it("should increment token ID on successive stream creations", () => {
+      const startBlock = simnet.blockHeight + 1;
 
-      // Mint second NFT
-      const second = simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(2), Cl.principal(wallet2)],
-        deployer
-      );
-      const secondId = Number((second.result as any).value.value);
-
-      expect(secondId).toBe(firstId + 1);
-    });
-
-    it("should set correct owner after minting", () => {
-      const streamId = 5;
-
-      const mintResult = simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(streamId), Cl.principal(wallet1)],
-        deployer
-      );
-      const tokenId = Number((mintResult.result as any).value.value);
-
-      const { result } = simnet.callReadOnlyFn(
-        CONTRACT,
-        "get-owner",
-        [Cl.uint(tokenId)],
-        deployer
-      );
-
-      expect(result).toBeOk(Cl.some(Cl.principal(wallet1)));
-    });
-
-    it("should update last-token-id after minting", () => {
-      // Get initial count
+      // Get initial last token ID
       const initialResult = simnet.callReadOnlyFn(
         CONTRACT,
         "get-last-token-id",
@@ -113,68 +99,105 @@ describe("bitpay-nft contract", () => {
       );
       const initialId = Number((initialResult.result as any).value.value);
 
-      // Mint new NFT
+      // Create two streams
       simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(10), Cl.principal(wallet1)],
-        deployer
+        CORE_CONTRACT,
+        "create-stream",
+        [Cl.principal(recipient), Cl.uint(100000000), Cl.uint(startBlock), Cl.uint(startBlock + 100)],
+        sender
       );
 
-      // Check updated count
-      const { result } = simnet.callReadOnlyFn(
+      simnet.callPublicFn(
+        CORE_CONTRACT,
+        "create-stream",
+        [Cl.principal(wallet3), Cl.uint(50000000), Cl.uint(startBlock + 1), Cl.uint(startBlock + 101)],
+        sender
+      );
+
+      // Check last token ID increased by 2
+      const finalResult = simnet.callReadOnlyFn(
         CONTRACT,
         "get-last-token-id",
         [],
         deployer
       );
+      const finalId = Number((finalResult.result as any).value.value);
 
-      const newId = Number((result as any).value.value);
-      expect(newId).toBe(initialId + 1);
-    });
-  });
-
-  describe("Token to Stream Mapping", () => {
-    it("should map token ID to stream ID", () => {
-      const streamId = 100;
-
-      const mintResult = simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(streamId), Cl.principal(wallet1)],
-        deployer
-      );
-      const tokenId = Number((mintResult.result as any).value.value);
-
-      const { result } = simnet.callReadOnlyFn(
-        CONTRACT,
-        "get-stream-id",
-        [Cl.uint(tokenId)],
-        deployer
-      );
-
-      expect(result).toBeOk(Cl.some(Cl.uint(streamId)));
+      expect(finalId).toBe(initialId + 2);
     });
 
-    it("should map stream ID to token ID", () => {
-      const streamId = 200;
+    it("should set correct owner (recipient) after minting", () => {
+      const startBlock = simnet.blockHeight + 1;
 
-      const mintResult = simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(streamId), Cl.principal(wallet1)],
-        deployer
+      // Create stream
+      const createResult = simnet.callPublicFn(
+        CORE_CONTRACT,
+        "create-stream",
+        [Cl.principal(recipient), Cl.uint(100000000), Cl.uint(startBlock), Cl.uint(startBlock + 100)],
+        sender
       );
-      const tokenId = Number((mintResult.result as any).value.value);
+      const streamId = Number((createResult.result as any).value.value);
 
-      const { result } = simnet.callReadOnlyFn(
+      // Get token ID - returns (ok (some uint))
+      const tokenResult = simnet.callReadOnlyFn(
         CONTRACT,
         "get-token-id",
         [Cl.uint(streamId)],
         deployer
       );
 
-      expect(result).toBeOk(Cl.some(Cl.uint(tokenId)));
+      // Extract: ResponseOk.value -> OptionalSome.value -> UInt.value
+      expect(tokenResult.result).toHaveClarityType(ClarityType.ResponseOk);
+      const optionalValue = (tokenResult.result as any).value; // Gets the (some uint) or none
+      expect(optionalValue.type).toBe(ClarityType.OptionalSome);
+      const uintClarityValue = optionalValue.value; // This is a Clarity UInt
+      const tokenId = Number(uintClarityValue.value); // Extract the actual number from UInt
+      expect(tokenId).toBeGreaterThan(0);
+
+      // Check owner is recipient
+      const ownerResult = simnet.callReadOnlyFn(
+        CONTRACT,
+        "get-owner",
+        [Cl.uint(tokenId)],
+        deployer
+      );
+
+      expect(ownerResult.result).toBeOk(Cl.some(Cl.principal(recipient)));
+    });
+  });
+
+  describe("Token to Stream Mapping", () => {
+    it("should map token ID to stream ID", () => {
+      const startBlock = simnet.blockHeight + 1;
+
+      const createResult = simnet.callPublicFn(
+        CORE_CONTRACT,
+        "create-stream",
+        [Cl.principal(recipient), Cl.uint(100000000), Cl.uint(startBlock), Cl.uint(startBlock + 100)],
+        sender
+      );
+      const streamId = Number((createResult.result as any).value.value);
+
+      // Get token ID from stream ID - returns (ok (some uint))
+      const tokenResult = simnet.callReadOnlyFn(
+        CONTRACT,
+        "get-token-id",
+        [Cl.uint(streamId)],
+        deployer
+      );
+      const optionalValue = (tokenResult.result as any).value;
+      const uintClarityValue = optionalValue.value;
+      const tokenId = Number(uintClarityValue.value);
+
+      // Verify reverse mapping
+      const streamResult = simnet.callReadOnlyFn(
+        CONTRACT,
+        "get-stream-id",
+        [Cl.uint(tokenId)],
+        deployer
+      );
+
+      expect(streamResult.result).toBeOk(Cl.some(Cl.uint(streamId)));
     });
 
     it("should return none for unmapped stream ID", () => {
@@ -200,138 +223,106 @@ describe("bitpay-nft contract", () => {
     });
   });
 
-  describe("NFT Transfer", () => {
-    it("should allow owner to transfer NFT", () => {
-      // Mint NFT to wallet1
-      const mintResult = simnet.callPublicFn(
+  describe("NFT Transfer (Soul-Bound - Should Fail)", () => {
+    it("should reject transfer attempts (soul-bound)", () => {
+      const startBlock = simnet.blockHeight + 1;
+
+      // Create stream
+      const createResult = simnet.callPublicFn(
+        CORE_CONTRACT,
+        "create-stream",
+        [Cl.principal(recipient), Cl.uint(100000000), Cl.uint(startBlock), Cl.uint(startBlock + 100)],
+        sender
+      );
+      const streamId = Number((createResult.result as any).value.value);
+
+      // Get token ID
+      const tokenResult = simnet.callReadOnlyFn(
         CONTRACT,
-        "mint",
-        [Cl.uint(50), Cl.principal(wallet1)],
+        "get-token-id",
+        [Cl.uint(streamId)],
         deployer
       );
-      const tokenId = Number((mintResult.result as any).value.value);
+      const optionalValue = (tokenResult.result as any).value;
+      const uintClarityValue = optionalValue.value;
+      const tokenId = Number(uintClarityValue.value);
 
-      // Transfer from wallet1 to wallet2
+      // Attempt transfer (should fail - soul-bound)
       const { result } = simnet.callPublicFn(
         CONTRACT,
         "transfer",
-        [Cl.uint(tokenId), Cl.principal(wallet1), Cl.principal(wallet2)],
-        wallet1
+        [Cl.uint(tokenId), Cl.principal(recipient), Cl.principal(wallet3)],
+        recipient
       );
 
-      expect(result).toBeOk(Cl.bool(true));
-    });
-
-    it("should update owner after transfer", () => {
-      // Mint NFT to wallet1
-      const mintResult = simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(60), Cl.principal(wallet1)],
-        deployer
-      );
-      const tokenId = Number((mintResult.result as any).value.value);
-
-      // Transfer to wallet2
-      simnet.callPublicFn(
-        CONTRACT,
-        "transfer",
-        [Cl.uint(tokenId), Cl.principal(wallet1), Cl.principal(wallet2)],
-        wallet1
-      );
-
-      // Check new owner
-      const { result } = simnet.callReadOnlyFn(
-        CONTRACT,
-        "get-owner",
-        [Cl.uint(tokenId)],
-        deployer
-      );
-
-      expect(result).toBeOk(Cl.some(Cl.principal(wallet2)));
-    });
-
-    it("should fail when non-owner tries to transfer", () => {
-      // Mint NFT to wallet1
-      const mintResult = simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(70), Cl.principal(wallet1)],
-        deployer
-      );
-      const tokenId = Number((mintResult.result as any).value.value);
-
-      // wallet3 tries to transfer (not owner)
-      const { result } = simnet.callPublicFn(
-        CONTRACT,
-        "transfer",
-        [Cl.uint(tokenId), Cl.principal(wallet1), Cl.principal(wallet3)],
-        wallet3
-      );
-
-      expect(result).toBeErr(Cl.uint(401)); // ERR_NOT_TOKEN_OWNER
-    });
-
-    it("should fail when sender is not tx-sender", () => {
-      // Mint NFT to wallet1
-      const mintResult = simnet.callPublicFn(
-        CONTRACT,
-        "mint",
-        [Cl.uint(80), Cl.principal(wallet1)],
-        deployer
-      );
-      const tokenId = Number((mintResult.result as any).value.value);
-
-      // wallet2 tries to send on behalf of wallet1
-      const { result } = simnet.callPublicFn(
-        CONTRACT,
-        "transfer",
-        [Cl.uint(tokenId), Cl.principal(wallet1), Cl.principal(wallet3)],
-        wallet2
-      );
-
-      expect(result).toBeErr(Cl.uint(401)); // ERR_NOT_TOKEN_OWNER
+      expect(result).toBeErr(Cl.uint(403)); // ERR_UNAUTHORIZED (transfers disabled)
     });
   });
 
   describe("Burning Stream NFTs", () => {
     it("should allow owner to burn their NFT", () => {
-      // Mint NFT to wallet1
-      const mintResult = simnet.callPublicFn(
+      const startBlock = simnet.blockHeight + 1;
+
+      // Create stream
+      const createResult = simnet.callPublicFn(
+        CORE_CONTRACT,
+        "create-stream",
+        [Cl.principal(recipient), Cl.uint(100000000), Cl.uint(startBlock), Cl.uint(startBlock + 100)],
+        sender
+      );
+      const streamId = Number((createResult.result as any).value.value);
+
+      // Get token ID
+      const tokenResult = simnet.callReadOnlyFn(
         CONTRACT,
-        "mint",
-        [Cl.uint(90), Cl.principal(wallet1)],
+        "get-token-id",
+        [Cl.uint(streamId)],
         deployer
       );
-      const tokenId = Number((mintResult.result as any).value.value);
+      const optionalValue = (tokenResult.result as any).value;
+      const uintClarityValue = optionalValue.value;
+      const tokenId = Number(uintClarityValue.value);
 
       // Burn NFT
       const { result } = simnet.callPublicFn(
         CONTRACT,
         "burn",
-        [Cl.uint(tokenId), Cl.principal(wallet1)],
-        wallet1
+        [Cl.uint(tokenId), Cl.principal(recipient)],
+        recipient
       );
 
       expect(result).toBeOk(Cl.bool(true));
     });
 
     it("should remove owner after burning", () => {
-      // Mint NFT to wallet1
-      const mintResult = simnet.callPublicFn(
+      const startBlock = simnet.blockHeight + 1;
+
+      // Create stream
+      const createResult = simnet.callPublicFn(
+        CORE_CONTRACT,
+        "create-stream",
+        [Cl.principal(recipient), Cl.uint(100000000), Cl.uint(startBlock), Cl.uint(startBlock + 100)],
+        sender
+      );
+      const streamId = Number((createResult.result as any).value.value);
+
+      // Get token ID
+      const tokenResult = simnet.callReadOnlyFn(
         CONTRACT,
-        "mint",
-        [Cl.uint(95), Cl.principal(wallet1)],
+        "get-token-id",
+        [Cl.uint(streamId)],
         deployer
       );
-      const tokenId = Number((mintResult.result as any).value.value);
+      const optionalValue = (tokenResult.result as any).value;
+      const uintClarityValue = optionalValue.value;
+      const tokenId = Number(uintClarityValue.value);
 
       // Burn NFT
       simnet.callPublicFn(
         CONTRACT,
         "burn",
-        [Cl.uint(tokenId), Cl.principal(wallet1)],
-        wallet1
+        [Cl.uint(tokenId), Cl.principal(recipient)],
+        recipient
       );
 
       // Check owner is none
@@ -346,21 +337,34 @@ describe("bitpay-nft contract", () => {
     });
 
     it("should fail when non-owner tries to burn", () => {
-      // Mint NFT to wallet1
-      const mintResult = simnet.callPublicFn(
+      const startBlock = simnet.blockHeight + 1;
+
+      // Create stream
+      const createResult = simnet.callPublicFn(
+        CORE_CONTRACT,
+        "create-stream",
+        [Cl.principal(recipient), Cl.uint(100000000), Cl.uint(startBlock), Cl.uint(startBlock + 100)],
+        sender
+      );
+      const streamId = Number((createResult.result as any).value.value);
+
+      // Get token ID
+      const tokenResult = simnet.callReadOnlyFn(
         CONTRACT,
-        "mint",
-        [Cl.uint(96), Cl.principal(wallet1)],
+        "get-token-id",
+        [Cl.uint(streamId)],
         deployer
       );
-      const tokenId = Number((mintResult.result as any).value.value);
+      const optionalValue = (tokenResult.result as any).value;
+      const uintClarityValue = optionalValue.value;
+      const tokenId = Number(uintClarityValue.value);
 
-      // wallet2 tries to burn (not owner)
+      // wallet3 tries to burn (not owner)
       const { result } = simnet.callPublicFn(
         CONTRACT,
         "burn",
-        [Cl.uint(tokenId), Cl.principal(wallet1)],
-        wallet2
+        [Cl.uint(tokenId), Cl.principal(recipient)],
+        wallet3
       );
 
       expect(result).toBeErr(Cl.uint(401)); // ERR_NOT_TOKEN_OWNER

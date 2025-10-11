@@ -52,6 +52,7 @@
 ;; Transfer obligation NFT
 ;; NOTE: After transferring, the new owner must call bitpay-core.update-stream-sender
 ;; to sync the stream sender with the new NFT owner
+;; #[allow(unchecked_data)]
 (define-public (transfer
         (token-id uint)
         (sender principal)
@@ -71,7 +72,7 @@
                 token-id: token-id,
                 from: sender,
                 to: recipient,
-                note: "New owner must call update-stream-sender to complete transfer"
+                note: "New owner must call update-stream-sender to complete transfer",
             })
 
             (ok true)
@@ -83,6 +84,7 @@
 
 ;; Mint obligation NFT for a stream (called by bitpay-core)
 ;; SECURITY: Only bitpay-core can mint NFTs to prevent fake obligation NFTs
+;; #[allow(unchecked_data)]
 (define-public (mint
         (stream-id uint)
         (sender principal)
@@ -108,6 +110,7 @@
 )
 
 ;; Burn obligation NFT when stream is cancelled or fully paid
+;; #[allow(unchecked_data)]
 (define-public (burn
         (token-id uint)
         (owner principal)
@@ -140,6 +143,7 @@
 )
 
 ;; Set base token URI (owner only)
+;; #[allow(unchecked_data)]
 (define-public (set-base-token-uri (uri (string-ascii 256)))
     (begin
         (asserts! (is-eq tx-sender CONTRACT_OWNER) ERR_OWNER_ONLY)

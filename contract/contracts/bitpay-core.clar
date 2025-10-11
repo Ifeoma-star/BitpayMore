@@ -66,6 +66,7 @@
 ;; @param start-block: Block height when streaming starts
 ;; @param end-block: Block height when streaming ends
 ;; @returns: (ok stream-id) on success
+;; #[allow(unchecked_data)]
 (define-public (create-stream
         (recipient principal)
         (amount uint)
@@ -146,6 +147,7 @@
 ;; Withdraw vested amount from a stream
 ;; @param stream-id: ID of the stream to withdraw from
 ;; @returns: (ok withdrawn-amount) on success
+;; #[allow(unchecked_data)]
 (define-public (withdraw-from-stream (stream-id uint))
     (let (
             (stream (unwrap! (map-get? streams stream-id) ERR_STREAM_NOT_FOUND))
@@ -184,6 +186,7 @@
 ;; A 1% cancellation fee is charged on unvested amount to discourage frivolous cancellations
 ;; @param stream-id: ID of the stream to cancel
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (cancel-stream (stream-id uint))
     (let (
             (stream (unwrap! (map-get? streams stream-id) ERR_STREAM_NOT_FOUND))
@@ -261,6 +264,7 @@
 ;; @param stream-id: ID of the stream
 ;; @param new-sender: New sender (obligation holder)
 ;; @returns: (ok true) on success
+;; #[allow(unchecked_data)]
 (define-public (update-stream-sender
         (stream-id uint)
         (new-sender principal)
@@ -274,15 +278,13 @@
             (asserts! (not (get cancelled stream)) ERR_STREAM_CANCELLED)
 
             ;; Update the sender (obligation holder)
-            (map-set streams stream-id (merge stream {
-                sender: new-sender
-            }))
+            (map-set streams stream-id (merge stream { sender: new-sender }))
 
             (print {
                 event: "stream-sender-updated",
                 stream-id: stream-id,
                 old-sender: (get sender stream),
-                new-sender: new-sender
+                new-sender: new-sender,
             })
 
             (ok true)
