@@ -36,6 +36,7 @@
 (define-data-var next-proposal-id uint u0)
 (define-data-var last-withdrawal-block uint u0)
 (define-data-var withdrawn-today uint u0)
+(define-data-var active-admin-count uint u1) ;; Start with 1 (CONTRACT_OWNER)
 
 ;; Maps
 (define-map fee-recipients
@@ -44,7 +45,10 @@
 )
 
 ;; Multi-sig admins (5 slots for institutional governance)
-(define-map multisig-admins principal bool)
+(define-map multisig-admins
+    principal
+    bool
+)
 
 ;; Withdrawal proposals
 (define-map withdrawal-proposals
@@ -57,7 +61,7 @@
         executed: bool,
         proposed-at: uint,
         expires-at: uint,
-        description: (string-ascii 256)
+        description: (string-ascii 256),
     }
 )
 
@@ -71,7 +75,7 @@
         approvals: (list 10 principal),
         executed: bool,
         proposed-at: uint,
-        expires-at: uint
+        expires-at: uint,
     }
 )
 
@@ -92,14 +96,20 @@
 )
 
 ;; Helper: Check if principal is in approval list
-(define-private (is-in-list (item principal) (lst (list 10 principal)))
+(define-private (is-in-list
+        (item principal)
+        (lst (list 10 principal))
+    )
     (is-some (index-of? lst item))
 )
 
-;; Helper: Count total multisig admins
+;; Helper: Count active multisig admins
 (define-read-only (count-admins)
-    ;; In production, you'd maintain a counter
-    ;; For now, return configured total
+    (ok (var-get active-admin-count))
+)
+
+;; Helper: Get total available admin slots
+(define-read-only (get-total-admin-slots)
     (ok TOTAL_ADMIN_SLOTS)
 )
 
@@ -351,23 +361,25 @@
     )
 )
 
-;;=============================================================================
+;; =============================================================================
 ;; MULTI-SIG TREASURY FUNCTIONS (Professional Grade)
-;;=============================================================================
+;; =============================================================================
 
 ;; ==========================================
 ;; WITHDRAWAL PROPOSALS (With Timelock & Limits)
 ;; ==========================================
 
 ;; Propose a withdrawal (requires 3-of-5 approval + 24h timelock)
+;; #[allow(unchecked_data)]
 (define-public (propose-multisig-withdrawal
-    (amount uint)
-    (recipient principal)
-    (description (string-ascii 256)))
-    (let (
-        (proposal-id (var-get next-proposal-id))
-        (expiry (+ stacks-block-height PROPOSAL_EXPIRY_BLOCKS))
+        (amount uint)
+        (recipient principal)
+        (description (string-ascii 256))
     )
+    (let (
+            (proposal-id (var-get next-proposal-id))
+            (expiry (+ stacks-block-height PROPOSAL_EXPIRY_BLOCKS))
+        )
         ;; Only multisig admins can propose
         (asserts! (is-multisig-admin tx-sender) ERR_UNAUTHORIZED)
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)
@@ -382,7 +394,7 @@
             executed: false,
             proposed-at: stacks-block-height,
             expires-at: expiry,
-            description: description
+            description: description,
         })
 
         (var-set next-proposal-id (+ proposal-id u1))
@@ -394,7 +406,7 @@
             recipient: recipient,
             proposer: tx-sender,
             description: description,
-            expires-at: expiry
+            expires-at: expiry,
         })
 
         (ok proposal-id)
@@ -402,32 +414,37 @@
 )
 
 ;; Approve a withdrawal proposal
+;; #[allow(unchecked_data)]
 (define-public (approve-multisig-withdrawal (proposal-id uint))
     (let (
-        (proposal (unwrap! (map-get? withdrawal-proposals proposal-id) ERR_PROPOSAL_NOT_FOUND))
-        (current-approvals (get approvals proposal))
-    )
+            (proposal (unwrap! (map-get? withdrawal-proposals proposal-id)
+                ERR_PROPOSAL_NOT_FOUND
+            ))
+            (current-approvals (get approvals proposal))
+        )
         ;; Checks
         (asserts! (is-multisig-admin tx-sender) ERR_UNAUTHORIZED)
-        (asserts! (not (is-in-list tx-sender current-approvals)) ERR_ALREADY_APPROVED)
+        (asserts! (not (is-in-list tx-sender current-approvals))
+            ERR_ALREADY_APPROVED
+        )
         (asserts! (not (get executed proposal)) ERR_ALREADY_EXECUTED)
-        (asserts! (< stacks-block-height (get expires-at proposal)) ERR_PROPOSAL_EXPIRED)
+        (asserts! (< stacks-block-height (get expires-at proposal))
+            ERR_PROPOSAL_EXPIRED
+        )
 
         ;; Add approval
         (map-set withdrawal-proposals proposal-id
-            (merge proposal {
-                approvals: (unwrap!
-                    (as-max-len? (append current-approvals tx-sender) u10)
-                    ERR_INVALID_AMOUNT)
-            })
-        )
+            (merge proposal { approvals: (unwrap! (as-max-len? (append current-approvals tx-sender) u10)
+                ERR_INVALID_AMOUNT
+            ) }
+            ))
 
         (print {
             event: "withdrawal-approved",
             proposal-id: proposal-id,
             approver: tx-sender,
             total-approvals: (+ (len current-approvals) u1),
-            required: REQUIRED_SIGNATURES
+            required: REQUIRED_SIGNATURES,
         })
 
         (ok true)
@@ -435,26 +452,33 @@
 )
 
 ;; Execute withdrawal (once 3 approvals + timelock elapsed)
+;; #[allow(unchecked_data)]
 (define-public (execute-multisig-withdrawal (proposal-id uint))
     (let (
-        (proposal (unwrap! (map-get? withdrawal-proposals proposal-id) ERR_PROPOSAL_NOT_FOUND))
-        (approval-count (len (get approvals proposal)))
-        (timelock-elapsed (+ (get proposed-at proposal) TIMELOCK_BLOCKS))
-        (amount (get amount proposal))
-    )
+            (proposal (unwrap! (map-get? withdrawal-proposals proposal-id)
+                ERR_PROPOSAL_NOT_FOUND
+            ))
+            (approval-count (len (get approvals proposal)))
+            (timelock-elapsed (+ (get proposed-at proposal) TIMELOCK_BLOCKS))
+            (amount (get amount proposal))
+        )
         ;; Checks
         (asserts! (not (get executed proposal)) ERR_ALREADY_EXECUTED)
-        (asserts! (>= approval-count REQUIRED_SIGNATURES) ERR_INSUFFICIENT_APPROVALS)
-        (asserts! (>= stacks-block-height timelock-elapsed) ERR_TIMELOCK_NOT_ELAPSED)
-        (asserts! (< stacks-block-height (get expires-at proposal)) ERR_PROPOSAL_EXPIRED)
+        (asserts! (>= approval-count REQUIRED_SIGNATURES)
+            ERR_INSUFFICIENT_APPROVALS
+        )
+        (asserts! (>= stacks-block-height timelock-elapsed)
+            ERR_TIMELOCK_NOT_ELAPSED
+        )
+        (asserts! (< stacks-block-height (get expires-at proposal))
+            ERR_PROPOSAL_EXPIRED
+        )
 
         ;; Check daily limit
         (try! (check-daily-limit amount))
 
         ;; Execute withdrawal
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper
-            transfer-from-vault
-            amount
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper transfer-from-vault amount
             (get recipient proposal)
         )))
 
@@ -474,7 +498,7 @@
             proposal-id: proposal-id,
             amount: amount,
             recipient: (get recipient proposal),
-            approvals: approval-count
+            approvals: approval-count,
         })
 
         (ok true)
@@ -484,10 +508,10 @@
 ;; Check and update daily withdrawal limit
 (define-private (check-daily-limit (amount uint))
     (let (
-        (current-block stacks-block-height)
-        (last-block (var-get last-withdrawal-block))
-        (blocks-per-day u144)
-    )
+            (current-block stacks-block-height)
+            (last-block (var-get last-withdrawal-block))
+            (blocks-per-day u144)
+        )
         ;; Reset if new day
         (if (>= (- current-block last-block) blocks-per-day)
             (var-set withdrawn-today u0)
@@ -495,8 +519,10 @@
         )
 
         ;; Check limit
-        (asserts! (<= (+ (var-get withdrawn-today) amount) DAILY_WITHDRAWAL_LIMIT)
-            ERR_EXCEEDS_DAILY_LIMIT)
+        (asserts!
+            (<= (+ (var-get withdrawn-today) amount) DAILY_WITHDRAWAL_LIMIT)
+            ERR_EXCEEDS_DAILY_LIMIT
+        )
 
         (ok true)
     )
@@ -515,11 +541,12 @@
 ;; ==========================================
 
 ;; Propose adding a new admin
+;; #[allow(unchecked_data)]
 (define-public (propose-add-admin (new-admin principal))
     (let (
-        (proposal-id (var-get next-proposal-id))
-        (expiry (+ stacks-block-height PROPOSAL_EXPIRY_BLOCKS))
-    )
+            (proposal-id (var-get next-proposal-id))
+            (expiry (+ stacks-block-height PROPOSAL_EXPIRY_BLOCKS))
+        )
         ;; Checks
         (asserts! (is-multisig-admin tx-sender) ERR_UNAUTHORIZED)
         (asserts! (not (is-multisig-admin new-admin)) ERR_ALREADY_ADMIN)
@@ -532,7 +559,7 @@
             approvals: (list tx-sender),
             executed: false,
             proposed-at: stacks-block-height,
-            expires-at: expiry
+            expires-at: expiry,
         })
 
         (var-set next-proposal-id (+ proposal-id u1))
@@ -541,7 +568,7 @@
             event: "add-admin-proposed",
             proposal-id: proposal-id,
             new-admin: new-admin,
-            proposer: tx-sender
+            proposer: tx-sender,
         })
 
         (ok proposal-id)
@@ -549,15 +576,17 @@
 )
 
 ;; Propose removing an admin
+;; #[allow(unchecked_data)]
 (define-public (propose-remove-admin (target-admin principal))
     (let (
-        (proposal-id (var-get next-proposal-id))
-        (expiry (+ stacks-block-height PROPOSAL_EXPIRY_BLOCKS))
-    )
+            (proposal-id (var-get next-proposal-id))
+            (expiry (+ stacks-block-height PROPOSAL_EXPIRY_BLOCKS))
+        )
         ;; Checks
         (asserts! (is-multisig-admin tx-sender) ERR_UNAUTHORIZED)
         (asserts! (is-multisig-admin target-admin) ERR_NOT_ADMIN)
-        (asserts! (not (is-eq target-admin tx-sender)) ERR_UNAUTHORIZED) ;; Can't remove self
+        (asserts! (not (is-eq target-admin tx-sender)) ERR_UNAUTHORIZED)
+        ;; Can't remove self
 
         ;; Create proposal
         (map-set admin-proposals proposal-id {
@@ -567,7 +596,7 @@
             approvals: (list tx-sender),
             executed: false,
             proposed-at: stacks-block-height,
-            expires-at: expiry
+            expires-at: expiry,
         })
 
         (var-set next-proposal-id (+ proposal-id u1))
@@ -576,7 +605,7 @@
             event: "remove-admin-proposed",
             proposal-id: proposal-id,
             target-admin: target-admin,
-            proposer: tx-sender
+            proposer: tx-sender,
         })
 
         (ok proposal-id)
@@ -584,31 +613,36 @@
 )
 
 ;; Approve admin management proposal
+;; #[allow(unchecked_data)]
 (define-public (approve-admin-proposal (proposal-id uint))
     (let (
-        (proposal (unwrap! (map-get? admin-proposals proposal-id) ERR_PROPOSAL_NOT_FOUND))
-        (current-approvals (get approvals proposal))
-    )
+            (proposal (unwrap! (map-get? admin-proposals proposal-id)
+                ERR_PROPOSAL_NOT_FOUND
+            ))
+            (current-approvals (get approvals proposal))
+        )
         ;; Checks
         (asserts! (is-multisig-admin tx-sender) ERR_UNAUTHORIZED)
-        (asserts! (not (is-in-list tx-sender current-approvals)) ERR_ALREADY_APPROVED)
+        (asserts! (not (is-in-list tx-sender current-approvals))
+            ERR_ALREADY_APPROVED
+        )
         (asserts! (not (get executed proposal)) ERR_ALREADY_EXECUTED)
-        (asserts! (< stacks-block-height (get expires-at proposal)) ERR_PROPOSAL_EXPIRED)
+        (asserts! (< stacks-block-height (get expires-at proposal))
+            ERR_PROPOSAL_EXPIRED
+        )
 
         ;; Add approval
         (map-set admin-proposals proposal-id
-            (merge proposal {
-                approvals: (unwrap!
-                    (as-max-len? (append current-approvals tx-sender) u10)
-                    ERR_INVALID_AMOUNT)
-            })
-        )
+            (merge proposal { approvals: (unwrap! (as-max-len? (append current-approvals tx-sender) u10)
+                ERR_INVALID_AMOUNT
+            ) }
+            ))
 
         (print {
             event: "admin-proposal-approved",
             proposal-id: proposal-id,
             approver: tx-sender,
-            total-approvals: (+ (len current-approvals) u1)
+            total-approvals: (+ (len current-approvals) u1),
         })
 
         (ok true)
@@ -616,35 +650,46 @@
 )
 
 ;; Execute admin management proposal
+;; #[allow(unchecked_data)]
 (define-public (execute-admin-proposal (proposal-id uint))
     (let (
-        (proposal (unwrap! (map-get? admin-proposals proposal-id) ERR_PROPOSAL_NOT_FOUND))
-        (approval-count (len (get approvals proposal)))
-        (action (get action proposal))
-        (target (get target-admin proposal))
-    )
+            (proposal (unwrap! (map-get? admin-proposals proposal-id)
+                ERR_PROPOSAL_NOT_FOUND
+            ))
+            (approval-count (len (get approvals proposal)))
+            (action (get action proposal))
+            (target (get target-admin proposal))
+        )
         ;; Checks
         (asserts! (not (get executed proposal)) ERR_ALREADY_EXECUTED)
-        (asserts! (>= approval-count REQUIRED_SIGNATURES) ERR_INSUFFICIENT_APPROVALS)
-        (asserts! (< stacks-block-height (get expires-at proposal)) ERR_PROPOSAL_EXPIRED)
+        (asserts! (>= approval-count REQUIRED_SIGNATURES)
+            ERR_INSUFFICIENT_APPROVALS
+        )
+        (asserts! (< stacks-block-height (get expires-at proposal))
+            ERR_PROPOSAL_EXPIRED
+        )
 
-        ;; Execute action
+        ;; Execute action and update counter
         (if (is-eq action "add")
-            (map-set multisig-admins target true)
-            (map-delete multisig-admins target)
+            (begin
+                (map-set multisig-admins target true)
+                (var-set active-admin-count (+ (var-get active-admin-count) u1))
+            )
+            (begin
+                (map-delete multisig-admins target)
+                (var-set active-admin-count (- (var-get active-admin-count) u1))
+            )
         )
 
         ;; Mark as executed
-        (map-set admin-proposals proposal-id
-            (merge proposal { executed: true })
-        )
+        (map-set admin-proposals proposal-id (merge proposal { executed: true }))
 
         (print {
             event: "admin-proposal-executed",
             proposal-id: proposal-id,
             action: action,
             target-admin: target,
-            approvals: approval-count
+            approvals: approval-count,
         })
 
         (ok true)
@@ -675,10 +720,15 @@
         proposal-expiry-blocks: PROPOSAL_EXPIRY_BLOCKS,
         daily-limit: DAILY_WITHDRAWAL_LIMIT,
         withdrawn-today: (var-get withdrawn-today),
-        last-withdrawal-block: (var-get last-withdrawal-block)
+        last-withdrawal-block: (var-get last-withdrawal-block),
     })
 )
 
 (define-read-only (get-next-proposal-id)
     (ok (var-get next-proposal-id))
+)
+
+;; Get this contract's address (for receiving payments)
+(define-read-only (get-contract-address)
+    (ok (as-contract tx-sender))
 )

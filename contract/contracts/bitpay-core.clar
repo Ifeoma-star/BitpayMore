@@ -271,8 +271,18 @@
     )
     (let ((stream (unwrap! (map-get? streams stream-id) ERR_STREAM_NOT_FOUND)))
         (begin
-            ;; Verify caller is current stream sender
-            (asserts! (is-eq tx-sender (get sender stream)) ERR_UNAUTHORIZED)
+            ;; Verify caller is EITHER:
+            ;; 1. Current stream sender (for direct transfers), OR
+            ;; 2. Authorized contract (for marketplace/protocol transfers)
+            (asserts!
+                (or
+                    (is-eq tx-sender (get sender stream))
+                    (is-ok (contract-call? .bitpay-access-control
+                        assert-authorized-contract contract-caller
+                    ))
+                )
+                ERR_UNAUTHORIZED
+            )
 
             ;; Cannot update sender of cancelled stream
             (asserts! (not (get cancelled stream)) ERR_STREAM_CANCELLED)
@@ -285,6 +295,10 @@
                 stream-id: stream-id,
                 old-sender: (get sender stream),
                 new-sender: new-sender,
+                transfer-type: (if (is-eq tx-sender (get sender stream))
+                    "direct"
+                    "authorized-contract"
+                ),
             })
 
             (ok true)
