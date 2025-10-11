@@ -18,6 +18,9 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Shield,
+  Shuffle,
+  AlertTriangle,
 } from "lucide-react";
 import walletService from "@/lib/wallet/wallet-service";
 import { useStream } from "@/hooks/use-bitpay-read";
@@ -25,6 +28,9 @@ import { useBlockHeight } from "@/hooks/use-block-height";
 import { useWithdrawFromStream, useCancelStream } from "@/hooks/use-bitpay-write";
 import { microToDisplay, StreamStatus, calculateProgress, STACKS_API_URL } from "@/lib/contracts/config";
 import { toast } from "sonner";
+import { CancelStreamModal } from "@/components/dashboard/modals/CancelStreamModal";
+import { TransferObligationNFTModal } from "@/components/dashboard/modals/TransferObligationNFTModal";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function StreamDetailPage() {
   const params = useParams();
@@ -33,6 +39,8 @@ export default function StreamDetailPage() {
 
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showTransferNFTModal, setShowTransferNFTModal] = useState(false);
 
   const { blockHeight } = useBlockHeight(30000);
   const { data: stream, isLoading, refetch } = useStream(streamId);
@@ -58,13 +66,14 @@ export default function StreamDetailPage() {
     }
   };
 
-  const handleCancel = async () => {
+  const handleCancelConfirm = async () => {
     if (!streamId) return;
     const txId = await cancel(streamId);
     if (txId) {
       toast.success("Stream cancelled!", {
         description: "Transaction submitted to the blockchain",
       });
+      setShowCancelModal(false);
       setTimeout(() => refetch(), 3000);
     }
   };
@@ -120,6 +129,13 @@ export default function StreamDetailPage() {
     : 0;
   const isRecipient = userAddress?.toLowerCase() === stream.recipient.toLowerCase();
   const isSender = userAddress?.toLowerCase() === stream.sender.toLowerCase();
+
+  // Calculate cancellation fee (1% of unvested amount)
+  const totalAmount = Number(microToDisplay(stream.amount));
+  const vestedAmount = Number(microToDisplay(stream.vestedAmount));
+  const unvestedAmount = totalAmount - vestedAmount;
+  const cancellationFee = unvestedAmount * 0.01;
+  const amountAfterFee = unvestedAmount - cancellationFee;
 
   return (
     <div className="space-y-6">
@@ -258,6 +274,108 @@ export default function StreamDetailPage() {
         </CardContent>
       </Card>
 
+      {/* NFT Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>NFT Information</CardTitle>
+          <CardDescription>Dual NFT system for this stream</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Recipient NFT */}
+            <div className="border border-brand-teal/20 bg-brand-teal/5 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="h-5 w-5 text-brand-teal" />
+                <h3 className="font-semibold text-brand-teal">Recipient NFT</h3>
+                <Badge variant="outline" className="ml-auto text-xs border-brand-teal text-brand-teal">
+                  Soul-Bound
+                </Badge>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Token ID:</span>
+                  <span className="font-mono font-medium">#{streamId?.toString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Owner:</span>
+                  <span className="font-mono text-xs">{stream.recipient.slice(0, 8)}...</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Transferable:</span>
+                  <span className="font-medium text-red-500">No</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Non-transferable proof of payment receipt
+                </p>
+              </div>
+            </div>
+
+            {/* Obligation NFT */}
+            <div className="border border-brand-pink/20 bg-brand-pink/5 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Shuffle className="h-5 w-5 text-brand-pink" />
+                <h3 className="font-semibold text-brand-pink">Obligation NFT</h3>
+                <Badge variant="outline" className="ml-auto text-xs border-brand-pink text-brand-pink">
+                  Transferable
+                </Badge>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Token ID:</span>
+                  <span className="font-mono font-medium">#{streamId?.toString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Owner:</span>
+                  <span className="font-mono text-xs">{stream.sender.slice(0, 8)}...</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Transferable:</span>
+                  <span className="font-medium text-green-500">Yes</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Can be transferred for invoice factoring
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {isSender && stream.status === StreamStatus.ACTIVE && (
+            <Button
+              onClick={() => setShowTransferNFTModal(true)}
+              variant="outline"
+              className="w-full mt-4 border-brand-pink text-brand-pink hover:bg-brand-pink/10"
+            >
+              <Shuffle className="h-4 w-4 mr-2" />
+              Transfer Obligation NFT
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cancellation Fee Preview */}
+      {isSender && stream.status === StreamStatus.ACTIVE && unvestedAmount > 0 && (
+        <Alert className="border-yellow-500/50 bg-yellow-500/5">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription>
+            <p className="font-medium mb-2 text-yellow-800">Cancellation Fee Information</p>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Unvested Amount:</span>
+                <span className="font-medium">{unvestedAmount.toFixed(8)} sBTC</span>
+              </div>
+              <div className="flex justify-between text-red-600">
+                <span>Cancellation Fee (1%):</span>
+                <span className="font-medium">-{cancellationFee.toFixed(8)} sBTC</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold pt-1 border-t">
+                <span>You'd Receive:</span>
+                <span className="text-brand-pink">{amountAfterFee.toFixed(8)} sBTC</span>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Actions Card */}
       <Card>
         <CardHeader>
@@ -280,12 +398,11 @@ export default function StreamDetailPage() {
           {isSender && stream.status === StreamStatus.ACTIVE && (
             <Button
               variant="destructive"
-              onClick={handleCancel}
-              disabled={isCancelling}
+              onClick={() => setShowCancelModal(true)}
               className="w-full"
               size="lg"
             >
-              {isCancelling ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
+              <XCircle className="h-4 w-4 mr-2" />
               Cancel Stream
             </Button>
           )}
@@ -334,6 +451,42 @@ export default function StreamDetailPage() {
           </Link>
         </Button>
       </div>
+
+      {/* Modals */}
+      {stream && (
+        <>
+          <CancelStreamModal
+            isOpen={showCancelModal}
+            onClose={() => setShowCancelModal(false)}
+            stream={{
+              id: streamId?.toString() || "0",
+              sender: stream.sender,
+              recipient: stream.recipient,
+              totalAmount: microToDisplay(stream.amount),
+              vestedAmount: microToDisplay(stream.vestedAmount),
+              withdrawn: microToDisplay(stream.withdrawn),
+              status: stream.status,
+            }}
+            onConfirm={handleCancelConfirm}
+            isLoading={isCancelling}
+          />
+
+          <TransferObligationNFTModal
+            isOpen={showTransferNFTModal}
+            onClose={() => setShowTransferNFTModal(false)}
+            streamId={streamId?.toString() || "0"}
+            obligationTokenId={streamId?.toString() || "0"}
+            currentAmount={microToDisplay(stream.amount)}
+            onSuccess={() => {
+              toast.success("Obligation NFT transferred!", {
+                description: "New owner must call update-stream-sender",
+              });
+              setShowTransferNFTModal(false);
+              setTimeout(() => refetch(), 3000);
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }

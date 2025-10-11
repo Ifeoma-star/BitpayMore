@@ -6,27 +6,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Image as ImageIcon,
   Search,
   ExternalLink,
   Loader2,
   Gift,
-  Share2,
+  Lock,
+  Shuffle,
+  Info,
+  Shield,
+  ArrowRight
 } from "lucide-react";
 import walletService from "@/lib/wallet/wallet-service";
-import { useUserStreams } from "@/hooks/use-bitpay-read";
-import { useMintStreamNFT } from "@/hooks/use-bitpay-write";
-import { microToDisplay, StreamStatus, STACKS_API_URL } from "@/lib/contracts/config";
-import { toast } from "sonner";
+import { useUserStreamsByRole } from "@/hooks/use-user-streams";
+import { microToDisplay, StreamStatus } from "@/lib/contracts/config";
+import { TransferObligationNFTModal } from "@/components/dashboard/modals/TransferObligationNFTModal";
 
 export default function NFTGalleryPage() {
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [mintingStreamId, setMintingStreamId] = useState<bigint | null>(null);
+  const [selectedStreamForTransfer, setSelectedStreamForTransfer] = useState<any>(null);
 
-  const { data: streams, isLoading, refetch } = useUserStreams(userAddress);
-  const { write: mintNFT, isLoading: isMinting, txId } = useMintStreamNFT();
+  const {
+    outgoingStreams,
+    incomingStreams,
+    isLoading,
+    refetch
+  } = useUserStreamsByRole(userAddress);
 
   useEffect(() => {
     const loadWallet = async () => {
@@ -36,38 +45,21 @@ export default function NFTGalleryPage() {
     loadWallet();
   }, []);
 
-  const handleMintNFT = async (streamId: bigint, recipient: string) => {
-    setMintingStreamId(streamId);
-    const txId = await mintNFT(streamId, recipient);
-    if (txId) {
-      toast.success("NFT Minting Initiated!", {
-        description: "Transaction submitted to blockchain",
-      });
-      setTimeout(() => {
-        refetch();
-        setMintingStreamId(null);
-      }, 3000);
-    } else {
-      setMintingStreamId(null);
-    }
-  };
-
-  // Filter streams that can have NFTs (completed or active)
-  const nftEligibleStreams = streams?.filter(
-    (s) => s.status === StreamStatus.COMPLETED || s.status === StreamStatus.ACTIVE
+  // Filter by search
+  const filteredRecipientNFTs = incomingStreams.filter((stream) =>
+    stream.id.toString().includes(searchTerm) ||
+    stream.sender.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Filter by search
-  const filteredStreams = nftEligibleStreams?.filter((stream) =>
+  const filteredObligationNFTs = outgoingStreams.filter((stream) =>
     stream.id.toString().includes(searchTerm) ||
-    stream.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    stream.sender.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+    stream.recipient.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  if (isLoading && !streams) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-pink" />
         <p className="ml-3 text-muted-foreground">Loading NFT gallery...</p>
       </div>
     );
@@ -78,29 +70,24 @@ export default function NFTGalleryPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Stream NFT Gallery</h1>
+          <h1 className="text-3xl font-bold">NFT Gallery</h1>
           <p className="text-muted-foreground">
-            Mint and manage NFTs for your payment streams
+            Manage your stream NFTs - receipts and payment obligations
           </p>
         </div>
       </div>
 
-      {/* Info Card */}
-      <Card className="border-brand-pink/20 bg-brand-pink/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gift className="h-5 w-5 text-brand-pink" />
-            About Stream NFTs
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Stream NFTs are SIP-009 compliant tokens that represent ownership of a payment stream.
-            NFTs can be minted for active or completed streams and can be transferred to other users.
-            Each NFT contains metadata about the stream including amount, duration, and participants.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Dual NFT System Explanation */}
+      <Alert className="border-brand-teal/30 bg-brand-teal/5">
+        <Info className="h-4 w-4 text-brand-teal" />
+        <AlertDescription>
+          <p className="font-medium mb-2 text-brand-teal">Dual NFT System</p>
+          <div className="text-sm space-y-1">
+            <p><strong>Recipient NFTs (Soul-bound):</strong> Non-transferable proof of payment receipt. Can't be sold or transferred.</p>
+            <p><strong>Obligation NFTs (Transferable):</strong> Represents payment obligation. Can be transferred for invoice factoring.</p>
+          </div>
+        </AlertDescription>
+      </Alert>
 
       {/* Search */}
       <Card>
@@ -117,149 +104,290 @@ export default function NFTGalleryPage() {
         </CardHeader>
       </Card>
 
-      {/* NFT Grid */}
-      {filteredStreams.length === 0 ? (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center text-muted-foreground">
-              <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">No NFT-eligible streams found</p>
-              <p className="text-sm">
-                Complete a stream or create a new one to mint NFTs
+      {/* Tabs for Recipient vs Obligation NFTs */}
+      <Tabs defaultValue="recipient" className="space-y-6">
+        <TabsList className="border-b w-full justify-start rounded-none h-auto p-0 bg-transparent">
+          <TabsTrigger
+            value="recipient"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-teal data-[state=active]:bg-transparent"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            Recipient NFTs ({incomingStreams.length})
+          </TabsTrigger>
+          <TabsTrigger
+            value="obligation"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-pink data-[state=active]:bg-transparent"
+          >
+            <Shuffle className="h-4 w-4 mr-2" />
+            Obligation NFTs ({outgoingStreams.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Recipient NFTs Tab (Soul-bound) */}
+        <TabsContent value="recipient" className="space-y-6">
+          <Card className="border-brand-teal/20 bg-brand-teal/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-brand-teal">
+                <Lock className="h-5 w-5" />
+                Soul-Bound Receipt NFTs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                These NFTs represent proof that you are receiving a payment stream. They are <strong>non-transferable</strong> (soul-bound) and serve as permanent receipts of income.
               </p>
-              <Button asChild className="mt-4 bg-brand-pink hover:bg-brand-pink/90 text-white">
-                <Link href="/dashboard/streams/create">Create Stream</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStreams.map((stream) => {
-            const isRecipient = userAddress?.toLowerCase() === stream.recipient.toLowerCase();
-            const isMintingThis = mintingStreamId?.toString() === stream.id.toString();
+            </CardContent>
+          </Card>
 
-            return (
-              <Card key={stream.id.toString()} className="overflow-hidden hover:border-brand-pink/50 transition-colors">
-                {/* NFT Image/Placeholder */}
-                <div className="relative h-48 bg-gradient-to-br from-brand-pink/20 via-brand-teal/20 to-purple-500/20 flex items-center justify-center">
-                  <div className="text-center">
-                    <ImageIcon className="h-16 w-16 mx-auto text-brand-pink/50 mb-2" />
-                    <p className="text-2xl font-bold text-foreground/80">#{stream.id.toString()}</p>
+          {filteredRecipientNFTs.length === 0 ? (
+            <Card className="border-dashed border-brand-teal/30">
+              <CardContent className="py-16">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brand-teal/10 mb-4">
+                    <Shield className="h-10 w-10 text-brand-teal" />
                   </div>
-                  <Badge className="absolute top-3 right-3">
-                    {stream.status === StreamStatus.COMPLETED ? "Completed" : "Active"}
-                  </Badge>
+                  <h3 className="text-lg font-semibold mb-2">No Recipient NFTs Yet</h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                    When someone creates a payment stream to you, you'll automatically receive a soul-bound receipt NFT. These NFTs serve as permanent proof of income and cannot be transferred.
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Lock className="h-4 w-4" />
+                    <span>Soul-bound • Non-transferable</span>
+                  </div>
                 </div>
-
-                <CardHeader>
-                  <CardTitle className="text-lg">Stream #{stream.id.toString()}</CardTitle>
-                  <CardDescription className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>From:</span>
-                      <span className="font-mono">{stream.sender.slice(0, 8)}...</span>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredRecipientNFTs.map((stream) => (
+                <Card key={stream.id.toString()} className="overflow-hidden hover:border-brand-teal/50 transition-colors">
+                  {/* NFT Visualization */}
+                  <div className="relative h-48 bg-brand-teal/10 flex items-center justify-center">
+                    <div className="text-center">
+                      <Shield className="h-16 w-16 mx-auto text-brand-teal/50 mb-2" />
+                      <p className="text-2xl font-bold">#{stream.id.toString()}</p>
                     </div>
-                    <div className="flex justify-between text-xs">
-                      <span>To:</span>
-                      <span className="font-mono">{stream.recipient.slice(0, 8)}...</span>
-                    </div>
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Stream Stats */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Amount</p>
-                      <p className="font-semibold">{microToDisplay(stream.amount)} sBTC</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Vested</p>
-                      <p className="font-semibold text-brand-teal">
-                        {microToDisplay(stream.vestedAmount)} sBTC
-                      </p>
-                    </div>
+                    <Badge className="absolute top-3 right-3 bg-brand-teal">
+                      <Lock className="h-3 w-3 mr-1" />
+                      Soul-Bound
+                    </Badge>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleMintNFT(stream.id, stream.recipient)}
-                      disabled={isMinting || isMintingThis}
-                      className="flex-1 bg-brand-pink hover:bg-brand-pink/90"
-                      size="sm"
-                    >
-                      {isMintingThis ? (
-                        <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Minting...</>
-                      ) : (
-                        <><Gift className="h-4 w-4 mr-2" /> Mint NFT</>
-                      )}
-                    </Button>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Receipt NFT #{stream.id.toString()}</CardTitle>
+                    <CardDescription className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span>From:</span>
+                        <span className="font-mono">{stream.sender.slice(0, 8)}...{stream.sender.slice(-4)}</span>
+                      </div>
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    {/* Stream Stats */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Total Amount</p>
+                        <p className="font-semibold">{microToDisplay(stream.amount)} sBTC</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Received</p>
+                        <p className="font-semibold text-brand-teal">
+                          {microToDisplay(stream.vestedAmount)} sBTC
+                        </p>
+                      </div>
+                    </div>
+
+                    <Alert>
+                      <Lock className="h-4 w-4 text-brand-teal" />
+                      <AlertDescription className="text-xs">
+                        Non-transferable. Permanent proof of receipt.
+                      </AlertDescription>
+                    </Alert>
+
+                    {/* Actions */}
                     <Button
                       variant="outline"
                       size="sm"
+                      className="w-full border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
                       asChild
                     >
                       <Link href={`/dashboard/streams/${stream.id}`}>
-                        View <ExternalLink className="h-4 w-4 ml-1" />
+                        View Stream <ExternalLink className="h-4 w-4 ml-1" />
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Obligation NFTs Tab (Transferable) */}
+        <TabsContent value="obligation" className="space-y-6">
+          <Card className="border-brand-pink/20 bg-brand-pink/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-brand-pink">
+                <Shuffle className="h-5 w-5" />
+                Transferable Obligation NFTs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                These NFTs represent payment obligations for streams you're sending. They are <strong>transferable</strong> and can be sold for invoice factoring or assigned to others.
+              </p>
+            </CardContent>
+          </Card>
+
+          {filteredObligationNFTs.length === 0 ? (
+            <Card className="border-dashed border-brand-pink/30">
+              <CardContent className="py-16">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brand-pink/10 mb-4">
+                    <Shuffle className="h-10 w-10 text-brand-pink" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No Obligation NFTs Yet</h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                    When you create a payment stream, you'll receive an obligation NFT representing the payment commitment. These NFTs are transferable and can be sold for invoice factoring.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4">
+                    <Button asChild className="bg-brand-pink hover:bg-brand-pink/90 text-white">
+                      <Link href="/dashboard/streams/create">
+                        <ArrowRight className="mr-2 h-4 w-4" />
+                        Create Stream
                       </Link>
                     </Button>
                   </div>
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Shuffle className="h-4 w-4" />
+                    <span>Transferable • Invoice Factoring</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredObligationNFTs.map((stream) => (
+                <Card key={stream.id.toString()} className="overflow-hidden hover:border-brand-pink/50 transition-colors">
+                  {/* NFT Visualization */}
+                  <div className="relative h-48 bg-brand-pink/10 flex items-center justify-center">
+                    <div className="text-center">
+                      <Gift className="h-16 w-16 mx-auto text-brand-pink/50 mb-2" />
+                      <p className="text-2xl font-bold">#{stream.id.toString()}</p>
+                    </div>
+                    <Badge className="absolute top-3 right-3 bg-brand-pink">
+                      <Shuffle className="h-3 w-3 mr-1" />
+                      Transferable
+                    </Badge>
+                    {stream.status === StreamStatus.ACTIVE && (
+                      <Badge variant="secondary" className="absolute top-3 left-3">
+                        Active
+                      </Badge>
+                    )}
+                  </div>
 
-                  {/* Explorer Link */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-xs"
-                    asChild
-                  >
-                    <a
-                      href={`${STACKS_API_URL.replace("api", "explorer")}/address/${stream.sender}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View on Explorer <ExternalLink className="h-3 w-3 ml-1" />
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  <CardHeader>
+                    <CardTitle className="text-lg">Obligation NFT #{stream.id.toString()}</CardTitle>
+                    <CardDescription className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span>To:</span>
+                        <span className="font-mono">{stream.recipient.slice(0, 8)}...{stream.recipient.slice(-4)}</span>
+                      </div>
+                    </CardDescription>
+                  </CardHeader>
 
-      {/* Stats Footer */}
-      {filteredStreams.length > 0 && (
-        <Card>
-          <CardContent className="py-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-brand-pink">{filteredStreams.length}</p>
-                <p className="text-xs text-muted-foreground">NFT-Eligible Streams</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-brand-teal">
-                  {filteredStreams.filter(s => s.status === StreamStatus.COMPLETED).length}
-                </p>
-                <p className="text-xs text-muted-foreground">Completed</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-500">
-                  {filteredStreams.filter(s => s.status === StreamStatus.ACTIVE).length}
-                </p>
-                <p className="text-xs text-muted-foreground">Active</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {microToDisplay(
-                    filteredStreams.reduce((sum, s) => sum + s.amount, BigInt(0))
-                  )}
-                </p>
-                <p className="text-xs text-muted-foreground">Total Value (sBTC)</p>
-              </div>
+                  <CardContent className="space-y-4">
+                    {/* Stream Stats */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Obligation</p>
+                        <p className="font-semibold">{microToDisplay(stream.amount)} sBTC</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Paid Out</p>
+                        <p className="font-semibold text-brand-pink">
+                          {microToDisplay(stream.vestedAmount)} sBTC
+                        </p>
+                      </div>
+                    </div>
+
+                    <Alert>
+                      <Shuffle className="h-4 w-4 text-brand-pink" />
+                      <AlertDescription className="text-xs">
+                        Can be transferred for invoice factoring
+                      </AlertDescription>
+                    </Alert>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-brand-pink hover:bg-brand-pink/90 text-white"
+                        onClick={() => setSelectedStreamForTransfer(stream)}
+                        disabled={stream.status !== StreamStatus.ACTIVE}
+                      >
+                        <Shuffle className="h-4 w-4 mr-2" />
+                        Transfer NFT
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <Link href={`/dashboard/streams/${stream.id}`}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Stats Summary */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold text-brand-teal">{incomingStreams.length}</p>
+              <p className="text-xs text-muted-foreground">Recipient NFTs</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-brand-pink">{outgoingStreams.length}</p>
+              <p className="text-xs text-muted-foreground">Obligation NFTs</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">
+                {microToDisplay(
+                  incomingStreams.reduce((sum, s) => sum + s.vestedAmount, BigInt(0))
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">Total Received (sBTC)</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">
+                {microToDisplay(
+                  outgoingStreams.reduce((sum, s) => sum + s.amount, BigInt(0))
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">Total Obligations (sBTC)</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Transfer Obligation NFT Modal */}
+      {selectedStreamForTransfer && (
+        <TransferObligationNFTModal
+          isOpen={!!selectedStreamForTransfer}
+          onClose={() => setSelectedStreamForTransfer(null)}
+          streamId={selectedStreamForTransfer.id.toString()}
+          obligationTokenId={selectedStreamForTransfer.id.toString()} // TODO: Get actual obligation token ID
+          currentAmount={microToDisplay(selectedStreamForTransfer.amount)}
+        />
       )}
     </div>
   );

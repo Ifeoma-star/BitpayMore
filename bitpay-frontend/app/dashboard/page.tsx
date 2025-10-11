@@ -4,15 +4,19 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowUpRight,
+  ArrowDownLeft,
   Plus,
   TrendingUp,
   Wallet,
   Activity,
   Bitcoin,
   RefreshCw,
-  Loader2
+  Loader2,
+  Send,
+  Download
 } from "lucide-react";
 import {
   LineChart,
@@ -26,7 +30,7 @@ import {
 import { motion } from "framer-motion";
 import Link from "next/link";
 import walletService from "@/lib/wallet/wallet-service";
-import { useUserStreams } from "@/hooks/use-bitpay-read";
+import { useUserStreamsByRole } from "@/hooks/use-user-streams";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { microToDisplay, StreamStatus } from "@/lib/contracts/config";
 
@@ -35,10 +39,20 @@ export default function DashboardPage() {
   const [walletBalance, setWalletBalance] = useState<bigint>(BigInt(0));
 
   // Get current block height
-  const { blockHeight, isLoading: blockLoading } = useBlockHeight(30000); // Poll every 30 seconds
+  const { blockHeight, isLoading: blockLoading } = useBlockHeight(30000);
 
-  // Get user's streams from contract
-  const { data: streams, isLoading: streamsLoading, refetch } = useUserStreams(userAddress);
+  // Get user's streams split by role
+  const {
+    outgoingStreams,
+    incomingStreams,
+    hasOutgoing,
+    hasIncoming,
+    totalOutgoing,
+    totalIncoming,
+    allStreams,
+    isLoading: streamsLoading,
+    refetch
+  } = useUserStreamsByRole(userAddress);
 
   useEffect(() => {
     const loadWalletData = async () => {
@@ -58,12 +72,16 @@ export default function DashboardPage() {
     loadWalletData();
   }, []);
 
-  // Calculate stats from blockchain data
-  const activeStreams = streams?.filter(s => s.status === StreamStatus.ACTIVE).length || 0;
-  const completedStreams = streams?.filter(s => s.status === StreamStatus.COMPLETED).length || 0;
-  const totalStreamed = streams?.reduce((sum, stream) => sum + stream.vestedAmount, BigInt(0)) || BigInt(0);
-  const totalVolume = streams?.reduce((sum, stream) => sum + stream.amount, BigInt(0)) || BigInt(0);
-  const availableToWithdraw = streams?.reduce((sum, stream) => sum + stream.withdrawableAmount, BigInt(0)) || BigInt(0);
+  // Calculate combined stats
+  const activeStreams = allStreams?.filter(s => s.status === StreamStatus.ACTIVE).length || 0;
+  const completedStreams = allStreams?.filter(s => s.status === StreamStatus.COMPLETED).length || 0;
+  const totalStreamed = allStreams?.reduce((sum, stream) => sum + stream.vestedAmount, BigInt(0)) || BigInt(0);
+  const totalVolume = allStreams?.reduce((sum, stream) => sum + stream.amount, BigInt(0)) || BigInt(0);
+
+  // Calculate role-specific stats
+  const totalSending = outgoingStreams.reduce((sum, s) => sum + s.amount, BigInt(0));
+  const totalReceiving = incomingStreams.reduce((sum, s) => sum + s.vestedAmount, BigInt(0));
+  const availableToWithdraw = incomingStreams.reduce((sum, s) => sum + s.withdrawableAmount, BigInt(0));
 
   const stats = [
     {
@@ -76,7 +94,7 @@ export default function DashboardPage() {
     {
       title: "Active Streams",
       value: activeStreams.toString(),
-      change: `${streams?.length || 0} Total`,
+      change: `${allStreams?.length || 0} Total`,
       changeType: "neutral" as const,
       icon: Activity,
     },
@@ -96,9 +114,9 @@ export default function DashboardPage() {
     },
   ];
 
-  // Chart data based on actual vesting progress
-  const chartData = streams && streams.length > 0 ?
-    streams.slice(0, 5).map((stream, i) => ({
+  // Chart data
+  const chartData = allStreams && allStreams.length > 0 ?
+    allStreams.slice(0, 5).map((stream, i) => ({
       date: `Stream ${i + 1}`,
       balance: Number(microToDisplay(stream.vestedAmount)),
     })) : [];
@@ -108,7 +126,7 @@ export default function DashboardPage() {
   if (loading && !blockHeight) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-pink" />
         <p className="ml-3 text-muted-foreground">Loading blockchain data...</p>
       </div>
     );
@@ -124,7 +142,7 @@ export default function DashboardPage() {
             Welcome back! Here's an overview of your Bitcoin streaming activity.
           </p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
             variant="outline"
@@ -180,157 +198,304 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Recent Activity & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Latest Bitcoin streaming activity and transactions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {streams && streams.length > 0 ? (
-                streams.slice(0, 5).map((stream) => (
-                  <Link
-                    key={stream.id.toString()}
-                    href={`/dashboard/streams/${stream.id}`}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:border-brand-pink/50 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-brand-pink/10 rounded-full">
-                        <Activity className="h-4 w-4 text-brand-pink" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          Stream #{stream.id.toString()}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {stream.recipient.slice(0, 8)}...{stream.recipient.slice(-6)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-brand-teal">
-                        {microToDisplay(stream.vestedAmount)} sBTC
-                      </p>
-                      <Badge variant={stream.status === StreamStatus.ACTIVE ? 'default' : 'secondary'} className="text-xs">
-                        {stream.status}
-                      </Badge>
-                    </div>
-                  </Link>
-                ))
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No streams yet</p>
-                  <p className="text-xs">Create your first stream to see activity</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>
-              Manage your Bitcoin streams and settings
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Button 
-                className="w-full justify-start bg-brand-pink hover:bg-brand-pink/90 text-white"
-                asChild
-              >
-                <Link href="/dashboard/streams/create">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create New Stream
-                </Link>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
-                asChild
-              >
-                <Link href="/dashboard/streams">
-                  <Activity className="mr-2 h-4 w-4" />
-                  Manage Streams
-                </Link>
-              </Button>
-              {userAddress && (
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-1">Connected Wallet</p>
-                  <p className="text-sm font-mono">{userAddress.slice(0, 12)}...{userAddress.slice(-8)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Block Height: {blockHeight || '...'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Streaming Overview Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Streaming Overview</CardTitle>
-          <CardDescription>
-            Your Bitcoin streaming trends over time
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {chartData.some(d => d.balance > 0) ? (
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="date" 
-                    className="text-xs"
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    className="text-xs"
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--background))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                    }}
-                    formatter={(value: number) => [`${value.toFixed(6)} sBTC`, 'Streamed']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="balance" 
-                    stroke="#e91e63" 
-                    strokeWidth={2}
-                    dot={{ fill: '#e91e63', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: '#e91e63', strokeWidth: 2, fill: '#ffffff' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <TrendingUp className="h-8 w-8 mx-auto mb-2" />
-                <p>No streaming data available</p>
-                <p className="text-sm">Create your first stream to see trends</p>
-              </div>
-            </div>
+      {/* Tabbed Sections */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="border-b w-full justify-start rounded-none h-auto p-0 bg-transparent">
+          <TabsTrigger
+            value="overview"
+            className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-pink data-[state=active]:bg-transparent"
+          >
+            Overview
+          </TabsTrigger>
+          {hasOutgoing && (
+            <TabsTrigger
+              value="sending"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-pink data-[state=active]:bg-transparent"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Sending ({totalOutgoing})
+            </TabsTrigger>
           )}
-        </CardContent>
-      </Card>
+          {hasIncoming && (
+            <TabsTrigger
+              value="receiving"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-pink data-[state=active]:bg-transparent"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Receiving ({totalIncoming})
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>
+                  Latest Bitcoin streaming activity and transactions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {allStreams && allStreams.length > 0 ? (
+                    allStreams.slice(0, 5).map((stream) => (
+                      <Link
+                        key={stream.id.toString()}
+                        href={`/dashboard/streams/${stream.id}`}
+                        className="flex items-center justify-between p-3 rounded-lg border hover:border-brand-pink/50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-brand-pink/10 rounded-full">
+                            <Activity className="h-4 w-4 text-brand-pink" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              Stream #{stream.id.toString()}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {stream.recipient.slice(0, 8)}...{stream.recipient.slice(-6)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-brand-teal">
+                            {microToDisplay(stream.vestedAmount)} sBTC
+                          </p>
+                          <Badge variant={stream.status === StreamStatus.ACTIVE ? 'default' : 'secondary'} className="text-xs">
+                            {stream.status}
+                          </Badge>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No streams yet</p>
+                      <p className="text-xs">Create your first stream to see activity</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+                <CardDescription>
+                  Manage your Bitcoin streams and settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Button
+                    className="w-full justify-start bg-brand-pink hover:bg-brand-pink/90 text-white"
+                    asChild
+                  >
+                    <Link href="/dashboard/streams/create">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create New Stream
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
+                    asChild
+                  >
+                    <Link href="/dashboard/streams">
+                      <Activity className="mr-2 h-4 w-4" />
+                      Manage Streams
+                    </Link>
+                  </Button>
+                  {userAddress && (
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Connected Wallet</p>
+                      <p className="text-sm font-mono">{userAddress.slice(0, 12)}...{userAddress.slice(-8)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Block Height: {blockHeight || '...'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Streaming Overview Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Streaming Overview</CardTitle>
+              <CardDescription>
+                Your Bitcoin streaming trends over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {chartData.some(d => d.balance > 0) ? (
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis
+                        dataKey="date"
+                        className="text-xs"
+                        tickLine={false}
+                      />
+                      <YAxis
+                        className="text-xs"
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number) => [`${value.toFixed(6)} sBTC`, 'Streamed']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="balance"
+                        stroke="#e91e63"
+                        strokeWidth={2}
+                        dot={{ fill: '#e91e63', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6, stroke: '#e91e63', strokeWidth: 2, fill: '#ffffff' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <TrendingUp className="h-8 w-8 mx-auto mb-2" />
+                    <p>No streaming data available</p>
+                    <p className="text-sm">Create your first stream to see trends</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Sending Tab */}
+        {hasOutgoing && (
+          <TabsContent value="sending" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Streams I'm Sending</CardTitle>
+                    <CardDescription>
+                      Manage outgoing Bitcoin streams and obligation NFTs
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-brand-pink">{microToDisplay(totalSending)} sBTC</p>
+                    <p className="text-xs text-muted-foreground">Total locked</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {outgoingStreams.map((stream) => (
+                    <Link
+                      key={stream.id.toString()}
+                      href={`/dashboard/streams/${stream.id}`}
+                      className="flex items-center justify-between p-4 rounded-lg border hover:border-brand-pink/50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-brand-pink/10 rounded-full">
+                          <ArrowUpRight className="h-5 w-5 text-brand-pink" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            Stream #{stream.id.toString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            To: {stream.recipient.slice(0, 8)}...{stream.recipient.slice(-6)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{microToDisplay(stream.amount)} sBTC</p>
+                        <Badge variant={stream.status === StreamStatus.ACTIVE ? 'default' : 'secondary'} className="text-xs">
+                          {stream.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* Receiving Tab */}
+        {hasIncoming && (
+          <TabsContent value="receiving" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Streams I'm Receiving</CardTitle>
+                    <CardDescription>
+                      View incoming Bitcoin streams and withdraw funds
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-brand-teal">{microToDisplay(availableToWithdraw)} sBTC</p>
+                    <p className="text-xs text-muted-foreground">Available to withdraw</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {availableToWithdraw > BigInt(0) && (
+                    <Button className="w-full bg-brand-teal hover:bg-brand-teal/90 text-white">
+                      <Wallet className="mr-2 h-4 w-4" />
+                      Withdraw All ({microToDisplay(availableToWithdraw)} sBTC)
+                    </Button>
+                  )}
+
+                  {incomingStreams.map((stream) => (
+                    <Link
+                      key={stream.id.toString()}
+                      href={`/dashboard/streams/${stream.id}`}
+                      className="flex items-center justify-between p-4 rounded-lg border hover:border-brand-teal/50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-brand-teal/10 rounded-full">
+                          <ArrowDownLeft className="h-5 w-5 text-brand-teal" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            Stream #{stream.id.toString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            From: {stream.sender.slice(0, 8)}...{stream.sender.slice(-6)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-brand-teal">
+                          {microToDisplay(stream.withdrawableAmount)} sBTC
+                        </p>
+                        <Badge variant={stream.status === StreamStatus.ACTIVE ? 'default' : 'secondary'} className="text-xs">
+                          {stream.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
 
       {/* Getting Started Card (for new users) */}
-      {(!streams || streams.length === 0) && userAddress && (
+      {(!allStreams || allStreams.length === 0) && userAddress && (
         <Card className="border-brand-pink/20 bg-brand-pink/5">
           <CardHeader>
             <CardTitle className="text-brand-pink">🚀 Get Started with BitPay</CardTitle>

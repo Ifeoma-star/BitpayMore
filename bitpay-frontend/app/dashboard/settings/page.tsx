@@ -21,6 +21,9 @@ import {
   Copy,
   Check,
   ExternalLink,
+  Image as ImageIcon,
+  UserCog,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import walletService from "@/lib/wallet/wallet-service";
@@ -31,6 +34,9 @@ export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [streamNotifications, setStreamNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showNFTMetadata, setShowNFTMetadata] = useState(true);
+  const [nftGridSize, setNftGridSize] = useState("medium");
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -75,7 +81,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 lg:w-auto">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
@@ -88,10 +94,20 @@ export default function SettingsPage() {
             <Bell className="h-4 w-4" />
             <span className="hidden sm:inline">Notifications</span>
           </TabsTrigger>
+          <TabsTrigger value="nft-preferences" className="gap-2">
+            <ImageIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">NFT</span>
+          </TabsTrigger>
           <TabsTrigger value="security" className="gap-2">
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">Security</span>
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="admin" className="gap-2">
+              <UserCog className="h-4 w-4" />
+              <span className="hidden sm:inline">Admin</span>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Profile Tab */}
@@ -438,6 +454,192 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* NFT Preferences Tab */}
+        <TabsContent value="nft-preferences" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" />
+                NFT Display Settings
+              </CardTitle>
+              <CardDescription>
+                Customize how your stream NFTs are displayed
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>Show NFT Metadata</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display token ID, owner, and other details on NFT cards
+                  </p>
+                </div>
+                <Switch
+                  checked={showNFTMetadata}
+                  onCheckedChange={setShowNFTMetadata}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label>Grid Size</Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Choose how many NFTs to display per row
+                </p>
+                <select
+                  className="w-full px-3 py-2 border rounded-md bg-background"
+                  value={nftGridSize}
+                  onChange={(e) => setNftGridSize(e.target.value)}
+                >
+                  <option value="small">Small (4 columns)</option>
+                  <option value="medium">Medium (3 columns)</option>
+                  <option value="large">Large (2 columns)</option>
+                </select>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>Auto-refresh NFTs</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically update NFT status when streams change
+                  </p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>Show Transfer History</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display obligation NFT transfer history on detail page
+                  </p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-brand-teal/20 bg-brand-teal/5">
+            <CardHeader>
+              <CardTitle className="text-brand-teal">Dual NFT System</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-start gap-3">
+                <Shield className="h-5 w-5 text-brand-teal mt-0.5" />
+                <div>
+                  <p className="font-medium">Recipient NFTs (Soul-bound)</p>
+                  <p className="text-muted-foreground">Non-transferable proof of payment receipt</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <ImageIcon className="h-5 w-5 text-brand-pink mt-0.5" />
+                <div>
+                  <p className="font-medium">Obligation NFTs (Transferable)</p>
+                  <p className="text-muted-foreground">Can be transferred for invoice factoring</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Admin Tab */}
+        {isAdmin && (
+          <TabsContent value="admin" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserCog className="h-5 w-5" />
+                  Treasury Administration
+                </CardTitle>
+                <CardDescription>
+                  Manage treasury settings and protocol parameters
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Admin Status</p>
+                    <p className="text-xs text-muted-foreground">
+                      You have full treasury admin permissions
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-brand-pink animate-pulse" />
+                    <span className="text-sm text-brand-pink">Admin</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label>Quick Actions</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => window.location.href = '/dashboard/treasury'}
+                    >
+                      <SettingsIcon className="h-4 w-4 mr-2" />
+                      Manage Treasury
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => window.location.href = '/dashboard/treasury?tab=access-control'}
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Access Control
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label>Protocol Settings</Label>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Current Cancellation Fee</span>
+                      <span className="font-medium">1% (100 BPS)</span>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Treasury Balance</span>
+                      <span className="font-medium">0.00 sBTC</span>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-muted-foreground">Total Fees Collected</span>
+                      <span className="font-medium">0.00 sBTC</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-amber-600" />
+                  Admin Responsibilities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-200">
+                  <li>• Manage treasury fee parameters responsibly</li>
+                  <li>• Only authorize trusted contracts for vault access</li>
+                  <li>• Regularly review access control permissions</li>
+                  <li>• Use two-step admin transfer for security</li>
+                  <li>• Monitor fee collection and withdrawals</li>
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

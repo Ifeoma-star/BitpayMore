@@ -21,13 +21,13 @@ path = 'contracts/bitpay-access-control.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-sbtc-helper]
-path = 'contracts/bitpay-sbtc-helper.clar'
+[contracts.bitpay-core]
+path = 'contracts/bitpay-core.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-treasury]
-path = 'contracts/bitpay-treasury.clar'
+[contracts.bitpay-marketplace]
+path = 'contracts/bitpay-marketplace.clar'
 clarity_version = 3
 epoch = 3.1
 
@@ -41,8 +41,13 @@ path = 'contracts/bitpay-obligation-nft.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-core]
-path = 'contracts/bitpay-core.clar'
+[contracts.bitpay-sbtc-helper]
+path = 'contracts/bitpay-sbtc-helper.clar'
+clarity_version = 3
+epoch = 3.1
+
+[contracts.bitpay-treasury]
+path = 'contracts/bitpay-treasury.clar'
 clarity_version = 3
 epoch = 3.1
 [repl.analysis]
