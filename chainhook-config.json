@@ -1,70 +1,294 @@
 {
   "chainhooks": [
     {
-      "uuid": "bitpay-stream-events",
-      "name": "BitPay Stream Events",
+      "uuid": "bitpay-core-print-events",
+      "name": "BitPay Core Stream Events",
       "version": 1,
       "chain": "stacks",
       "networks": {
         "testnet": {
           "if_this": {
-            "scope": "contract_call",
-            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-core",
-            "method": ["create-stream", "withdraw-from-stream", "cancel-stream"]
+            "scope": "print_event",
+            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-core-v2",
+            "contains": [
+              "stream-created",
+              "stream-withdrawal",
+              "stream-cancelled",
+              "stream-sender-updated"
+            ]
           },
           "then_that": {
             "http_post": {
-              "url": "https://your-domain.com/api/webhooks/chainhook",
-              "authorization_header": "Bearer YOUR_SECRET_TOKEN_HERE"
+              "url": "http://localhost:3000/api/webhooks/chainhook/streams",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
             }
-          }
+          },
+          "start_block": 1,
+          "decode_clarity_values": true
         },
         "mainnet": {
           "if_this": {
-            "scope": "contract_call",
-            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-core",
-            "method": ["create-stream", "withdraw-from-stream", "cancel-stream"]
+            "scope": "print_event",
+            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-core-v2",
+            "contains": [
+              "stream-created",
+              "stream-withdrawal",
+              "stream-cancelled",
+              "stream-sender-updated"
+            ]
           },
           "then_that": {
             "http_post": {
-              "url": "https://your-production-domain.com/api/webhooks/chainhook",
-              "authorization_header": "Bearer YOUR_PRODUCTION_SECRET_TOKEN_HERE"
+              "url": "https://your-production-domain.com/api/webhooks/chainhook/streams",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
+            }
+          },
+          "decode_clarity_values": true
+        }
+      }
+    },
+    {
+      "uuid": "bitpay-marketplace-print-events",
+      "name": "BitPay Marketplace Events",
+      "version": 1,
+      "chain": "stacks",
+      "networks": {
+        "testnet": {
+          "if_this": {
+            "scope": "print_event",
+            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-marketplace-v2",
+            "contains": [
+              "direct-purchase-completed",
+              "purchase-initiated",
+              "gateway-purchase-completed",
+              "purchase-expired",
+              "backend-authorized",
+              "backend-deauthorized",
+              "marketplace-fee-updated"
+            ]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "http://localhost:3000/api/webhooks/chainhook/marketplace",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
+            }
+          },
+          "start_block": 1,
+          "decode_clarity_values": true
+        },
+        "mainnet": {
+          "if_this": {
+            "scope": "print_event",
+            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-marketplace-v2",
+            "contains": [
+              "direct-purchase-completed",
+              "purchase-initiated",
+              "gateway-purchase-completed",
+              "purchase-expired",
+              "backend-authorized",
+              "backend-deauthorized",
+              "marketplace-fee-updated"
+            ]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "https://your-production-domain.com/api/webhooks/chainhook/marketplace",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
+            }
+          },
+          "decode_clarity_values": true
+        }
+      }
+    },
+    {
+      "uuid": "bitpay-treasury-print-events",
+      "name": "BitPay Treasury Multi-Sig Events",
+      "version": 1,
+      "chain": "stacks",
+      "networks": {
+        "testnet": {
+          "if_this": {
+            "scope": "print_event",
+            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-treasury-v2",
+            "contains": [
+              "cancellation-fee-collected",
+              "marketplace-fee-collected",
+              "admin-transfer-proposed",
+              "admin-transfer-completed",
+              "admin-transfer-cancelled",
+              "withdrawal-proposed",
+              "withdrawal-approved",
+              "withdrawal-executed",
+              "add-admin-proposed",
+              "remove-admin-proposed",
+              "admin-proposal-approved",
+              "admin-proposal-executed"
+            ]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "http://localhost:3000/api/webhooks/chainhook/treasury",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
+            }
+          },
+          "start_block": 1,
+          "decode_clarity_values": true
+        },
+        "mainnet": {
+          "if_this": {
+            "scope": "print_event",
+            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-treasury-v2",
+            "contains": [
+              "cancellation-fee-collected",
+              "marketplace-fee-collected",
+              "admin-transfer-proposed",
+              "admin-transfer-completed",
+              "admin-transfer-cancelled",
+              "withdrawal-proposed",
+              "withdrawal-approved",
+              "withdrawal-executed",
+              "add-admin-proposed",
+              "remove-admin-proposed",
+              "admin-proposal-approved",
+              "admin-proposal-executed"
+            ]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "https://your-production-domain.com/api/webhooks/chainhook/treasury",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
+            }
+          },
+          "decode_clarity_values": true
+        }
+      }
+    },
+    {
+      "uuid": "bitpay-access-control-print-events",
+      "name": "BitPay Access Control Events",
+      "version": 1,
+      "chain": "stacks",
+      "networks": {
+        "testnet": {
+          "if_this": {
+            "scope": "print_event",
+            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control-v2",
+            "contains": [
+              "contract-authorized",
+              "contract-revoked",
+              "protocol-paused",
+              "protocol-unpaused",
+              "admin-transfer-initiated",
+              "admin-transfer-completed"
+            ]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "http://localhost:3000/api/webhooks/chainhook/access-control",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
+            }
+          },
+          "start_block": 1,
+          "decode_clarity_values": true
+        },
+        "mainnet": {
+          "if_this": {
+            "scope": "print_event",
+            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-access-control-v2",
+            "contains": [
+              "contract-authorized",
+              "contract-revoked",
+              "protocol-paused",
+              "protocol-unpaused",
+              "admin-transfer-initiated",
+              "admin-transfer-completed"
+            ]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "https://your-production-domain.com/api/webhooks/chainhook/access-control",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
+            }
+          },
+          "decode_clarity_values": true
+        }
+      }
+    },
+    {
+      "uuid": "bitpay-nft-events",
+      "name": "BitPay NFT Events",
+      "version": 1,
+      "chain": "stacks",
+      "networks": {
+        "testnet": {
+          "if_this": {
+            "scope": "nft_event",
+            "asset_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-nft-v2::bitpay-recipient-nft",
+            "actions": ["mint", "burn"]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "http://localhost:3000/api/webhooks/chainhook/nft",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
+            }
+          },
+          "start_block": 1
+        },
+        "mainnet": {
+          "if_this": {
+            "scope": "nft_event",
+            "asset_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-nft-v2::bitpay-recipient-nft",
+            "actions": ["mint", "burn"]
+          },
+          "then_that": {
+            "http_post": {
+              "url": "https://your-production-domain.com/api/webhooks/chainhook/nft",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
             }
           }
         }
       }
     },
     {
-      "uuid": "bitpay-print-events",
-      "name": "BitPay Print Events",
+      "uuid": "bitpay-obligation-nft-events",
+      "name": "BitPay Obligation NFT Events",
       "version": 1,
       "chain": "stacks",
       "networks": {
         "testnet": {
           "if_this": {
             "scope": "print_event",
-            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-core",
-            "contains": ["stream-created", "stream-withdrawal", "stream-cancelled"]
+            "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-obligation-nft-v2",
+            "contains": [
+              "obligation-transferred",
+              "obligation-minted"
+            ]
           },
           "then_that": {
             "http_post": {
-              "url": "https://your-domain.com/api/webhooks/chainhook",
-              "authorization_header": "Bearer YOUR_SECRET_TOKEN_HERE"
+              "url": "http://localhost:3000/api/webhooks/chainhook/nft",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
             }
-          }
+          },
+          "start_block": 1,
+          "decode_clarity_values": true
         },
         "mainnet": {
           "if_this": {
             "scope": "print_event",
-            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-core",
-            "contains": ["stream-created", "stream-withdrawal", "stream-cancelled"]
+            "contract_identifier": "REPLACE_WITH_MAINNET_DEPLOYER.bitpay-obligation-nft-v2",
+            "contains": [
+              "obligation-transferred",
+              "obligation-minted"
+            ]
           },
           "then_that": {
             "http_post": {
-              "url": "https://your-production-domain.com/api/webhooks/chainhook",
-              "authorization_header": "Bearer YOUR_PRODUCTION_SECRET_TOKEN_HERE"
+              "url": "https://your-production-domain.com/api/webhooks/chainhook/nft",
+              "authorization_header": "Bearer ${CHAINHOOK_SECRET_TOKEN}"
             }
-          }
+          },
+          "decode_clarity_values": true
         }
       }
     }

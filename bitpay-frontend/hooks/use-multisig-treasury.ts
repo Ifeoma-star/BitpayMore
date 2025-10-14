@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { useBitPayRead } from './use-bitpay-read';
 import { useBitPayWrite } from './use-bitpay-write';
 import { CONTRACT_NAMES } from '@/lib/contracts/config';
