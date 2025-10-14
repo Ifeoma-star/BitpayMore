@@ -1,38 +1,37 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowUpRight,
   ArrowDownLeft,
   Plus,
-  TrendingUp,
   Wallet,
   Activity,
   Bitcoin,
   RefreshCw,
   Loader2,
   Send,
-  Download
+  Download,
+  TrendingUp
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { motion } from "framer-motion";
 import Link from "next/link";
 import walletService from "@/lib/wallet/wallet-service";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { microToDisplay, StreamStatus } from "@/lib/contracts/config";
+import { StatsCard } from "@/components/dashboard/overview/StatsCard";
+import { RecentStreams } from "@/components/dashboard/overview/RecentStreams";
+import { QuickActions } from "@/components/dashboard/overview/QuickActions";
+import { StreamingAnalytics } from "@/components/dashboard/overview/StreamingAnalytics";
+import { MarketplaceActivity } from "@/components/dashboard/overview/MarketplaceActivity";
+import { StreamStatusDistribution } from "@/components/dashboard/overview/StreamStatusDistribution";
+import { TreasuryInfo } from "@/components/dashboard/overview/TreasuryInfo";
+import { NFTGallery } from "@/components/dashboard/overview/NFTGallery";
 
 export default function DashboardPage() {
   const [userAddress, setUserAddress] = useState<string | null>(null);
@@ -87,39 +86,70 @@ export default function DashboardPage() {
     {
       title: "Total Streamed",
       value: `${microToDisplay(totalStreamed)} sBTC`,
-      change: `${completedStreams} completed`,
-      changeType: "neutral" as const,
+      subtitle: `${completedStreams} completed`,
       icon: Bitcoin,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100",
     },
     {
       title: "Active Streams",
       value: activeStreams.toString(),
-      change: `${allStreams?.length || 0} Total`,
-      changeType: "neutral" as const,
+      subtitle: `${allStreams?.length || 0} Total`,
       icon: Activity,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
     },
     {
       title: "Total Volume",
       value: `${microToDisplay(totalVolume)} sBTC`,
-      change: "All streams combined",
-      changeType: "neutral" as const,
+      subtitle: "All streams combined",
       icon: TrendingUp,
+      color: "text-purple-600",
+      bgColor: "bg-purple-100",
     },
     {
       title: "Available to Withdraw",
       value: `${microToDisplay(availableToWithdraw)} sBTC`,
-      change: "Ready for withdrawal",
-      changeType: "neutral" as const,
+      subtitle: "Ready for withdrawal",
       icon: Wallet,
+      color: "text-green-600",
+      bgColor: "bg-green-100",
     },
   ];
 
-  // Chart data
-  const chartData = allStreams && allStreams.length > 0 ?
-    allStreams.slice(0, 5).map((stream, i) => ({
-      date: `Stream ${i + 1}`,
-      balance: Number(microToDisplay(stream.vestedAmount)),
-    })) : [];
+  // Chart data for analytics
+  const analyticsData = allStreams && allStreams.length > 0 ?
+    allStreams.slice(0, 6).map((stream, i) => ({
+      month: `S${i + 1}`,
+      amount: Number(microToDisplay(stream.amount)),
+    })) : [
+      { month: 'Jan', amount: 0 },
+      { month: 'Feb', amount: 0 },
+      { month: 'Mar', amount: 0 },
+    ];
+
+  // Stream status distribution
+  const statusData = [
+    { name: 'Active', value: activeStreams },
+    { name: 'Completed', value: completedStreams },
+    { name: 'Paused', value: allStreams?.filter(s => s.status === StreamStatus.PAUSED).length || 0 },
+    { name: 'Cancelled', value: allStreams?.filter(s => s.status === StreamStatus.CANCELLED).length || 0 },
+  ].filter(item => item.value > 0);
+
+  // Mock NFT data (replace with real data from contracts)
+  const mockNFTs = allStreams ? allStreams.slice(0, 4).map(stream => ({
+    id: `nft-${stream.id}`,
+    type: stream.sender === userAddress ? 'Obligation' as const : 'Recipient' as const,
+    streamId: stream.id.toString(),
+  })) : [];
+
+  // Recent streams for component
+  const recentStreams = allStreams ? allStreams.slice(0, 3).map(stream => ({
+    id: stream.id.toString(),
+    amount: microToDisplay(stream.vestedAmount),
+    recipient: stream.recipient,
+    status: stream.status,
+  })) : [];
 
   const loading = blockLoading || streamsLoading;
 
@@ -170,31 +200,18 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
-          <motion.div
+          <StatsCard
             key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-          >
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                  <Badge variant="secondary">
-                    {stat.change}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+            title={stat.title}
+            value={stat.value}
+            subtitle={stat.subtitle}
+            icon={stat.icon}
+            color={stat.color}
+            bgColor={stat.bgColor}
+            index={index}
+          />
         ))}
       </div>
 
@@ -228,154 +245,33 @@ export default function DashboardPage() {
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>
-                  Latest Bitcoin streaming activity and transactions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {allStreams && allStreams.length > 0 ? (
-                    allStreams.slice(0, 5).map((stream) => (
-                      <Link
-                        key={stream.id.toString()}
-                        href={`/dashboard/streams/${stream.id}`}
-                        className="flex items-center justify-between p-3 rounded-lg border hover:border-brand-pink/50 transition-colors"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-brand-pink/10 rounded-full">
-                            <Activity className="h-4 w-4 text-brand-pink" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">
-                              Stream #{stream.id.toString()}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {stream.recipient.slice(0, 8)}...{stream.recipient.slice(-6)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-brand-teal">
-                            {microToDisplay(stream.vestedAmount)} sBTC
-                          </p>
-                          <Badge variant={stream.status === StreamStatus.ACTIVE ? 'default' : 'secondary'} className="text-xs">
-                            {stream.status}
-                          </Badge>
-                        </div>
-                      </Link>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground">
-                      <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No streams yet</p>
-                      <p className="text-xs">Create your first stream to see activity</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>
-                  Manage your Bitcoin streams and settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Button
-                    className="w-full justify-start bg-brand-pink hover:bg-brand-pink/90 text-white"
-                    asChild
-                  >
-                    <Link href="/dashboard/streams/create">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create New Stream
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
-                    asChild
-                  >
-                    <Link href="/dashboard/streams">
-                      <Activity className="mr-2 h-4 w-4" />
-                      Manage Streams
-                    </Link>
-                  </Button>
-                  {userAddress && (
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-1">Connected Wallet</p>
-                      <p className="text-sm font-mono">{userAddress.slice(0, 12)}...{userAddress.slice(-8)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Block Height: {blockHeight || '...'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <RecentStreams streams={recentStreams} />
+            <QuickActions
+              userAddress={userAddress}
+              blockHeight={blockHeight}
+            />
           </div>
 
-          {/* Streaming Overview Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Streaming Overview</CardTitle>
-              <CardDescription>
-                Your Bitcoin streaming trends over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {chartData.some(d => d.balance > 0) ? (
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis
-                        dataKey="date"
-                        className="text-xs"
-                        tickLine={false}
-                      />
-                      <YAxis
-                        className="text-xs"
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--background))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number) => [`${value.toFixed(6)} sBTC`, 'Streamed']}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="balance"
-                        stroke="#e91e63"
-                        strokeWidth={2}
-                        dot={{ fill: '#e91e63', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, stroke: '#e91e63', strokeWidth: 2, fill: '#ffffff' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <TrendingUp className="h-8 w-8 mx-auto mb-2" />
-                    <p>No streaming data available</p>
-                    <p className="text-sm">Create your first stream to see trends</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <StreamingAnalytics data={analyticsData} />
+            <StreamStatusDistribution data={statusData} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <MarketplaceActivity
+              listings={12}
+              sales={34}
+              nfts={56}
+            />
+            <TreasuryInfo
+              balance="1.234"
+              feesCollected="0.056"
+            />
+          </div>
+
+          <NFTGallery nfts={mockNFTs} />
         </TabsContent>
 
         {/* Sending Tab */}

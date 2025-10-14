@@ -72,10 +72,16 @@
 
 ;; Read-only functions
 
+;; Get listing details for a stream
+;; @param stream-id: ID of the stream
+;; @returns: Optional listing data
 (define-read-only (get-listing (stream-id uint))
   (map-get? listings stream-id)
 )
 
+;; Check if a stream is currently listed
+;; @param stream-id: ID of the stream
+;; @returns: true if active listing exists, false otherwise
 (define-read-only (is-listed (stream-id uint))
   (match (get-listing stream-id)
     listing (get active listing)
@@ -83,14 +89,22 @@
   )
 )
 
+;; Get all listings created by a user
+;; @param user: Principal address
+;; @returns: List of stream IDs listed by user
 (define-read-only (get-user-listings (user principal))
   (default-to (list) (map-get? user-listings user))
 )
 
+;; Get sale history by sale ID
+;; @param sale-id: ID of the sale
+;; @returns: Optional sale data
 (define-read-only (get-sale-history (sale-id uint))
   (map-get? sales-history sale-id)
 )
 
+;; Get marketplace statistics
+;; @returns: (ok stats) with total listings, sales, and volume
 (define-read-only (get-marketplace-stats)
   (ok {
     total-listings: (var-get total-listings),
@@ -99,33 +113,77 @@
   })
 )
 
+;; Calculate marketplace fee for a given price
+;; @param price: Sale price in sats
+;; @returns: Fee amount in sats
 (define-read-only (calculate-marketplace-fee (price uint))
   (/ (* price (var-get marketplace-fee-bps)) u10000)
 )
 
+;; Get current marketplace fee in basis points
+;; @returns: (ok fee-bps)
 (define-read-only (get-marketplace-fee-bps)
   (ok (var-get marketplace-fee-bps))
 )
 
+;; Calculate seller proceeds after marketplace fee
+;; @param price: Sale price in sats
+;; @returns: Net proceeds to seller in sats
 (define-read-only (calculate-seller-proceeds (price uint))
   (- price (calculate-marketplace-fee price))
 )
 
+;; Get pending purchase details for a stream
+;; @param stream-id: ID of the stream
+;; @returns: Optional pending purchase data
 (define-read-only (get-pending-purchase (stream-id uint))
   (map-get? pending-purchases stream-id)
 )
 
+;; Check if a stream has a pending purchase
+;; @param stream-id: ID of the stream
+;; @returns: true if pending purchase exists, false otherwise
 (define-read-only (is-pending-purchase (stream-id uint))
   (is-some (get-pending-purchase stream-id))
 )
 
+;; Check if a principal is an authorized backend
+;; @param backend: Principal to check
+;; @returns: true if authorized, false otherwise
 (define-read-only (is-authorized-backend (backend principal))
   (default-to false (map-get? authorized-backends backend))
+)
+
+;; Get count of active listings
+;; @returns: (ok total-listings)
+(define-read-only (get-active-listings-count)
+  (ok (var-get total-listings))
+)
+
+;; Get detailed listing information including fees
+;; @param stream-id: ID of the stream
+;; @returns: (ok listing-details) or error
+(define-read-only (get-listing-details (stream-id uint))
+  (match (get-listing stream-id)
+    listing (ok {
+      stream-id: stream-id,
+      seller: (get seller listing),
+      price: (get price listing),
+      listed-at: (get listed-at listing),
+      active: (get active listing),
+      marketplace-fee: (calculate-marketplace-fee (get price listing)),
+      seller-proceeds: (calculate-seller-proceeds (get price listing)),
+    })
+    err-listing-not-found
+  )
 )
 
 ;; Public functions
 
 ;; List an obligation NFT for sale
+;; @param stream-id: ID of the stream to list
+;; @param price: Asking price in sats
+;; @returns: (ok true) on success
 (define-public (list-nft
     (stream-id uint)
     (price uint)
@@ -168,6 +226,9 @@
 )
 
 ;; Update listing price
+;; @param stream-id: ID of the stream listing to update
+;; @param new-price: New asking price in sats
+;; @returns: (ok true) on success
 (define-public (update-listing-price
     (stream-id uint)
     (new-price uint)
@@ -186,6 +247,8 @@
 )
 
 ;; Cancel listing
+;; @param stream-id: ID of the stream listing to cancel
+;; @returns: (ok true) on success
 (define-public (cancel-listing (stream-id uint))
   (let ((listing (unwrap! (get-listing stream-id) err-listing-not-found)))
     ;; Validations
@@ -203,7 +266,10 @@
 ;; ========================================
 ;; OPTION 1: Direct On-Chain Purchase
 ;; ========================================
+
 ;; Buy an obligation NFT directly with crypto wallet (atomic transaction)
+;; @param stream-id: ID of the stream to purchase
+;; @returns: (ok sale-id) on success
 (define-public (buy-nft (stream-id uint))
   (let (
       (listing (unwrap! (get-listing stream-id) err-listing-not-found))
@@ -247,7 +313,9 @@
 
     ;; Transfer obligation NFT: seller to buyer
     (unwrap!
-      (contract-call? .bitpay-obligation-nft-v2 transfer stream-id seller tx-sender)
+      (contract-call? .bitpay-obligation-nft-v2 transfer stream-id seller
+        tx-sender
+      )
       err-transfer-failed
     )
 
@@ -294,6 +362,9 @@
 
 ;; Step 1: Initiate purchase through payment gateway
 ;; Called by buyer when they start checkout on external gateway
+;; @param stream-id: ID of the stream to purchase
+;; @param payment-id: Unique payment identifier from gateway
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (initiate-purchase
     (stream-id uint)
@@ -331,6 +402,10 @@
 
 ;; Step 2: Complete purchase after payment confirmed by gateway
 ;; Called by authorized backend after webhook confirms payment
+;; @param stream-id: ID of the stream to complete purchase
+;; @param buyer: Principal of the buyer
+;; @param payment-id: Payment identifier to verify
+;; @returns: (ok sale-id) on success
 (define-public (complete-purchase
     (stream-id uint)
     (buyer principal)
@@ -399,6 +474,8 @@
 
 ;; Cancel expired pending purchase
 ;; Allows cleaning up expired purchase attempts
+;; @param stream-id: ID of the stream with expired purchase
+;; @returns: (ok true) on success
 (define-public (cancel-expired-purchase (stream-id uint))
   (let ((pending (unwrap! (get-pending-purchase stream-id) err-no-pending-purchase)))
     (asserts! (>= stacks-block-height (get expires-at pending)) err-not-expired)
@@ -419,6 +496,8 @@
 ;; ========================================
 
 ;; Add authorized backend principal
+;; @param backend: Principal to authorize
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (add-authorized-backend (backend principal))
   (begin
@@ -433,6 +512,8 @@
 )
 
 ;; Remove authorized backend principal
+;; @param backend: Principal to deauthorize
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (remove-authorized-backend (backend principal))
   (begin
@@ -447,6 +528,8 @@
 )
 
 ;; Admin function to update marketplace fee
+;; @param new-fee-bps: New fee in basis points (max 1000 = 10%)
+;; @returns: (ok true) on success
 (define-public (set-marketplace-fee (new-fee-bps uint))
   (begin
     (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
@@ -458,26 +541,5 @@
       new-fee: new-fee-bps,
     })
     (ok true)
-  )
-)
-
-;; Get active listings (helper for frontend)
-(define-read-only (get-active-listings-count)
-  (ok (var-get total-listings))
-)
-
-;; Batch get listings (for pagination)
-(define-read-only (get-listing-details (stream-id uint))
-  (match (get-listing stream-id)
-    listing (ok {
-      stream-id: stream-id,
-      seller: (get seller listing),
-      price: (get price listing),
-      listed-at: (get listed-at listing),
-      active: (get active listing),
-      marketplace-fee: (calculate-marketplace-fee (get price listing)),
-      seller-proceeds: (calculate-seller-proceeds (get price listing)),
-    })
-    err-listing-not-found
   )
 )

@@ -32,10 +32,15 @@
 
 ;; SIP-009 required functions
 
+;; Get the last minted token ID
+;; @returns: (ok last-token-id)
 (define-read-only (get-last-token-id)
     (ok (var-get last-token-id))
 )
 
+;; Get the token URI for metadata
+;; @param token-id: ID of the token
+;; @returns: (ok optional-uri)
 (define-read-only (get-token-uri (token-id uint))
     (if (> (len (var-get base-token-uri)) u0)
         (ok (some (var-get base-token-uri)))
@@ -43,12 +48,19 @@
     )
 )
 
+;; Get the owner of a token
+;; @param token-id: ID of the token
+;; @returns: (ok optional-owner)
 (define-read-only (get-owner (token-id uint))
     (ok (nft-get-owner? stream-nft token-id))
 )
 
 ;; Transfer is DISABLED - Recipient NFTs are soul-bound (non-transferable)
 ;; They serve as proof of receipt and cannot be traded
+;; @param token-id: ID of the token
+;; @param sender: Current owner
+;; @param recipient: Intended recipient
+;; @returns: Always returns ERR_UNAUTHORIZED (transfers disabled)
 ;; #[allow(unchecked_data)]
 (define-public (transfer
         (token-id uint)
@@ -63,6 +75,9 @@
 
 ;; Mint NFT for a stream (called by bitpay-core)
 ;; SECURITY: Only bitpay-core can mint NFTs to prevent fake stream NFTs
+;; @param stream-id: ID of the stream to link
+;; @param recipient: Principal to receive the NFT
+;; @returns: (ok token-id) on success
 ;; #[allow(unchecked_data)]
 (define-public (mint
         (stream-id uint)
@@ -81,6 +96,9 @@
 )
 
 ;; Burn NFT when stream is fully withdrawn or cancelled
+;; @param token-id: ID of the token to burn
+;; @param owner: Current owner of the token
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (burn
         (token-id uint)
@@ -103,16 +121,22 @@
 )
 
 ;; Get stream ID from token ID
+;; @param token-id: ID of the token
+;; @returns: (ok optional-stream-id)
 (define-read-only (get-stream-id (token-id uint))
     (ok (map-get? token-to-stream token-id))
 )
 
 ;; Get token ID from stream ID
+;; @param stream-id: ID of the stream
+;; @returns: (ok optional-token-id)
 (define-read-only (get-token-id (stream-id uint))
     (ok (map-get? stream-to-token stream-id))
 )
 
 ;; Set base token URI (owner only)
+;; @param uri: Base URI for token metadata
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (set-base-token-uri (uri (string-ascii 256)))
     (begin

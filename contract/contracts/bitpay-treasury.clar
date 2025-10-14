@@ -83,19 +83,30 @@
 (map-set multisig-admins CONTRACT_OWNER true)
 
 ;; Authorization checks
+
+;; Check if caller is the legacy admin
+;; @returns: true if caller is admin
 (define-private (is-admin)
     (is-eq tx-sender (var-get admin))
 )
 
+;; Check if a user is a multisig admin
+;; @param user: Principal to check
+;; @returns: true if user is multisig admin
 (define-private (is-multisig-admin (user principal))
     (default-to false (map-get? multisig-admins user))
 )
 
+;; Check if caller is either multisig admin or legacy admin
+;; @returns: true if caller has admin privileges
 (define-private (is-multisig-admin-or-legacy)
     (or (is-multisig-admin tx-sender) (is-admin))
 )
 
 ;; Helper: Check if principal is in approval list
+;; @param item: Principal to search for
+;; @param lst: List of principals
+;; @returns: true if item is in list
 (define-private (is-in-list
         (item principal)
         (lst (list 10 principal))
@@ -104,16 +115,19 @@
 )
 
 ;; Helper: Count active multisig admins
+;; @returns: (ok admin-count)
 (define-read-only (count-admins)
     (ok (var-get active-admin-count))
 )
 
 ;; Helper: Get total available admin slots
+;; @returns: (ok total-slots)
 (define-read-only (get-total-admin-slots)
     (ok TOTAL_ADMIN_SLOTS)
 )
 
 ;; Check if protocol is paused via access-control
+;; @returns: (ok true) if not paused, error if paused
 (define-private (check-not-paused)
     (let ((paused-check (contract-call? .bitpay-access-control-v2 is-paused)))
         (asserts! (not paused-check) ERR_PAUSED)
@@ -122,6 +136,8 @@
 )
 
 ;; Calculate fee amount based on basis points
+;; @param amount: Gross amount to calculate fee on
+;; @returns: (ok fee-amount)
 (define-read-only (calculate-fee (amount uint))
     (let ((fee (/ (* amount (var-get fee-bps)) u10000)))
         (ok fee)
@@ -129,6 +145,8 @@
 )
 
 ;; Collect fee from a stream (called by bitpay-core)
+;; @param amount: Amount to collect as fee
+;; @returns: (ok fee-amount) on success
 ;; #[allow(unchecked_data)]
 (define-public (collect-fee (amount uint))
     (begin
@@ -137,7 +155,9 @@
 
         (let ((fee (unwrap-panic (calculate-fee amount))))
             ;; Transfer fee from sender to treasury
-            (try! (contract-call? .bitpay-sbtc-helper-v2 transfer-to-vault fee tx-sender))
+            (try! (contract-call? .bitpay-sbtc-helper-v2 transfer-to-vault fee
+                tx-sender
+            ))
 
             ;; Update treasury balance
             (var-set treasury-balance (+ (var-get treasury-balance) fee))
@@ -164,7 +184,9 @@
         ))
 
         ;; Transfer sBTC from vault to this treasury contract
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount tx-sender)))
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount
+            tx-sender
+        )))
 
         ;; Update treasury balance
         (var-set treasury-balance (+ (var-get treasury-balance) amount))
@@ -213,6 +235,9 @@
 )
 
 ;; Withdraw from treasury (admin only)
+;; @param amount: Amount to withdraw in sats
+;; @param recipient: Principal to receive funds
+;; @returns: (ok amount) on success
 ;; #[allow(unchecked_data)]
 (define-public (withdraw
         (amount uint)
@@ -224,7 +249,9 @@
         (asserts! (<= amount (var-get treasury-balance)) ERR_INSUFFICIENT_BALANCE)
 
         ;; Transfer from treasury to recipient
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount recipient)))
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount
+            recipient
+        )))
 
         ;; Update treasury balance
         (var-set treasury-balance (- (var-get treasury-balance) amount))
@@ -234,6 +261,9 @@
 )
 
 ;; Distribute fees to recipients
+;; @param recipient: Principal to receive distribution
+;; @param amount: Amount to distribute in sats
+;; @returns: (ok amount) on success
 ;; #[allow(unchecked_data)]
 (define-public (distribute-to-recipient
         (recipient principal)
@@ -245,7 +275,9 @@
         (asserts! (<= amount (var-get treasury-balance)) ERR_INSUFFICIENT_BALANCE)
 
         ;; Transfer to recipient
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount recipient)))
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount
+            recipient
+        )))
 
         ;; Update balances
         (var-set treasury-balance (- (var-get treasury-balance) amount))
@@ -258,6 +290,8 @@
 )
 
 ;; Update fee percentage (admin only)
+;; @param new-fee-bps: New fee in basis points (max 1000 = 10%)
+;; @returns: (ok new-fee-bps) on success
 ;; #[allow(unchecked_data)]
 (define-public (set-fee-bps (new-fee-bps uint))
     (begin
@@ -270,6 +304,8 @@
 )
 
 ;; Propose admin transfer (step 1 of 2)
+;; @param new-admin: Principal to transfer admin role to
+;; @returns: (ok new-admin) on success
 ;; #[allow(unchecked_data)]
 (define-public (propose-admin-transfer (new-admin principal))
     (begin
@@ -289,6 +325,7 @@
 )
 
 ;; Accept admin transfer (step 2 of 2)
+;; @returns: (ok tx-sender) on success
 ;; #[allow(unchecked_data)]
 (define-public (accept-admin-transfer)
     (let ((pending (var-get pending-admin)))
@@ -311,6 +348,7 @@
 )
 
 ;; Cancel pending admin transfer
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (cancel-admin-transfer)
     (begin
@@ -330,31 +368,46 @@
 
 ;; Read-only functions
 
+;; Get current treasury balance
+;; @returns: (ok balance)
 (define-read-only (get-treasury-balance)
     (ok (var-get treasury-balance))
 )
 
+;; Get current fee in basis points
+;; @returns: (ok fee-bps)
 (define-read-only (get-fee-bps)
     (ok (var-get fee-bps))
 )
 
+;; Get total fees collected all-time
+;; @returns: (ok total-fees)
 (define-read-only (get-total-fees-collected)
     (ok (var-get total-fees-collected))
 )
 
+;; Get current admin
+;; @returns: (ok admin)
 (define-read-only (get-admin)
     (ok (var-get admin))
 )
 
+;; Get pending admin transfer
+;; @returns: (ok optional-pending-admin)
 (define-read-only (get-pending-admin)
     (ok (var-get pending-admin))
 )
 
+;; Get total distributed to a recipient
+;; @param recipient: Principal to check
+;; @returns: (ok amount)
 (define-read-only (get-recipient-total (recipient principal))
     (ok (default-to u0 (map-get? fee-recipients recipient)))
 )
 
 ;; Calculate net amount after fee deduction
+;; @param gross-amount: Amount before fee
+;; @returns: (ok net-amount)
 (define-read-only (get-amount-after-fee (gross-amount uint))
     (let ((fee (unwrap-panic (calculate-fee gross-amount))))
         (ok (- gross-amount fee))
@@ -370,6 +423,10 @@
 ;; ==========================================
 
 ;; Propose a withdrawal (requires 3-of-5 approval + 24h timelock)
+;; @param amount: Amount to withdraw in sats
+;; @param recipient: Principal to receive funds
+;; @param description: Description of withdrawal purpose
+;; @returns: (ok proposal-id) on success
 ;; #[allow(unchecked_data)]
 (define-public (propose-multisig-withdrawal
         (amount uint)
@@ -414,6 +471,8 @@
 )
 
 ;; Approve a withdrawal proposal
+;; @param proposal-id: ID of the proposal to approve
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (approve-multisig-withdrawal (proposal-id uint))
     (let (
@@ -452,6 +511,8 @@
 )
 
 ;; Execute withdrawal (once 3 approvals + timelock elapsed)
+;; @param proposal-id: ID of the proposal to execute
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (execute-multisig-withdrawal (proposal-id uint))
     (let (
@@ -506,6 +567,8 @@
 )
 
 ;; Check and update daily withdrawal limit
+;; @param amount: Amount to check against daily limit
+;; @returns: (ok true) if within limit
 (define-private (check-daily-limit (amount uint))
     (let (
             (current-block stacks-block-height)
@@ -528,6 +591,9 @@
     )
 )
 
+;; Update daily withdrawal limit tracking
+;; @param amount: Amount withdrawn
+;; @returns: true
 (define-private (update-daily-limit (amount uint))
     (begin
         (var-set withdrawn-today (+ (var-get withdrawn-today) amount))
@@ -541,6 +607,8 @@
 ;; ==========================================
 
 ;; Propose adding a new admin
+;; @param new-admin: Principal to add as admin
+;; @returns: (ok proposal-id) on success
 ;; #[allow(unchecked_data)]
 (define-public (propose-add-admin (new-admin principal))
     (let (
@@ -576,6 +644,8 @@
 )
 
 ;; Propose removing an admin
+;; @param target-admin: Principal to remove from admin list
+;; @returns: (ok proposal-id) on success
 ;; #[allow(unchecked_data)]
 (define-public (propose-remove-admin (target-admin principal))
     (let (
@@ -613,6 +683,8 @@
 )
 
 ;; Approve admin management proposal
+;; @param proposal-id: ID of the proposal to approve
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (approve-admin-proposal (proposal-id uint))
     (let (
@@ -650,6 +722,8 @@
 )
 
 ;; Execute admin management proposal
+;; @param proposal-id: ID of the proposal to execute
+;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
 (define-public (execute-admin-proposal (proposal-id uint))
     (let (
@@ -700,18 +774,29 @@
 ;; READ-ONLY FUNCTIONS (Query Multi-Sig State)
 ;; ==========================================
 
+;; Get withdrawal proposal details
+;; @param proposal-id: ID of the proposal
+;; @returns: (ok optional-proposal)
 (define-read-only (get-withdrawal-proposal (proposal-id uint))
     (ok (map-get? withdrawal-proposals proposal-id))
 )
 
+;; Get admin management proposal details
+;; @param proposal-id: ID of the proposal
+;; @returns: (ok optional-proposal)
 (define-read-only (get-admin-proposal (proposal-id uint))
     (ok (map-get? admin-proposals proposal-id))
 )
 
+;; Check if a user is a multisig admin
+;; @param user: Principal to check
+;; @returns: (ok is-admin)
 (define-read-only (is-multisig-admin-check (user principal))
     (ok (is-multisig-admin user))
 )
 
+;; Get multisig configuration parameters
+;; @returns: (ok config)
 (define-read-only (get-multisig-config)
     (ok {
         required-signatures: REQUIRED_SIGNATURES,
@@ -724,11 +809,14 @@
     })
 )
 
+;; Get next proposal ID
+;; @returns: (ok next-id)
 (define-read-only (get-next-proposal-id)
     (ok (var-get next-proposal-id))
 )
 
 ;; Get this contract's address (for receiving payments)
+;; @returns: (ok contract-address)
 (define-read-only (get-contract-address)
     (ok (as-contract tx-sender))
 )

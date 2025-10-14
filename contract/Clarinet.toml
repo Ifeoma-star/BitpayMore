@@ -9,44 +9,44 @@ cache_dir = './.cache'
 contract_id = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-deposit'
 
 [[project.requirements]]
-contract_id = 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control'
+contract_id = 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control-v2'
 
 [[project.requirements]]
 contract_id = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token'
 
 [[project.requirements]]
 contract_id = 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait'
-[contracts.bitpay-access-control]
+[contracts.bitpay-access-control-v2]
 path = 'contracts/bitpay-access-control.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-core]
+[contracts.bitpay-core-v2]
 path = 'contracts/bitpay-core.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-marketplace]
+[contracts.bitpay-marketplace-v2]
 path = 'contracts/bitpay-marketplace.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-nft]
+[contracts.bitpay-nft-v2]
 path = 'contracts/bitpay-nft.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-obligation-nft]
+[contracts.bitpay-obligation-nft-v2]
 path = 'contracts/bitpay-obligation-nft.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-sbtc-helper]
+[contracts.bitpay-sbtc-helper-v2]
 path = 'contracts/bitpay-sbtc-helper.clar'
 clarity_version = 3
 epoch = 3.1
 
-[contracts.bitpay-treasury]
+[contracts.bitpay-treasury-v2]
 path = 'contracts/bitpay-treasury.clar'
 clarity_version = 3
 epoch = 3.1

@@ -13,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, ShoppingCart, Info, Calculator, TrendingUp, CheckCircle, Calendar } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Loader2, ShoppingCart, Info, Calculator, TrendingUp, CheckCircle, Calendar, Wallet, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 interface MarketplaceListing {
@@ -45,6 +47,7 @@ export function BuyObligationNFTModal({
 }: BuyObligationNFTModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"direct" | "gateway">("direct");
 
   const profit = listing.totalAmount - listing.price;
   const roi = (profit / listing.price) * 100;
@@ -58,20 +61,37 @@ export function BuyObligationNFTModal({
     setIsLoading(true);
 
     try {
-      // TODO: Call marketplace smart contract to buy NFT
-      // marketplace.buy-nft(stream-id) with payment
-      console.log("Buying NFT:", {
-        streamId: listing.streamId,
-        price: listing.price * 1_000_000, // Convert to micro units
-        seller: listing.seller,
-      });
+      if (paymentMethod === "direct") {
+        // TODO: Call marketplace smart contract to buy NFT directly
+        // marketplace.buy-nft(stream-id) with sBTC payment
+        console.log("Buying NFT directly:", {
+          streamId: listing.streamId,
+          price: listing.price * 1_000_000, // Convert to micro units
+          seller: listing.seller,
+        });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      toast.success("Purchase successful!", {
-        description: `You now own the obligation NFT for Stream #${listing.streamId}`,
-      });
+        toast.success("Purchase successful!", {
+          description: `You now own the obligation NFT for Stream #${listing.streamId}`,
+        });
+      } else {
+        // TODO: Create payment stream for the purchase
+        // User creates a payment stream to the seller for the listing price
+        // Once stream is created, marketplace contract transfers NFT
+        console.log("Creating payment stream for NFT:", {
+          streamId: listing.streamId,
+          price: listing.price * 1_000_000,
+          seller: listing.seller,
+          duration: "30 days", // Configurable
+        });
+
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        toast.success("Payment stream created!", {
+          description: `NFT will transfer once payment stream is active`,
+        });
+      }
 
       if (onSuccess) {
         onSuccess();
@@ -116,6 +136,42 @@ export function BuyObligationNFTModal({
             <Badge className="bg-brand-pink text-white text-lg px-3 py-1">
               {listing.discount.toFixed(1)}% OFF
             </Badge>
+          </div>
+
+          <Separator />
+
+          {/* Payment Method Selection */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Payment Method</Label>
+            <RadioGroup value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+              <div className="flex items-start space-x-3 p-4 border rounded-lg hover:border-brand-pink/50 transition-colors cursor-pointer">
+                <RadioGroupItem value="direct" id="direct" className="mt-1" />
+                <Label htmlFor="direct" className="cursor-pointer flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Wallet className="h-4 w-4 text-brand-pink" />
+                    <span className="font-semibold">Direct Purchase</span>
+                    <Badge variant="secondary" className="text-xs">Instant</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Pay {listing.price.toFixed(2)} sBTC immediately from your wallet. NFT transfers instantly.
+                  </p>
+                </Label>
+              </div>
+
+              <div className="flex items-start space-x-3 p-4 border rounded-lg hover:border-brand-teal/50 transition-colors cursor-pointer">
+                <RadioGroupItem value="gateway" id="gateway" className="mt-1" />
+                <Label htmlFor="gateway" className="cursor-pointer flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CreditCard className="h-4 w-4 text-brand-teal" />
+                    <span className="font-semibold">Payment Stream</span>
+                    <Badge variant="secondary" className="text-xs">Flexible</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Create a payment stream to the seller over time (e.g., 30 days). NFT transfers once stream starts.
+                  </p>
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
           <Separator />
@@ -255,17 +311,22 @@ export function BuyObligationNFTModal({
           <Button
             onClick={handleBuy}
             disabled={isLoading || !agreedToTerms}
-            className="bg-brand-pink hover:bg-brand-pink/90"
+            className={paymentMethod === "direct" ? "bg-brand-pink hover:bg-brand-pink/90" : "bg-brand-teal hover:bg-brand-teal/90"}
           >
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Processing...
               </>
-            ) : (
+            ) : paymentMethod === "direct" ? (
               <>
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Buy for {listing.price.toFixed(2)} sBTC
+              </>
+            ) : (
+              <>
+                <CreditCard className="h-4 w-4 mr-2" />
+                Create Payment Stream
               </>
             )}
           </Button>

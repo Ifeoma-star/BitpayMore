@@ -16,13 +16,14 @@ import {
   ArrowLeft,
   Bitcoin,
   Clock,
-  Info,
   Wallet,
   AlertCircle,
-  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { StreamPreview } from "@/components/dashboard/streams/create/StreamPreview";
+import { QuickTemplates } from "@/components/dashboard/streams/create/QuickTemplates";
+import { ImportantNotes } from "@/components/dashboard/streams/create/ImportantNotes";
 
 const createStreamSchema = z.object({
   recipient: z.string().min(1, "Recipient address is required"),
@@ -325,179 +326,23 @@ export default function CreateStreamPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Stream Preview */}
-            <Card className="border-brand-pink/20">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-brand-pink" />
-                  Stream Preview
-                </CardTitle>
-                <CardDescription>Real-time streaming rate calculations</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {estimates ? (
-                  <>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center py-3 px-4 bg-muted/50 rounded-lg">
-                        <span className="text-sm text-muted-foreground">Total Amount</span>
-                        <span className="font-semibold text-lg">{watchedValues.amount || "0"} sBTC</span>
-                      </div>
-                      <div className="flex justify-between items-center py-3 px-4 bg-muted/50 rounded-lg">
-                        <span className="text-sm text-muted-foreground">Duration</span>
-                        <span className="font-semibold">
-                          {watchedValues.duration || "0"} {watchedValues.durationType}
-                        </span>
-                      </div>
-                    </div>
+            <StreamPreview
+              amount={watchedValues.amount}
+              duration={watchedValues.duration}
+              durationType={watchedValues.durationType}
+              estimates={estimates}
+            />
 
-                    <Separator />
+            <QuickTemplates
+              onTemplateSelect={(template) => {
+                form.setValue("amount", template.amount);
+                form.setValue("duration", template.duration);
+                form.setValue("durationType", template.durationType);
+                form.setValue("description", template.description);
+              }}
+            />
 
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Streaming Rates
-                      </h4>
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Per second</span>
-                          <span className="text-brand-pink font-mono font-medium">{estimates.perSecond}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Per minute</span>
-                          <span className="text-brand-teal font-mono font-medium">{estimates.perMinute}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Per hour</span>
-                          <span className="text-brand-pink font-mono font-medium">{estimates.perHour}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Per day</span>
-                          <span className="text-brand-teal font-mono font-medium text-base">{estimates.perDay}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-12">
-                    <Bitcoin className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                    <p className="text-sm text-muted-foreground">
-                      Enter amount and duration to see streaming rates
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Templates */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Templates</CardTitle>
-                <CardDescription>Pre-configured payment schedules</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full justify-start text-left h-auto py-4"
-                  onClick={() => {
-                    form.setValue("amount", "2.5");
-                    form.setValue("duration", "30");
-                    form.setValue("durationType", "days");
-                    form.setValue("description", "Monthly salary payment");
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">💼</span>
-                    <div>
-                      <div className="font-medium">Monthly Salary</div>
-                      <div className="text-xs text-muted-foreground">2.5 sBTC over 30 days</div>
-                    </div>
-                  </div>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full justify-start text-left h-auto py-4"
-                  onClick={() => {
-                    form.setValue("amount", "1.0");
-                    form.setValue("duration", "7");
-                    form.setValue("durationType", "days");
-                    form.setValue("description", "Weekly project payment");
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">📋</span>
-                    <div>
-                      <div className="font-medium">Weekly Project</div>
-                      <div className="text-xs text-muted-foreground">1.0 sBTC over 7 days</div>
-                    </div>
-                  </div>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full justify-start text-left h-auto py-4"
-                  onClick={() => {
-                    form.setValue("amount", "0.5");
-                    form.setValue("duration", "1000");
-                    form.setValue("durationType", "blocks");
-                    form.setValue("description", "Short-term payment");
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">⚡</span>
-                    <div>
-                      <div className="font-medium">Quick Payment</div>
-                      <div className="text-xs text-muted-foreground">0.5 sBTC over 1000 blocks</div>
-                    </div>
-                  </div>
-                </Button>
-
-                <Separator className="my-4" />
-
-                <Link href="/dashboard/templates">
-                  <Button variant="ghost" className="w-full" size="sm">
-                    View All Templates →
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Important Notes */}
-            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Info className="h-4 w-4 text-amber-600" />
-                  Important Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-200">
-                  <li className="flex gap-2">
-                    <span>•</span>
-                    <span>Streams cannot be modified once created</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span>•</span>
-                    <span>Recipients can withdraw vested amounts anytime</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span>•</span>
-                    <span>Cancelling returns only unvested amounts</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span>•</span>
-                    <span>Ensure sufficient sBTC balance before creating</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span>•</span>
-                    <span>Network fees apply for stream creation</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+            <ImportantNotes />
           </div>
         </div>
       </div>

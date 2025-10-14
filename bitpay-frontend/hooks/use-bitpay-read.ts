@@ -69,7 +69,8 @@ export function useBitPayRead<T = any>(
     } finally {
       setIsLoading(false);
     }
-  }, [contractName, functionName, JSON.stringify(functionArgs), enabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractName, functionName, enabled, functionArgs.length]);
 
   useEffect(() => {
     fetchData();

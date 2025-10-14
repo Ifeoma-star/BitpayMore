@@ -3,18 +3,12 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Wallet,
-  Settings,
-  Loader2,
+  
   AlertCircle,
-  CheckCircle,
   Shield,
-  UserCog,
   BarChart3,
-  XCircle,
   FileText,
   Plus
 } from "lucide-react";
@@ -33,9 +27,13 @@ import {
   useProposeAddAdmin,
   useProposeRemoveAdmin,
 } from "@/hooks/use-multisig-treasury";
-import { ProposalCard } from "@/components/dashboard/treasury/ProposalCard";
-import { ProposeWithdrawalModal } from "@/components/dashboard/treasury/ProposeWithdrawalModal";
-import { MultiSigAdminList } from "@/components/dashboard/treasury/MultiSigAdminList";
+import { ProposalCard } from "@/components/dashboard/treasury/proposals/ProposalCard";
+import { ProposeWithdrawalModal } from "@/components/dashboard/treasury/proposals/ProposeWithdrawalModal";
+import { MultiSigAdminList } from "@/components/dashboard/treasury/multisig/MultiSigAdminList";
+import { TreasuryHeader } from "@/components/dashboard/treasury/overview/TreasuryHeader";
+import { TreasuryStats } from "@/components/dashboard/treasury/overview/TreasuryStats";
+import { TreasuryOverviewCard } from "@/components/dashboard/treasury/overview/TreasuryOverviewCard";
+import { MultiSigConfigCard } from "@/components/dashboard/treasury/multisig/MultiSigConfigCard";
 import { toast } from "sonner";
 
 export default function TreasuryPage() {
@@ -131,8 +129,59 @@ export default function TreasuryPage() {
     });
   };
 
-  const currentFeePercent = feeBps ? Number(feeBps) / 100 : 0;
-  const treasuryBalanceDisplay = treasuryBalance ? microToDisplay(treasuryBalance as bigint) : "0.000000";
+  // Helper function to safely extract numeric values from contract responses
+  const extractValue = (data: any): any => {
+    if (data === null || data === undefined) return null;
+    
+    // Deep extraction - handle nested {type, value} structures
+    let current = data;
+    while (current && typeof current === 'object' && 'value' in current) {
+      current = current.value;
+    }
+    
+    return current;
+  };
+
+  const currentFeePercent = feeBps ? Number(extractValue(feeBps)) / 100 : 0;
+  
+  // Extract bigint value from cvToJSON result if needed
+  const getTreasuryBalanceValue = (): string => {
+    try {
+      const value = extractValue(treasuryBalance);
+      if (!value && value !== 0) return "0.000000";
+      const bigintValue = typeof value === 'bigint' ? value : BigInt(value.toString());
+      return microToDisplay(bigintValue);
+    } catch (error) {
+      console.error('Error extracting treasury balance:', error, treasuryBalance);
+      return "0.000000";
+    }
+  };
+  
+  const getTotalFeesValue = (): string => {
+    try {
+      const value = extractValue(totalFees);
+      if (!value && value !== 0) return "0.000000";
+      const bigintValue = typeof value === 'bigint' ? value : BigInt(value.toString());
+      return microToDisplay(bigintValue);
+    } catch (error) {
+      console.error('Error extracting total fees:', error, totalFees);
+      return "0.000000";
+    }
+  };
+  
+  const getAdminCountValue = (): number => {
+    try {
+      const value = extractValue(adminCount);
+      if (!value && value !== 0) return 1;
+      const numValue = typeof value === 'number' ? value : Number(value.toString());
+      return isNaN(numValue) ? 1 : numValue;
+    } catch (error) {
+      console.error('Error extracting admin count:', error, adminCount);
+      return 1;
+    }
+  };
+  
+  const treasuryBalanceDisplay = getTreasuryBalanceValue();
 
   // Mock admin list (will be fetched from contract)
   const mockAdmins = [
@@ -154,96 +203,17 @@ export default function TreasuryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Treasury Management</h1>
-          <p className="text-muted-foreground">
-            Multi-sig fee collection and treasury administration
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {isMultiSigAdmin ? (
-            <Badge className="bg-green-500 text-white">
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Multi-Sig Admin
-            </Badge>
-          ) : isAdmin ? (
-            <Badge className="bg-blue-500 text-white">
-              <Shield className="h-4 w-4 mr-1" />
-              Legacy Admin
-            </Badge>
-          ) : (
-            <Badge variant="secondary">
-              <AlertCircle className="h-4 w-4 mr-1" />
-              View Only
-            </Badge>
-          )}
-        </div>
-      </div>
+      <TreasuryHeader
+        isMultiSigAdmin={!!isMultiSigAdmin}
+        isLegacyAdmin={isAdmin}
+      />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Treasury Balance</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-brand-teal">
-              {treasuryBalanceDisplay} sBTC
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Available for withdrawal
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Fees Collected</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {totalFees ? microToDisplay(totalFees) : "0.000000"} sBTC
-            </div>
-            <p className="text-xs text-muted-foreground">
-              All-time collection
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Multi-Sig Admins</CardTitle>
-            <UserCog className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-brand-pink">
-              {adminCount || 1}/5
-            </div>
-            <p className="text-xs text-muted-foreground">
-              3 approvals required
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Proposals</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">
-              {mockProposals.filter(p => !p.executed).length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Awaiting action
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <TreasuryStats
+        balance={String(treasuryBalanceDisplay || "0.000000")}
+        totalFees={String(getTotalFeesValue() || "0.000000")}
+        adminCount={Number(getAdminCountValue() || 1)}
+        pendingProposals={Number(mockProposals.filter(p => !p.executed).length || 0)}
+      />
 
       {/* Tabs for different sections */}
       <Tabs defaultValue="proposals" className="space-y-6">
@@ -260,7 +230,7 @@ export default function TreasuryPage() {
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-pink data-[state=active]:bg-transparent"
           >
             <Shield className="h-4 w-4 mr-2" />
-            Multi-Sig ({adminCount || 1}/5)
+            Multi-Sig ({getAdminCountValue()}/5)
           </TabsTrigger>
           <TabsTrigger
             value="overview"
@@ -361,82 +331,17 @@ export default function TreasuryPage() {
             onProposeRemove={handleProposeRemoveAdmin}
           />
 
-          {/* Multi-Sig Config Info */}
-          {multiSigConfig && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuration</CardTitle>
-                <CardDescription>Current multi-sig treasury settings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Required Signatures</p>
-                    <p className="text-2xl font-bold">{multiSigConfig.requiredSignatures}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Timelock</p>
-                    <p className="text-2xl font-bold">{multiSigConfig.timelockBlocks}</p>
-                    <p className="text-xs text-muted-foreground">~24 hours</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Daily Limit</p>
-                    <p className="text-2xl font-bold">
-                      {microToDisplay(multiSigConfig.dailyLimit)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">sBTC per day</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Withdrawn Today</p>
-                    <p className="text-2xl font-bold">
-                      {microToDisplay(multiSigConfig.withdrawnToday)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Proposal Expiry</p>
-                    <p className="text-2xl font-bold">{multiSigConfig.proposalExpiryBlocks}</p>
-                    <p className="text-xs text-muted-foreground">~7 days</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {multiSigConfig && <MultiSigConfigCard config={multiSigConfig} />}
         </TabsContent>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Treasury Overview</CardTitle>
-              <CardDescription>
-                Fee collection and treasury statistics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-sm text-muted-foreground">Current Fee Rate</span>
-                  <span className="font-semibold">{currentFeePercent.toFixed(2)}%</span>
-                </div>
-                <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-sm text-muted-foreground">Treasury Balance</span>
-                  <span className="font-semibold">{treasuryBalanceDisplay} sBTC</span>
-                </div>
-                <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-sm text-muted-foreground">Total Fees Collected</span>
-                  <span className="font-semibold">
-                    {totalFees ? microToDisplay(totalFees) : "0"} sBTC
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="text-sm text-muted-foreground">Multi-Sig Status</span>
-                  <Badge className="bg-green-500 text-white">
-                    {adminCount || 1}/5 Admins Active
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <TreasuryOverviewCard
+            feeRate={Number(currentFeePercent || 0)}
+            balance={String(treasuryBalanceDisplay || "0.000000")}
+            totalFees={String(getTotalFeesValue() || "0.000000")}
+            adminCount={Number(getAdminCountValue() || 1)}
+          />
         </TabsContent>
 
         {/* Access Control Tab */}

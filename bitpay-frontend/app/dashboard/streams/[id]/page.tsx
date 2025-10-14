@@ -5,22 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Pause,
   Loader2,
   ExternalLink,
-  Copy,
-  Check,
-  Shield,
-  Shuffle,
   AlertTriangle,
+  XCircle,
+  ArrowLeft,
 } from "lucide-react";
 import walletService from "@/lib/wallet/wallet-service";
 import { useStream } from "@/hooks/use-bitpay-read";
@@ -31,6 +22,11 @@ import { toast } from "sonner";
 import { CancelStreamModal } from "@/components/dashboard/modals/CancelStreamModal";
 import { TransferObligationNFTModal } from "@/components/dashboard/modals/TransferObligationNFTModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { StreamHeader } from "@/components/dashboard/streams/detail/StreamHeader";
+import { StreamProgress } from "@/components/dashboard/streams/detail/StreamProgress";
+import { StreamAmounts } from "@/components/dashboard/streams/detail/StreamAmounts";
+import { StreamAddresses } from "@/components/dashboard/streams/detail/StreamAddresses";
+import { StreamNFTSection } from "@/components/dashboard/streams/detail/StreamNFTSection";
 
 export default function StreamDetailPage() {
   const params = useParams();
@@ -38,7 +34,6 @@ export default function StreamDetailPage() {
   const streamId = params.id ? BigInt(params.id as string) : null;
 
   const [userAddress, setUserAddress] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showTransferNFTModal, setShowTransferNFTModal] = useState(false);
 
@@ -78,43 +73,6 @@ export default function StreamDetailPage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    toast.success("Copied to clipboard!");
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const getStatusIcon = (status: StreamStatus) => {
-    switch (status) {
-      case StreamStatus.ACTIVE:
-        return <Clock className="h-5 w-5 text-brand-teal" />;
-      case StreamStatus.COMPLETED:
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case StreamStatus.PENDING:
-        return <Pause className="h-5 w-5 text-yellow-500" />;
-      case StreamStatus.CANCELLED:
-        return <XCircle className="h-5 w-5 text-red-500" />;
-      default:
-        return <Clock className="h-5 w-5" />;
-    }
-  };
-
-  const getStatusBadge = (status: StreamStatus) => {
-    switch (status) {
-      case StreamStatus.ACTIVE:
-        return <Badge className="bg-brand-teal text-white">Active</Badge>;
-      case StreamStatus.COMPLETED:
-        return <Badge className="bg-green-500 text-white">Completed</Badge>;
-      case StreamStatus.PENDING:
-        return <Badge variant="secondary">Pending</Badge>;
-      case StreamStatus.CANCELLED:
-        return <Badge variant="destructive">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
   if (isLoading || !stream) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -139,20 +97,7 @@ export default function StreamDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">Stream #{streamId?.toString()}</h1>
-          <p className="text-muted-foreground">Detailed view of payment stream</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {getStatusIcon(stream.status)}
-          {getStatusBadge(stream.status)}
-        </div>
-      </div>
+      <StreamHeader streamId={streamId?.toString() || "0"} status={stream.status} />
 
       {/* Main Info Card */}
       <Card>
@@ -161,78 +106,25 @@ export default function StreamDetailPage() {
           <CardDescription>Complete details of this payment stream</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Vesting Progress</span>
-              <span className="font-medium">{progress.toFixed(2)}%</span>
-            </div>
-            <Progress value={progress} className="h-3" />
-          </div>
+          <StreamProgress progress={progress} />
 
           <Separator />
 
-          {/* Amounts Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
-              <p className="text-2xl font-bold">{microToDisplay(stream.amount)}</p>
-              <p className="text-xs text-muted-foreground">sBTC</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Vested</p>
-              <p className="text-2xl font-bold text-brand-teal">{microToDisplay(stream.vestedAmount)}</p>
-              <p className="text-xs text-muted-foreground">sBTC</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Withdrawn</p>
-              <p className="text-2xl font-bold">{microToDisplay(stream.withdrawn)}</p>
-              <p className="text-xs text-muted-foreground">sBTC</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Available</p>
-              <p className="text-2xl font-bold text-brand-pink">{microToDisplay(stream.withdrawableAmount)}</p>
-              <p className="text-xs text-muted-foreground">sBTC</p>
-            </div>
-          </div>
+          <StreamAmounts
+            totalAmount={microToDisplay(stream.amount)}
+            vestedAmount={microToDisplay(stream.vestedAmount)}
+            withdrawn={microToDisplay(stream.withdrawn)}
+            available={microToDisplay(stream.withdrawableAmount)}
+          />
 
           <Separator />
 
-          {/* Addresses */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Sender</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 bg-muted rounded text-xs font-mono">
-                  {stream.sender}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => copyToClipboard(stream.sender)}
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-              {isSender && <Badge className="mt-2">You</Badge>}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Recipient</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 bg-muted rounded text-xs font-mono">
-                  {stream.recipient}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => copyToClipboard(stream.recipient)}
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-              {isRecipient && <Badge className="mt-2">You</Badge>}
-            </div>
-          </div>
+          <StreamAddresses
+            sender={stream.sender}
+            recipient={stream.recipient}
+            isSender={isSender}
+            isRecipient={isRecipient}
+          />
 
           <Separator />
 
@@ -281,74 +173,14 @@ export default function StreamDetailPage() {
           <CardDescription>Dual NFT system for this stream</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Recipient NFT */}
-            <div className="border border-brand-teal/20 bg-brand-teal/5 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Shield className="h-5 w-5 text-brand-teal" />
-                <h3 className="font-semibold text-brand-teal">Recipient NFT</h3>
-                <Badge variant="outline" className="ml-auto text-xs border-brand-teal text-brand-teal">
-                  Soul-Bound
-                </Badge>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Token ID:</span>
-                  <span className="font-mono font-medium">#{streamId?.toString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Owner:</span>
-                  <span className="font-mono text-xs">{stream.recipient.slice(0, 8)}...</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Transferable:</span>
-                  <span className="font-medium text-red-500">No</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  Non-transferable proof of payment receipt
-                </p>
-              </div>
-            </div>
-
-            {/* Obligation NFT */}
-            <div className="border border-brand-pink/20 bg-brand-pink/5 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Shuffle className="h-5 w-5 text-brand-pink" />
-                <h3 className="font-semibold text-brand-pink">Obligation NFT</h3>
-                <Badge variant="outline" className="ml-auto text-xs border-brand-pink text-brand-pink">
-                  Transferable
-                </Badge>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Token ID:</span>
-                  <span className="font-mono font-medium">#{streamId?.toString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Owner:</span>
-                  <span className="font-mono text-xs">{stream.sender.slice(0, 8)}...</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Transferable:</span>
-                  <span className="font-medium text-green-500">Yes</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  Can be transferred for invoice factoring
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {isSender && stream.status === StreamStatus.ACTIVE && (
-            <Button
-              onClick={() => setShowTransferNFTModal(true)}
-              variant="outline"
-              className="w-full mt-4 border-brand-pink text-brand-pink hover:bg-brand-pink/10"
-            >
-              <Shuffle className="h-4 w-4 mr-2" />
-              Transfer Obligation NFT
-            </Button>
-          )}
+          <StreamNFTSection
+            streamId={streamId?.toString() || "0"}
+            sender={stream.sender}
+            recipient={stream.recipient}
+            isSender={isSender}
+            status={stream.status}
+            onTransferNFT={() => setShowTransferNFTModal(true)}
+          />
         </CardContent>
       </Card>
 
@@ -460,30 +292,26 @@ export default function StreamDetailPage() {
             onClose={() => setShowCancelModal(false)}
             stream={{
               id: streamId?.toString() || "0",
-              sender: stream.sender,
+              description: `Stream #${streamId?.toString() || "0"}`,
               recipient: stream.recipient,
               totalAmount: microToDisplay(stream.amount),
               vestedAmount: microToDisplay(stream.vestedAmount),
-              withdrawn: microToDisplay(stream.withdrawn),
-              status: stream.status,
+              withdrawnAmount: microToDisplay(stream.withdrawn),
             }}
-            onConfirm={handleCancelConfirm}
-            isLoading={isCancelling}
+            onSuccess={() => {
+              handleCancelConfirm();
+            }}
           />
 
           <TransferObligationNFTModal
             isOpen={showTransferNFTModal}
-            onClose={() => setShowTransferNFTModal(false)}
-            streamId={streamId?.toString() || "0"}
-            obligationTokenId={streamId?.toString() || "0"}
-            currentAmount={microToDisplay(stream.amount)}
-            onSuccess={() => {
-              toast.success("Obligation NFT transferred!", {
-                description: "New owner must call update-stream-sender",
-              });
+            onClose={() => {
               setShowTransferNFTModal(false);
               setTimeout(() => refetch(), 3000);
             }}
+            streamId={streamId?.toString() || "0"}
+            obligationTokenId={streamId?.toString() || "0"}
+            currentAmount={microToDisplay(stream.amount)}
           />
         </>
       )}
