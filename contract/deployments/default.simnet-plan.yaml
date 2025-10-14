@@ -96,6 +96,16 @@ plan:
             path: contracts/bitpay-access-control.clar
             clarity-version: 3
         - emulated-contract-publish:
+            contract-name: bitpay-core
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/bitpay-core.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: bitpay-marketplace
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/bitpay-marketplace.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: bitpay-nft
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/bitpay-nft.clar
@@ -114,15 +124,5 @@ plan:
             contract-name: bitpay-treasury
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/bitpay-treasury.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: bitpay-core
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/bitpay-core.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: bitpay-marketplace
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/bitpay-marketplace.clar
             clarity-version: 3
       epoch: "3.1"

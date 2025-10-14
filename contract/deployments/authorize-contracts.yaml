@@ -1,0 +1,32 @@
+---
+id: 0
+name: Authorize v2 contracts
+network: testnet
+stacks-node: "https://api.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-call:
+            contract-id: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control-v2
+            expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
+            method: authorize-contract
+            parameters:
+              - "'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-core-v2"
+            cost: 10000
+        - contract-call:
+            contract-id: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control-v2
+            expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
+            method: authorize-contract
+            parameters:
+              - "'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-marketplace-v2"
+            cost: 10000
+        - contract-call:
+            contract-id: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control-v2
+            expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
+            method: authorize-contract
+            parameters:
+              - "'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-treasury-v2"
+            cost: 10000
+      epoch: "3.1"

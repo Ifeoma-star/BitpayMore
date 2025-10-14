@@ -115,7 +115,7 @@
 
 ;; Check if protocol is paused via access-control
 (define-private (check-not-paused)
-    (let ((paused-check (contract-call? .bitpay-access-control is-paused)))
+    (let ((paused-check (contract-call? .bitpay-access-control-v2 is-paused)))
         (asserts! (not paused-check) ERR_PAUSED)
         (ok true)
     )
@@ -137,7 +137,7 @@
 
         (let ((fee (unwrap-panic (calculate-fee amount))))
             ;; Transfer fee from sender to treasury
-            (try! (contract-call? .bitpay-sbtc-helper transfer-to-vault fee tx-sender))
+            (try! (contract-call? .bitpay-sbtc-helper-v2 transfer-to-vault fee tx-sender))
 
             ;; Update treasury balance
             (var-set treasury-balance (+ (var-get treasury-balance) fee))
@@ -159,12 +159,12 @@
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)
 
         ;; Only authorized contracts (bitpay-core) can collect cancellation fees
-        (try! (contract-call? .bitpay-access-control assert-authorized-contract
+        (try! (contract-call? .bitpay-access-control-v2 assert-authorized-contract
             contract-caller
         ))
 
         ;; Transfer sBTC from vault to this treasury contract
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper transfer-from-vault amount tx-sender)))
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount tx-sender)))
 
         ;; Update treasury balance
         (var-set treasury-balance (+ (var-get treasury-balance) amount))
@@ -193,7 +193,7 @@
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)
 
         ;; Only authorized contracts (bitpay-marketplace) can collect marketplace fees
-        (try! (contract-call? .bitpay-access-control assert-authorized-contract
+        (try! (contract-call? .bitpay-access-control-v2 assert-authorized-contract
             contract-caller
         ))
 
@@ -224,7 +224,7 @@
         (asserts! (<= amount (var-get treasury-balance)) ERR_INSUFFICIENT_BALANCE)
 
         ;; Transfer from treasury to recipient
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper transfer-from-vault amount recipient)))
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount recipient)))
 
         ;; Update treasury balance
         (var-set treasury-balance (- (var-get treasury-balance) amount))
@@ -245,7 +245,7 @@
         (asserts! (<= amount (var-get treasury-balance)) ERR_INSUFFICIENT_BALANCE)
 
         ;; Transfer to recipient
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper transfer-from-vault amount recipient)))
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount recipient)))
 
         ;; Update balances
         (var-set treasury-balance (- (var-get treasury-balance) amount))
@@ -478,7 +478,7 @@
         (try! (check-daily-limit amount))
 
         ;; Execute withdrawal
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper transfer-from-vault amount
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v2 transfer-from-vault amount
             (get recipient proposal)
         )))
 
