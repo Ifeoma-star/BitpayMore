@@ -71,6 +71,18 @@ export default function DashboardPage() {
     loadWalletData();
   }, []);
 
+  // Auto-refresh streams every 30 seconds to catch newly confirmed transactions
+  useEffect(() => {
+    if (!userAddress) return;
+
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing overview from blockchain...');
+      refetch();
+    }, 30000); // Every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [userAddress, refetch]);
+
   // Calculate combined stats
   const activeStreams = allStreams?.filter(s => s.status === StreamStatus.ACTIVE).length || 0;
   const completedStreams = allStreams?.filter(s => s.status === StreamStatus.COMPLETED).length || 0;

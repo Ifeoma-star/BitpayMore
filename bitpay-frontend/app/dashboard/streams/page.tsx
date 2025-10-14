@@ -31,6 +31,18 @@ export default function StreamsPage() {
     loadWallet();
   }, []);
 
+  // Auto-refresh streams every 30 seconds to catch newly confirmed transactions
+  useEffect(() => {
+    if (!userAddress) return;
+
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing streams from blockchain...');
+      refetch();
+    }, 30000); // Every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [userAddress, refetch]);
+
   const filteredStreams = streams?.filter((stream) => {
     const matchesSearch =
       stream.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||

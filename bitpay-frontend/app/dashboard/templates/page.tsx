@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { BLOCKS_PER_MONTH } from "@/lib/contracts/config";
+import { BLOCKS_PER_MONTH, BLOCKS_PER_WEEK } from "@/lib/contracts/config";
 import { TemplatesHeader } from "@/components/dashboard/templates/TemplatesHeader";
 import { TemplateForm } from "@/components/dashboard/templates/form/TemplateForm";
 import { TemplateCard } from "@/components/dashboard/templates/list/TemplateCard";
 import { EmptyTemplates } from "@/components/dashboard/templates/list/EmptyTemplates";
 import { TemplatesInfo } from "@/components/dashboard/templates/TemplatesInfo";
+import { useAuth } from "@/hooks/use-auth";
 
 interface StreamTemplate {
+  _id?: string;
   id: string;
   name: string;
   description: string;
@@ -17,57 +19,15 @@ interface StreamTemplate {
   durationBlocks: number;
   durationLabel: string;
   category: "salary" | "contract" | "vesting" | "custom";
+  isDefault?: boolean;
 }
-
-const DEFAULT_TEMPLATES: StreamTemplate[] = [
-  {
-    id: "monthly-salary",
-    name: "Monthly Salary",
-    description: "Standard monthly salary payment stream",
-    amount: "5.0",
-    durationBlocks: BLOCKS_PER_MONTH,
-    durationLabel: "30 days",
-    category: "salary",
-  },
-  {
-    id: "weekly-contract",
-    name: "Weekly Contract",
-    description: "Weekly contractor payment",
-    amount: "1.0",
-    durationBlocks: BLOCKS_PER_WEEK,
-    durationLabel: "7 days",
-    category: "contract",
-  },
-  {
-    id: "quarterly-vesting",
-    name: "Quarterly Vesting",
-    description: "3-month vesting schedule",
-    amount: "10.0",
-    durationBlocks: BLOCKS_PER_MONTH * 3,
-    durationLabel: "90 days",
-    category: "vesting",
-  },
-  {
-    id: "annual-vesting",
-    name: "Annual Vesting",
-    description: "1-year vesting schedule",
-    amount: "50.0",
-    durationBlocks: BLOCKS_PER_MONTH * 12,
-    durationLabel: "365 days",
-    category: "vesting",
-  },
-];
 
 export default function TemplatesPage() {
   const router = useRouter();
-  const [templates, setTemplates] = useState<StreamTemplate[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("bitpay-stream-templates");
-      return saved ? JSON.parse(saved) : DEFAULT_TEMPLATES;
-    }
-    return DEFAULT_TEMPLATES;
-  });
-
+  const { isAuthenticated } = useAuth();
+  const [templates, setTemplates] = useState<StreamTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -79,41 +39,138 @@ export default function TemplatesPage() {
     category: "custom" as StreamTemplate["category"],
   });
 
-  const saveTemplates = (newTemplates: StreamTemplate[]) => {
-    setTemplates(newTemplates);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("bitpay-stream-templates", JSON.stringify(newTemplates));
+  // Fetch templates on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchTemplates();
+    }
+  }, [isAuthenticated]);
+
+  const fetchTemplates = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch("/api/templates", {
+        credentials: "include", // Send httpOnly cookies
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch templates");
+      }
+
+      const data = await response.json();
+      
+      // Map MongoDB _id to id for consistency with existing components
+      const mappedTemplates = data.templates.map((t: any) => ({
+        ...t,
+        id: t._id || t.id,
+      }));
+
+      setTemplates(mappedTemplates);
+    } catch (err) {
+      console.error("Error fetching templates:", err);
+      setError("Failed to load templates");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCreateTemplate = () => {
+  const handleCreateTemplate = async () => {
     if (!formData.name || !formData.amount) return;
 
-    const newTemplate: StreamTemplate = {
-      id: `custom-${Date.now()}`,
-      ...formData,
-    };
+    try {
+      const response = await fetch("/api/templates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Send httpOnly cookies
+        body: JSON.stringify(formData),
+      });
 
-    saveTemplates([...templates, newTemplate]);
-    resetForm();
+      if (!response.ok) {
+        throw new Error("Failed to create template");
+      }
+
+      const data = await response.json();
+      
+      // Add new template to list
+      const newTemplate = {
+        ...data.template,
+        id: data.template._id || data.template.id,
+      };
+      
+      setTemplates([...templates, newTemplate]);
+      resetForm();
+    } catch (err) {
+      console.error("Error creating template:", err);
+      alert("Failed to create template");
+    }
   };
 
-  const handleUpdateTemplate = () => {
+  const handleUpdateTemplate = async () => {
     if (!editingId || !formData.name || !formData.amount) return;
 
-    saveTemplates(
-      templates.map((t) => (t.id === editingId ? { ...t, ...formData } : t))
-    );
-    resetForm();
+    try {
+      const response = await fetch(`/api/templates/${editingId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Send httpOnly cookies
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update template");
+      }
+
+      const data = await response.json();
+      
+      // Update template in list
+      const updatedTemplate = {
+        ...data.template,
+        id: data.template._id || data.template.id,
+      };
+      
+      setTemplates(
+        templates.map((t) => (t.id === editingId ? updatedTemplate : t))
+      );
+      resetForm();
+    } catch (err) {
+      console.error("Error updating template:", err);
+      alert("Failed to update template");
+    }
   };
 
-  const handleDeleteTemplate = (id: string) => {
-    if (confirm("Delete this template?")) {
-      saveTemplates(templates.filter((t) => t.id !== id));
+  const handleDeleteTemplate = async (id: string) => {
+    if (!confirm("Delete this template?")) return;
+
+    try {
+      const response = await fetch(`/api/templates/${id}`, {
+        method: "DELETE",
+        credentials: "include", // Send httpOnly cookies
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete template");
+      }
+
+      setTemplates(templates.filter((t) => t.id !== id));
+    } catch (err) {
+      console.error("Error deleting template:", err);
+      alert("Failed to delete template");
     }
   };
 
   const handleEditTemplate = (template: StreamTemplate) => {
+    // Prevent editing default templates
+    if (template.isDefault) {
+      alert("Default templates cannot be edited. Create a custom template instead.");
+      return;
+    }
+
     setFormData({
       name: template.name,
       description: template.description,
@@ -146,6 +203,33 @@ export default function TemplatesPage() {
     setIsCreating(false);
     setEditingId(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading templates...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <button
+            onClick={fetchTemplates}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -28,18 +28,22 @@ import {
   useProposeRemoveAdmin,
 } from "@/hooks/use-multisig-treasury";
 import { ProposalCard } from "@/components/dashboard/treasury/proposals/ProposalCard";
-import { ProposeWithdrawalModal } from "@/components/dashboard/treasury/proposals/ProposeWithdrawalModal";
+import { ProposeWithdrawalModal } from "@/components/dashboard/modals/ProposeWithdrawalModal";
 import { MultiSigAdminList } from "@/components/dashboard/treasury/multisig/MultiSigAdminList";
 import { TreasuryHeader } from "@/components/dashboard/treasury/overview/TreasuryHeader";
 import { TreasuryStats } from "@/components/dashboard/treasury/overview/TreasuryStats";
 import { TreasuryOverviewCard } from "@/components/dashboard/treasury/overview/TreasuryOverviewCard";
 import { MultiSigConfigCard } from "@/components/dashboard/treasury/multisig/MultiSigConfigCard";
+import { WithdrawFeesModal } from "@/components/dashboard/modals/WithdrawFeesModal";
+import { ProposeAdminModal } from "@/components/dashboard/modals/ProposeAdminModal";
 import { toast } from "sonner";
 
 export default function TreasuryPage() {
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showProposeWithdrawalModal, setShowProposeWithdrawalModal] = useState(false);
+  const [showWithdrawFeesModal, setShowWithdrawFeesModal] = useState(false);
+  const [showProposeAdminModal, setShowProposeAdminModal] = useState(false);
 
   // Mock proposals data (will be fetched from contract after deployment)
   const [mockProposals] = useState<any[]>([
@@ -116,17 +120,11 @@ export default function TreasuryPage() {
   };
 
   const handleProposeAddAdmin = async () => {
-    // Will open modal in future iteration
-    toast.info("Add Admin Modal", {
-      description: "Coming soon after contract deployment",
-    });
+    setShowProposeAdminModal(true);
   };
 
   const handleProposeRemoveAdmin = async (address: string) => {
-    // Will be implemented after contract deployment
-    toast.info("Remove Admin Proposal", {
-      description: `Proposing to remove ${address.slice(0, 8)}...`,
-    });
+    setShowProposeAdminModal(true);
   };
 
   // Helper function to safely extract numeric values from contract responses
@@ -214,6 +212,29 @@ export default function TreasuryPage() {
         adminCount={Number(getAdminCountValue() || 1)}
         pendingProposals={Number(mockProposals.filter(p => !p.executed).length || 0)}
       />
+
+      {/* Withdraw Fees Button - Only for admins */}
+      {(isAdmin || isMultiSigAdmin) && parseFloat(treasuryBalanceDisplay) > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Withdraw Treasury Fees</h3>
+                <p className="text-sm text-muted-foreground">
+                  Available balance: {treasuryBalanceDisplay} sBTC
+                </p>
+              </div>
+              <Button
+                onClick={() => setShowWithdrawFeesModal(true)}
+                className="bg-brand-pink hover:bg-brand-pink/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Withdraw Fees
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs for different sections */}
       <Tabs defaultValue="proposals" className="space-y-6">
@@ -361,6 +382,26 @@ export default function TreasuryPage() {
         onSuccess={() => {
           // Refetch proposals
           toast.success("Proposal created successfully!");
+        }}
+      />
+
+      <WithdrawFeesModal
+        isOpen={showWithdrawFeesModal}
+        onClose={() => setShowWithdrawFeesModal(false)}
+        totalFeesAvailable={treasuryBalanceDisplay}
+        onSuccess={() => {
+          // Refetch treasury balance
+          toast.success("Fees withdrawn successfully!");
+        }}
+      />
+
+      <ProposeAdminModal
+        isOpen={showProposeAdminModal}
+        onClose={() => setShowProposeAdminModal(false)}
+        currentAdminCount={getAdminCountValue()}
+        onSuccess={() => {
+          // Refetch admin list
+          toast.success("Admin proposal created!");
         }}
       />
     </div>

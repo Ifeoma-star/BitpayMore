@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -12,18 +12,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft,
   Bitcoin,
   Clock,
   Wallet,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { StreamPreview } from "@/components/dashboard/streams/create/StreamPreview";
 import { QuickTemplates } from "@/components/dashboard/streams/create/QuickTemplates";
 import { ImportantNotes } from "@/components/dashboard/streams/create/ImportantNotes";
+import { useCreateStream } from "@/hooks/use-bitpay-write";
+import { useBlockHeight } from "@/hooks/use-block-height";
+import { BLOCKS_PER_DAY, BLOCKS_PER_WEEK, BLOCKS_PER_MONTH } from "@/lib/contracts/config";
 
 const createStreamSchema = z.object({
   recipient: z.string().min(1, "Recipient address is required"),
@@ -41,8 +46,9 @@ const createStreamSchema = z.object({
 type CreateStreamForm = z.infer<typeof createStreamSchema>;
 
 export default function CreateStreamPage() {
-  const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
+  const { write: createStream, isLoading: isCreating, error: createError, txId } = useCreateStream();
+  const { blockHeight, isLoading: blockHeightLoading } = useBlockHeight(10000); // Poll every 10 seconds
 
   const form = useForm({
     resolver: zodResolver(createStreamSchema),
@@ -57,6 +63,115 @@ export default function CreateStreamPage() {
   });
 
   const watchedValues = form.watch();
+
+  // Show toast when transaction completes
+  useEffect(() => {
+    if (txId) {
+      const explorerUrl = `https://explorer.hiro.so/txid/${txId}?chain=testnet`;
+
+      toast.success("Stream Created Successfully!", {
+        description: (
+          <div className="space-y-2 mt-1">
+            <p className="text-sm">Your payment stream is now on the blockchain.</p>
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono block hover:underline"
+            >
+              {txId.substring(0, 20)}...
+            </a>
+          </div>
+        ),
+        duration: 15000,
+        action: {
+          label: "View Streams",
+          onClick: () => router.push("/dashboard/streams"),
+        },
+      });
+
+      // Save to database
+      saveStreamToDatabase(txId);
+
+      // Log for easy copy-paste
+      console.log('✅ Stream created!');
+      console.log('📋 Transaction ID:', txId);
+      console.log('🔗 Explorer:', explorerUrl);
+
+      // Wait a bit then redirect to streams page
+      // This gives the transaction time to be processed
+      setTimeout(() => {
+        router.push("/dashboard/streams");
+      }, 3000);
+    }
+  }, [txId, router]);
+
+  // Show error toast
+  useEffect(() => {
+    if (createError) {
+      toast.error("Failed to Create Stream", {
+        description: createError === "Transaction cancelled"
+          ? "You cancelled the transaction in your wallet."
+          : createError,
+        duration: 8000,
+      });
+    }
+  }, [createError]);
+
+  // Save stream to database after blockchain confirmation
+  const saveStreamToDatabase = async (transactionId: string) => {
+    try {
+      const formValues = form.getValues();
+
+      // Convert duration to blocks
+      let durationInBlocks = 0;
+      const duration = parseInt(formValues.duration);
+
+      switch (formValues.durationType) {
+        case "blocks":
+          durationInBlocks = duration;
+          break;
+        case "days":
+          durationInBlocks = duration * BLOCKS_PER_DAY;
+          break;
+        case "weeks":
+          durationInBlocks = duration * BLOCKS_PER_WEEK;
+          break;
+        case "months":
+          durationInBlocks = duration * BLOCKS_PER_MONTH;
+          break;
+      }
+
+      const startBlock = (blockHeight || 0) + 1;
+      const endBlock = startBlock + durationInBlocks;
+
+      const response = await fetch('/api/streams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          recipient: formValues.recipient,
+          amount: formValues.amount,
+          startBlock,
+          endBlock,
+          description: formValues.description,
+          txHash: transactionId,
+          status: 'pending',
+        }),
+      });
+
+      if (response.ok) {
+        console.log('✅ Stream saved to database');
+      } else {
+        console.error('Failed to save stream to database');
+      }
+    } catch (error) {
+      console.error('Error saving stream to database:', error);
+      // Don't show error to user - stream is created on chain, DB is just cache
+    }
+  };
 
   // Calculate estimated values
   const calculateEstimates = () => {
@@ -98,22 +213,62 @@ export default function CreateStreamPage() {
   const estimates = calculateEstimates();
 
   const onSubmit = async (data: CreateStreamForm) => {
-    setIsCreating(true);
-
     try {
-      // TODO: Integrate with smart contract
-      console.log("Creating stream:", data);
+      if (!blockHeight) {
+        toast.error("Unable to fetch current block height. Please try again.");
+        return;
+      }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Convert duration to blocks
+      let durationInBlocks = 0;
+      const duration = parseInt(data.duration);
 
-      toast.success("Stream created successfully!");
-      router.push("/dashboard/streams");
+      switch (data.durationType) {
+        case "blocks":
+          durationInBlocks = duration;
+          break;
+        case "days":
+          durationInBlocks = duration * BLOCKS_PER_DAY;
+          break;
+        case "weeks":
+          durationInBlocks = duration * BLOCKS_PER_WEEK;
+          break;
+        case "months":
+          durationInBlocks = duration * BLOCKS_PER_MONTH;
+          break;
+      }
+
+      // Calculate start and end blocks
+      // Add buffer of 3 blocks (~1-1.5 minutes) to account for wallet confirmation delay
+      const startBlock = blockHeight + 3; // Start in 3 blocks (~90 seconds)
+      const endBlock = startBlock + durationInBlocks;
+
+      // Convert amount to satoshis for display
+      const amountInSats = parseFloat(data.amount) * 100_000_000;
+
+      console.log('════════════════════════════════════════');
+      console.log('📝 CREATING STREAM ON BLOCKCHAIN');
+      console.log('════════════════════════════════════════');
+      console.log('Recipient:', data.recipient);
+      console.log('Amount:', data.amount, 'sBTC');
+      console.log('Amount (sats):', amountInSats.toLocaleString());
+      console.log('Start Block:', startBlock);
+      console.log('End Block:', endBlock);
+      console.log('Duration:', durationInBlocks, 'blocks');
+      console.log('════════════════════════════════════════');
+
+      // Call smart contract
+      await createStream(
+        data.recipient,
+        data.amount,
+        startBlock,
+        endBlock
+      );
+
+      // Note: Navigation happens in the useEffect when txId is set
     } catch (error) {
-      toast.error("Failed to create stream. Please try again.");
       console.error("Stream creation error:", error);
-    } finally {
-      setIsCreating(false);
+      // Error toast is handled in useEffect
     }
   };
 
@@ -345,6 +500,40 @@ export default function CreateStreamPage() {
             <ImportantNotes />
           </div>
         </div>
+
+        {/* Loading Dialog */}
+        <Dialog open={isCreating}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-brand-pink" />
+                Creating Stream...
+              </DialogTitle>
+              <DialogDescription className="space-y-3 pt-4">
+                <p>Please confirm the transaction in your Stacks wallet.</p>
+                <div className="bg-muted p-4 rounded-lg space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Recipient:</span>
+                    <span className="font-mono text-xs">
+                      {watchedValues.recipient.substring(0, 8)}...
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount:</span>
+                    <span className="font-semibold">{watchedValues.amount} sBTC</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Duration:</span>
+                    <span>{watchedValues.duration} {watchedValues.durationType}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This may take a few moments. Don't close this window.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

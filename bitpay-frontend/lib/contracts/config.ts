@@ -111,6 +111,39 @@ export const SBTC_HELPER_FUNCTIONS = {
   GET_USER_BALANCE: 'get-user-balance',
 } as const;
 
+export const MARKETPLACE_FUNCTIONS = {
+  // Write functions
+  LIST_NFT: 'list-nft',
+  UPDATE_LISTING_PRICE: 'update-listing-price',
+  CANCEL_LISTING: 'cancel-listing',
+  BUY_NFT: 'buy-nft',
+  INITIATE_PURCHASE: 'initiate-purchase',
+  COMPLETE_PURCHASE: 'complete-purchase',
+  CANCEL_EXPIRED_PURCHASE: 'cancel-expired-purchase',
+  ADD_AUTHORIZED_BACKEND: 'add-authorized-backend',
+  REMOVE_AUTHORIZED_BACKEND: 'remove-authorized-backend',
+  SET_MARKETPLACE_FEE: 'set-marketplace-fee',
+
+  // Read functions
+  GET_LISTING: 'get-listing',
+  GET_PENDING_PURCHASE: 'get-pending-purchase',
+  GET_MARKETPLACE_FEE: 'get-marketplace-fee',
+  IS_BACKEND_AUTHORIZED: 'is-backend-authorized',
+} as const;
+
+export const OBLIGATION_NFT_FUNCTIONS = {
+  // Write functions
+  TRANSFER: 'transfer',
+  MINT: 'mint',
+  BURN: 'burn',
+  SET_BASE_TOKEN_URI: 'set-base-token-uri',
+
+  // Read functions
+  GET_OWNER: 'get-owner',
+  GET_LAST_TOKEN_ID: 'get-last-token-id',
+  GET_TOKEN_URI: 'get-token-uri',
+} as const;
+
 // Stream status enum
 export enum StreamStatus {
   PENDING = 'pending',      // start-block > current-block
@@ -138,17 +171,19 @@ export interface StreamWithId extends StreamData {
   withdrawableAmount: bigint;
 }
 
-// Utility: Convert micro-STX/sats to display format
+// Utility: Convert micro-sBTC (satoshis) to display format
+// sBTC uses 8 decimals (1 sBTC = 100,000,000 satoshis)
 export const microToDisplay = (micro: bigint | string): string => {
   const value = typeof micro === 'string' ? BigInt(micro) : micro;
-  const btc = Number(value) / 1_000_000;
-  return btc.toFixed(6);
+  const btc = Number(value) / 100_000_000;
+  return btc.toFixed(8);
 };
 
-// Utility: Convert display format to micro-STX/sats
+// Utility: Convert display format to micro-sBTC (satoshis)
+// sBTC uses 8 decimals (1 sBTC = 100,000,000 satoshis)
 export const displayToMicro = (display: number | string): bigint => {
   const value = typeof display === 'string' ? parseFloat(display) : display;
-  return BigInt(Math.floor(value * 1_000_000));
+  return BigInt(Math.floor(value * 100_000_000));
 };
 
 // Block time constants (Stacks blocks are ~10 minutes on Bitcoin)

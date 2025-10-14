@@ -1,61 +1,65 @@
 /**
  * POST /api/webhooks/payment-gateway
- * Handles external payment gateway webhooks (Stripe, PayPal, etc.)
- * Used for marketplace purchases via fiat currency
- * 
+ * Handles StacksPay payment gateway webhooks
+ * Used for marketplace purchases via BTC/STX/sBTC
+ *
  * Flow:
  * 1. User initiates purchase via initiate-purchase contract call
- * 2. Frontend shows payment link/button
- * 3. User completes payment via external gateway
- * 4. Gateway sends webhook to this endpoint
+ * 2. Frontend creates StacksPay payment link
+ * 3. User completes payment via StacksPay
+ * 4. StacksPay sends webhook to this endpoint
  * 5. Backend verifies payment and calls complete-purchase contract
  * 6. Chainhook picks up gateway-purchase-completed event
  */
 
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import connectToDatabase from '@/lib/db';
+import {
+  fetchCallReadOnlyFunction,
+  makeContractCall,
+  broadcastTransaction,
+  AnchorMode,
+  PostConditionMode,
+  uintCV,
+  principalCV,
+} from '@stacks/transactions';
+import {
+  getStacksNetwork,
+  BITPAY_DEPLOYER_ADDRESS,
+  CONTRACT_NAMES,
+} from '@/lib/contracts/config';
+import * as NotificationService from '@/lib/notifications/notification-service';
 
-// Payment gateway webhook payload types
-interface StripeWebhookPayload {
-  type: string;
+// StacksPay webhook payload types
+interface StacksPayWebhookPayload {
+  type: 'payment.created' | 'payment.pending' | 'payment.completed' | 'payment.failed' | 'payment.cancelled';
   data: {
-    object: {
+    payment: {
       id: string;
-      amount: number;
-      currency: string;
-      status: string;
-      metadata: {
-        streamId: string;
-        paymentId: string;
-        buyer: string;
-        seller: string;
+      status: 'pending' | 'completed' | 'failed' | 'cancelled';
+      amount: number; // satoshis
+      currency: 'BTC' | 'STX' | 'SBTC';
+      transactionId?: string; // Blockchain transaction ID
+      metadata?: {
+        streamId?: string;
+        buyer?: string;
+        seller?: string;
+        paymentId?: string;
       };
+      createdAt: string;
+      completedAt?: string;
     };
   };
-}
-
-interface PayPalWebhookPayload {
-  event_type: string;
-  resource: {
-    id: string;
-    amount: {
-      total: string;
-      currency: string;
-    };
-    state: string;
-    custom_id: string; // Our payment ID
-  };
+  created: string;
 }
 
 export async function POST(request: Request) {
   try {
-    // Determine payment gateway from headers or body
-    const gateway = detectPaymentGateway(request);
-
-    console.log(`💳 Payment gateway webhook received: ${gateway}`);
+    console.log('💳 StacksPay webhook received');
 
     // Verify webhook signature
-    const isValid = await verifyWebhookSignature(request, gateway);
+    const isValid = await verifyStacksPaySignature(request);
     if (!isValid) {
       console.error('❌ Invalid webhook signature');
       return NextResponse.json(
@@ -64,22 +68,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // Parse payload based on gateway
-    const payload = await request.json();
+    // Parse payload
+    const payload: StacksPayWebhookPayload = await request.json();
+    console.log(`🔔 StacksPay event: ${payload.type}`, payload.data.payment.id);
 
-    switch (gateway) {
-      case 'stripe':
-        return await handleStripeWebhook(payload as StripeWebhookPayload);
+    // Route to appropriate handler
+    switch (payload.type) {
+      case 'payment.created':
+        return await handlePaymentCreated(payload);
 
-      case 'paypal':
-        return await handlePayPalWebhook(payload as PayPalWebhookPayload);
+      case 'payment.pending':
+        return await handlePaymentPending(payload);
+
+      case 'payment.completed':
+        return await handlePaymentCompleted(payload);
+
+      case 'payment.failed':
+        return await handlePaymentFailed(payload);
+
+      case 'payment.cancelled':
+        return await handlePaymentCancelled(payload);
 
       default:
-        console.error(`Unknown payment gateway: ${gateway}`);
-        return NextResponse.json(
-          { success: false, error: 'Unknown gateway' },
-          { status: 400 }
-        );
+        console.log(`Unhandled StacksPay event: ${payload.type}`);
+        return NextResponse.json({ received: true });
     }
   } catch (error) {
     console.error('❌ Payment gateway webhook error:', error);
@@ -94,36 +106,43 @@ export async function POST(request: Request) {
 }
 
 /**
- * Detect which payment gateway sent the webhook
+ * Verify StacksPay webhook signature using HMAC SHA-256
  */
-function detectPaymentGateway(request: Request): string {
-  const stripeSignature = request.headers.get('stripe-signature');
-  const paypalTransmissionId = request.headers.get('paypal-transmission-id');
-
-  if (stripeSignature) return 'stripe';
-  if (paypalTransmissionId) return 'paypal';
-
-  return 'unknown';
-}
-
-/**
- * Verify webhook signature to ensure it's from the payment gateway
- */
-async function verifyWebhookSignature(
-  request: Request,
-  gateway: string
-): Promise<boolean> {
+async function verifyStacksPaySignature(request: Request): Promise<boolean> {
   try {
-    switch (gateway) {
-      case 'stripe':
-        return await verifyStripeSignature(request);
+    const signature = request.headers.get('x-stackspay-signature');
+    const timestamp = request.headers.get('x-stackspay-timestamp');
+    const secret = process.env.STACKSPAY_WEBHOOK_SECRET;
 
-      case 'paypal':
-        return await verifyPayPalSignature(request);
-
-      default:
-        return false;
+    if (!signature || !timestamp || !secret) {
+      console.error('Missing signature, timestamp, or secret');
+      return false;
     }
+
+    // Prevent replay attacks - reject timestamps older than 5 minutes
+    const currentTime = Math.floor(Date.now() / 1000);
+    const webhookTime = parseInt(timestamp);
+    if (Math.abs(currentTime - webhookTime) > 300) {
+      console.error('Webhook timestamp too old');
+      return false;
+    }
+
+    // Clone request to read body
+    const clonedRequest = request.clone();
+    const body = await clonedRequest.text();
+
+    // Compute expected signature: HMAC-SHA256(timestamp + body)
+    const payload = `${timestamp}.${body}`;
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(payload)
+      .digest('hex');
+
+    // Timing-safe comparison
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
   } catch (error) {
     console.error('Signature verification failed:', error);
     return false;
@@ -131,168 +150,212 @@ async function verifyWebhookSignature(
 }
 
 /**
- * Verify Stripe webhook signature
+ * Handle payment.created event
  */
-async function verifyStripeSignature(request: Request): Promise<boolean> {
-  const signature = request.headers.get('stripe-signature');
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!signature || !secret) {
-    return false;
-  }
-
-  // In production, use stripe.webhooks.constructEvent()
-  // For now, basic HMAC verification
-  const body = await request.text();
-  const timestamp = signature.split(',')[0].split('=')[1];
-  const receivedSignature = signature.split(',')[1].split('=')[1];
-
-  const payload = `${timestamp}.${body}`;
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
-
-  return crypto.timingSafeEqual(
-    Buffer.from(receivedSignature),
-    Buffer.from(expectedSignature)
-  );
-}
-
-/**
- * Verify PayPal webhook signature
- */
-async function verifyPayPalSignature(request: Request): Promise<boolean> {
-  // PayPal webhook verification is more complex
-  // Requires calling PayPal API to verify
-  // For now, check basic headers
-  const transmissionId = request.headers.get('paypal-transmission-id');
-  const transmissionTime = request.headers.get('paypal-transmission-time');
-  const transmissionSig = request.headers.get('paypal-transmission-sig');
-
-  return !!(transmissionId && transmissionTime && transmissionSig);
-}
-
-/**
- * Handle Stripe payment completed webhook
- */
-async function handleStripeWebhook(
-  payload: StripeWebhookPayload
+async function handlePaymentCreated(
+  payload: StacksPayWebhookPayload
 ): Promise<Response> {
-  console.log(`🔔 Stripe event: ${payload.type}`);
+  const { payment } = payload.data;
 
-  switch (payload.type) {
-    case 'payment_intent.succeeded':
-      return await handlePaymentSuccess({
-        paymentId: payload.data.object.metadata.paymentId,
-        streamId: payload.data.object.metadata.streamId,
-        buyer: payload.data.object.metadata.buyer,
-        seller: payload.data.object.metadata.seller,
-        amount: payload.data.object.amount,
-        currency: payload.data.object.currency,
-        gateway: 'stripe',
-        gatewayPaymentId: payload.data.object.id,
-      });
-
-    case 'payment_intent.payment_failed':
-      return await handlePaymentFailed({
-        paymentId: payload.data.object.metadata.paymentId,
-        streamId: payload.data.object.metadata.streamId,
-        reason: 'Payment failed',
-      });
-
-    default:
-      console.log(`Unhandled Stripe event: ${payload.type}`);
-      return NextResponse.json({ received: true });
-  }
-}
-
-/**
- * Handle PayPal payment completed webhook
- */
-async function handlePayPalWebhook(
-  payload: PayPalWebhookPayload
-): Promise<Response> {
-  console.log(`🔔 PayPal event: ${payload.event_type}`);
-
-  switch (payload.event_type) {
-    case 'PAYMENT.SALE.COMPLETED':
-      // Parse custom_id which should contain: streamId|paymentId|buyer|seller
-      const [streamId, paymentId, buyer, seller] = payload.resource.custom_id.split('|');
-
-      return await handlePaymentSuccess({
-        paymentId,
-        streamId,
-        buyer,
-        seller,
-        amount: parseFloat(payload.resource.amount.total) * 100, // Convert to cents
-        currency: payload.resource.amount.currency,
-        gateway: 'paypal',
-        gatewayPaymentId: payload.resource.id,
-      });
-
-    case 'PAYMENT.SALE.DENIED':
-      const [failedStreamId, failedPaymentId] = payload.resource.custom_id.split('|');
-
-      return await handlePaymentFailed({
-        paymentId: failedPaymentId,
-        streamId: failedStreamId,
-        reason: 'Payment denied',
-      });
-
-    default:
-      console.log(`Unhandled PayPal event: ${payload.event_type}`);
-      return NextResponse.json({ received: true });
-  }
-}
-
-/**
- * Handle successful payment - call complete-purchase contract
- */
-async function handlePaymentSuccess(data: {
-  paymentId: string;
-  streamId: string;
-  buyer: string;
-  seller: string;
-  amount: number;
-  currency: string;
-  gateway: string;
-  gatewayPaymentId: string;
-}): Promise<Response> {
-  console.log(`✅ Payment successful:`, data);
+  console.log(`📝 Payment created: ${payment.id}`);
 
   try {
-    // TODO: Call Stacks contract complete-purchase function
-    // This should be done by the authorized backend principal
-    // 1. Build transaction calling bitpay-marketplace-v2.complete-purchase
-    // 2. Sign with backend wallet
-    // 3. Broadcast transaction
-    // 4. Chainhook will pick up the gateway-purchase-completed event
+    // Store payment record in database
+    const mongoose = await connectToDatabase();
+    const db = mongoose.connection.db;
 
-    // For now, log the intent
-    console.log(`📝 Would call complete-purchase for stream ${data.streamId}`);
-
-    // TODO: Store payment confirmation in database
-    // await db.collection('payment_confirmations').insertOne({
-    //   ...data,
-    //   confirmedAt: new Date(),
-    //   status: 'pending_blockchain_confirmation',
-    // });
-
-    // TODO: Send confirmation email to buyer and seller
+    if (db) {
+      await db.collection('payment_confirmations').insertOne({
+        stacksPayId: payment.id,
+        streamId: payment.metadata?.streamId,
+        buyer: payment.metadata?.buyer,
+        seller: payment.metadata?.seller,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: 'created',
+        createdAt: new Date(payment.createdAt),
+        updatedAt: new Date(),
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Payment processed successfully',
-      streamId: data.streamId,
-      paymentId: data.paymentId,
+      message: 'Payment created',
+      paymentId: payment.id,
     });
   } catch (error) {
-    console.error('Failed to process payment:', error);
+    console.error('Failed to process payment created:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to process payment created' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Handle payment.pending event
+ */
+async function handlePaymentPending(
+  payload: StacksPayWebhookPayload
+): Promise<Response> {
+  const { payment } = payload.data;
+
+  console.log(`⏳ Payment pending: ${payment.id}`);
+
+  try {
+    // Update payment status
+    const mongoose = await connectToDatabase();
+    const db = mongoose.connection.db;
+
+    if (db) {
+      await db.collection('payment_confirmations').updateOne(
+        { stacksPayId: payment.id },
+        {
+          $set: {
+            status: 'pending',
+            transactionId: payment.transactionId,
+            updatedAt: new Date(),
+          },
+        }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Payment pending',
+      paymentId: payment.id,
+    });
+  } catch (error) {
+    console.error('Failed to process payment pending:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to process payment pending' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Handle payment.completed event
+ * This is the main handler that completes the blockchain purchase
+ */
+async function handlePaymentCompleted(
+  payload: StacksPayWebhookPayload
+): Promise<Response> {
+  const { payment } = payload.data;
+
+  console.log(`✅ Payment completed: ${payment.id}`);
+
+  try {
+    const { streamId, buyer, seller } = payment.metadata || {};
+
+    if (!streamId || !buyer || !seller) {
+      throw new Error('Missing required metadata: streamId, buyer, or seller');
+    }
+
+    // Update payment status in database
+    const mongoose = await connectToDatabase();
+    const db = mongoose.connection.db;
+
+    if (db) {
+      await db.collection('payment_confirmations').updateOne(
+        { stacksPayId: payment.id },
+        {
+          $set: {
+            status: 'completed',
+            transactionId: payment.transactionId,
+            completedAt: new Date(payment.completedAt || new Date()),
+            updatedAt: new Date(),
+          },
+        }
+      );
+    }
+
+    // Call complete-purchase smart contract function
+    // This must be done by an authorized backend principal
+    const network = getStacksNetwork();
+    const privateKey = process.env.BACKEND_WALLET_PRIVATE_KEY;
+
+    if (!privateKey) {
+      throw new Error('BACKEND_WALLET_PRIVATE_KEY not configured');
+    }
+
+    console.log(`📝 Calling complete-purchase for stream ${streamId}`);
+
+    const txOptions = {
+      contractAddress: BITPAY_DEPLOYER_ADDRESS,
+      contractName: CONTRACT_NAMES.MARKETPLACE,
+      functionName: 'complete-purchase',
+      functionArgs: [
+        uintCV(BigInt(streamId)),
+        principalCV(buyer),
+      ],
+      senderKey: privateKey,
+      network,
+      anchorMode: AnchorMode.Any,
+      postConditionMode: PostConditionMode.Allow,
+    };
+
+    const transaction = await makeContractCall(txOptions);
+    const txResult = await broadcastTransaction({ transaction, network });
+
+    if ('error' in txResult) {
+      throw new Error(`Transaction failed: ${txResult.reason || 'Unknown error'}`);
+    }
+
+    console.log(`✅ Transaction broadcast: ${txResult.txid}`);
+
+    // Update with blockchain transaction ID
+    if (db) {
+      await db.collection('payment_confirmations').updateOne(
+        { stacksPayId: payment.id },
+        {
+          $set: {
+            blockchainTxId: txResult.txid,
+            blockchainStatus: 'pending',
+            updatedAt: new Date(),
+          },
+        }
+      );
+    }
+
+    // Chainhook will pick up the gateway-purchase-completed event
+    // and trigger notifications via /api/webhooks/chainhook
+
+    return NextResponse.json({
+      success: true,
+      message: 'Payment completed and blockchain transaction broadcast',
+      paymentId: payment.id,
+      streamId,
+      blockchainTxId: txResult.txid,
+    });
+  } catch (error) {
+    console.error('Failed to process payment completed:', error);
+
+    // Update status to failed
+    try {
+      const mongoose = await connectToDatabase();
+      const db = mongoose.connection.db;
+
+      if (db) {
+        await db.collection('payment_confirmations').updateOne(
+          { stacksPayId: payload.data.payment.id },
+          {
+            $set: {
+              status: 'blockchain_failed',
+              error: error instanceof Error ? error.message : 'Unknown error',
+              updatedAt: new Date(),
+            },
+          }
+        );
+      }
+    } catch (dbError) {
+      console.error('Failed to update payment status:', dbError);
+    }
+
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to process payment',
+        error: error instanceof Error ? error.message : 'Failed to complete purchase',
       },
       { status: 500 }
     );
@@ -300,25 +363,65 @@ async function handlePaymentSuccess(data: {
 }
 
 /**
- * Handle failed payment
+ * Handle payment.failed event
  */
-async function handlePaymentFailed(data: {
-  paymentId: string;
-  streamId: string;
-  reason: string;
-}): Promise<Response> {
-  console.error(`❌ Payment failed:`, data);
+async function handlePaymentFailed(
+  payload: StacksPayWebhookPayload
+): Promise<Response> {
+  const { payment } = payload.data;
+
+  console.error(`❌ Payment failed: ${payment.id}`);
 
   try {
-    // TODO: Mark payment as failed in database
-    // TODO: Notify buyer
-    // TODO: Make listing available again
+    const { streamId, buyer, seller } = payment.metadata || {};
+
+    // Update payment status
+    const mongoose = await connectToDatabase();
+    const db = mongoose.connection.db;
+
+    if (db) {
+      await db.collection('payment_confirmations').updateOne(
+        { stacksPayId: payment.id },
+        {
+          $set: {
+            status: 'failed',
+            updatedAt: new Date(),
+          },
+        }
+      );
+
+      // Make listing available again by removing pending purchase record
+      if (streamId) {
+        await db.collection('pending_purchases').deleteOne({
+          streamId,
+          stacksPayId: payment.id,
+        });
+      }
+    }
+
+    // Notify buyer of failure
+    if (buyer) {
+      await NotificationService.createNotification(
+        buyer,
+        'purchase_failed',
+        '❌ Payment Failed',
+        `Your payment for stream #${streamId} failed. Please try again.`,
+        {
+          streamId,
+          paymentId: payment.id,
+        },
+        {
+          priority: 'high',
+          actionUrl: `/dashboard/marketplace`,
+          actionText: 'Try Again',
+        }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Payment failure processed',
-      streamId: data.streamId,
-      paymentId: data.paymentId,
+      paymentId: payment.id,
     });
   } catch (error) {
     console.error('Failed to process payment failure:', error);
@@ -333,13 +436,87 @@ async function handlePaymentFailed(data: {
 }
 
 /**
+ * Handle payment.cancelled event
+ */
+async function handlePaymentCancelled(
+  payload: StacksPayWebhookPayload
+): Promise<Response> {
+  const { payment } = payload.data;
+
+  console.log(`🚫 Payment cancelled: ${payment.id}`);
+
+  try {
+    const { streamId, buyer } = payment.metadata || {};
+
+    // Update payment status
+    const mongoose = await connectToDatabase();
+    const db = mongoose.connection.db;
+
+    if (db) {
+      await db.collection('payment_confirmations').updateOne(
+        { stacksPayId: payment.id },
+        {
+          $set: {
+            status: 'cancelled',
+            updatedAt: new Date(),
+          },
+        }
+      );
+
+      // Make listing available again
+      if (streamId) {
+        await db.collection('pending_purchases').deleteOne({
+          streamId,
+          stacksPayId: payment.id,
+        });
+      }
+    }
+
+    // Notify buyer
+    if (buyer) {
+      await NotificationService.createNotification(
+        buyer,
+        'purchase_cancelled',
+        '🚫 Payment Cancelled',
+        `Your payment for stream #${streamId} was cancelled.`,
+        {
+          streamId,
+          paymentId: payment.id,
+        },
+        {
+          priority: 'normal',
+          actionUrl: `/dashboard/marketplace`,
+          actionText: 'View Marketplace',
+        }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Payment cancellation processed',
+      paymentId: payment.id,
+    });
+  } catch (error) {
+    console.error('Failed to process payment cancellation:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to process payment cancellation',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * GET endpoint for health check
  */
 export async function GET() {
   return NextResponse.json({
     success: true,
-    message: 'Payment Gateway webhook endpoint',
+    message: 'StacksPay Payment Gateway webhook endpoint',
     status: 'active',
-    supportedGateways: ['stripe', 'paypal'],
+    supportedCurrencies: ['BTC', 'STX', 'SBTC'],
+    gateway: 'StacksPay',
   });
 }

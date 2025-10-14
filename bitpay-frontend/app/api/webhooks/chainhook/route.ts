@@ -166,19 +166,21 @@ async function handleApply(blocks: ChainhookBlock[]) {
 
 /**
  * Handle blockchain reorganizations
+ * Note: Rollback logic is implemented in specialized route handlers
+ * (streams, marketplace, treasury, etc.)
  */
 async function handleRollback(blocks: ChainhookBlock[]) {
   for (const block of blocks) {
     console.warn(`🔄 Rolling back block ${block.block_identifier.index}`);
 
-    // TODO: Implement rollback logic
-    // - Mark transactions from these blocks as "pending" or "rolled_back"
-    // - Revert any state changes made by these transactions
-    // - Notify affected users
-    // - Update database records
+    // Rollback handling is implemented in:
+    // - /api/webhooks/chainhook/streams/route.ts
+    // - /api/webhooks/chainhook/marketplace/route.ts
+    // - /api/webhooks/chainhook/treasury/route.ts
+    // - /api/webhooks/chainhook/nft/route.ts
+    // - /api/webhooks/chainhook/access-control/route.ts
 
-    // For now, just log
-    console.warn(`⚠️ Rollback for block ${block.block_identifier.index} - manual review required`);
+    console.warn(`⚠️ Rollback for block ${block.block_identifier.index} - handled by specialized routes`);
   }
 }
 
@@ -218,6 +220,7 @@ async function handlePrintEvent(
 
 /**
  * Handle stream-created event
+ * Note: Full implementation in /api/webhooks/chainhook/streams/route.ts
  */
 async function handleStreamCreated(
   event: StreamCreatedEvent,
@@ -233,13 +236,14 @@ async function handleStreamCreated(
     endBlock: event['end-block'].toString(),
   });
 
-  // TODO: Store in database
-  // TODO: Send notification to recipient
-  // TODO: Trigger real-time update via WebSocket/Pusher
+  // Database storage, notifications, and real-time updates
+  // are handled in /api/webhooks/chainhook/streams/route.ts
+  console.log('→ Event processing delegated to specialized streams route');
 }
 
 /**
  * Handle stream-withdrawal event
+ * Note: Full implementation in /api/webhooks/chainhook/streams/route.ts
  */
 async function handleStreamWithdrawal(
   event: StreamWithdrawalEvent,
@@ -253,13 +257,14 @@ async function handleStreamWithdrawal(
     txHash: tx.transaction_identifier.hash,
   });
 
-  // TODO: Update stream withdrawn amount in database
-  // TODO: Send notification to sender and recipient
-  // TODO: Trigger real-time update via WebSocket/Pusher
+  // Database updates, notifications, and real-time updates
+  // are handled in /api/webhooks/chainhook/streams/route.ts
+  console.log('→ Event processing delegated to specialized streams route');
 }
 
 /**
  * Handle stream-cancelled event
+ * Note: Full implementation in /api/webhooks/chainhook/streams/route.ts
  */
 async function handleStreamCancelled(
   event: StreamCancelledEvent,
@@ -274,9 +279,9 @@ async function handleStreamCancelled(
     cancelledAtBlock: event['cancelled-at-block'].toString(),
   });
 
-  // TODO: Mark stream as cancelled in database
-  // TODO: Send notification to sender and recipient
-  // TODO: Trigger real-time update via WebSocket/Pusher
+  // Database updates, notifications, and real-time updates
+  // are handled in /api/webhooks/chainhook/streams/route.ts
+  console.log('→ Event processing delegated to specialized streams route');
 }
 
 // Optional: GET endpoint for health check

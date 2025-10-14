@@ -22,7 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Menu,
   Home,
-  Wallet,
   BarChart3,
   Settings,
   LogOut,
@@ -43,6 +42,7 @@ import { SimpleThemeToggle } from "@/components/ui/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 
 interface User {
   id: string;
@@ -154,6 +154,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: Image, label: "NFT Gallery", href: "/dashboard/nfts", active: pathname === "/dashboard/nfts" },
     { icon: Users, label: "Marketplace", href: "/dashboard/marketplace", active: pathname === "/dashboard/marketplace" },
     { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics", active: pathname === "/dashboard/analytics" },
+    { icon: Bell, label: "Notifications", href: "/dashboard/notifications", active: pathname.startsWith("/dashboard/notifications") },
     // TODO: Uncomment after deployment for role-based access
     // ...(user?.role === 'admin' ? [
       { icon: DollarSign, label: "Treasury", href: "/dashboard/treasury", active: pathname === "/dashboard/treasury" },
@@ -352,10 +353,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center space-x-4">
             <SimpleThemeToggle />
 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-4 w-4" />
-              <Badge className="absolute -top-1 -right-1 h-2 w-2 p-0 bg-brand-pink"></Badge>
-            </Button>
+            <NotificationBell />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

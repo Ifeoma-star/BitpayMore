@@ -22,6 +22,8 @@ import {
   validatePayload,
   webhookRateLimiter,
 } from '@/lib/webhooks/chainhook-utils';
+import connectToDatabase from '@/lib/db';
+import * as NotificationService from '@/lib/notifications/notification-service';
 
 export async function POST(request: Request) {
   try {
@@ -141,18 +143,154 @@ async function handleNFTEvent(
   event: NFTEvent,
   context: any
 ): Promise<void> {
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
   switch (event.event) {
     case 'obligation-transferred':
       console.log(`🔄 Obligation NFT #${event['token-id']} transferred: ${event.from} → ${event.to}`);
-      // TODO: Update NFT ownership in database
-      // TODO: Notify both parties
-      // TODO: Update marketplace if listed
+
+      // Update NFT ownership in database
+      if (db) {
+        await db.collection('obligation_nfts').updateOne(
+          { tokenId: event['token-id'].toString() },
+          {
+            $set: {
+              owner: event.to,
+              updatedAt: new Date(context.timestamp * 1000),
+            },
+            $push: {
+              transferHistory: {
+                from: event.from,
+                to: event.to,
+                transferredAt: new Date(context.timestamp * 1000),
+                txHash: context.txHash,
+                blockHeight: context.blockHeight,
+              },
+            } as any,
+          },
+          { upsert: true }
+        );
+
+        // Check if NFT is listed on marketplace
+        const listing = await db.collection('marketplace_listings').findOne({
+          tokenId: event['token-id'].toString(),
+          status: 'active',
+        });
+
+        if (listing) {
+          // Update marketplace listing ownership or cancel it
+          await db.collection('marketplace_listings').updateOne(
+            { tokenId: event['token-id'].toString(), status: 'active' },
+            {
+              $set: {
+                seller: event.to,
+                updatedAt: new Date(),
+              },
+            }
+          );
+        }
+
+        // Log event
+        await db.collection('blockchain_events').insertOne({
+          type: 'obligation-transferred',
+          tokenId: event['token-id'].toString(),
+          data: {
+            tokenId: event['token-id'].toString(),
+            from: event.from,
+            to: event.to,
+            transferredAt: new Date(context.timestamp * 1000),
+          },
+          context,
+          processedAt: new Date(),
+        });
+      }
+
+      // Notify sender (from)
+      await NotificationService.createNotification(
+        event.from,
+        'purchase_completed',
+        '📤 Obligation NFT Transferred',
+        `You transferred Obligation NFT #${event['token-id']} to ${event.to.slice(0, 10)}...`,
+        {
+          tokenId: event['token-id'].toString(),
+          to: event.to,
+          txHash: context.txHash,
+        },
+        {
+          priority: 'normal',
+          actionUrl: `/dashboard/nfts/${event['token-id']}`,
+          actionText: 'View NFT',
+        }
+      );
+
+      // Notify recipient (to)
+      await NotificationService.createNotification(
+        event.to,
+        'purchase_received',
+        '📥 Obligation NFT Received',
+        `You received Obligation NFT #${event['token-id']} from ${event.from.slice(0, 10)}...`,
+        {
+          tokenId: event['token-id'].toString(),
+          from: event.from,
+          txHash: context.txHash,
+        },
+        {
+          priority: 'high',
+          actionUrl: `/dashboard/nfts/${event['token-id']}`,
+          actionText: 'View NFT',
+        }
+      );
       break;
 
     case 'obligation-minted':
       console.log(`✨ Obligation NFT #${event['token-id']} minted to ${event.recipient}`);
-      // TODO: Create NFT record in database
-      // TODO: Notify recipient
+
+      // Create NFT record in database
+      if (db) {
+        await db.collection('obligation_nfts').insertOne({
+          tokenId: event['token-id'].toString(),
+          owner: event.recipient,
+          streamId: (event as any)['stream-id']?.toString() || null,
+          mintedAt: new Date(context.timestamp * 1000),
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          transferHistory: [],
+          createdAt: new Date(),
+        });
+
+        // Log event
+        await db.collection('blockchain_events').insertOne({
+          type: 'obligation-minted',
+          tokenId: event['token-id'].toString(),
+          data: {
+            tokenId: event['token-id'].toString(),
+            recipient: event.recipient,
+            streamId: (event as any)['stream-id']?.toString() || null,
+            mintedAt: new Date(context.timestamp * 1000),
+          },
+          context,
+          processedAt: new Date(),
+        });
+      }
+
+      // Notify recipient
+      await NotificationService.createNotification(
+        event.recipient,
+        'purchase_received',
+        '✨ Obligation NFT Minted',
+        `Obligation NFT #${event['token-id']} has been minted to you. This represents your payment stream rights.`,
+        {
+          tokenId: event['token-id'].toString(),
+          streamId: (event as any)['stream-id']?.toString() || null,
+          txHash: context.txHash,
+        },
+        {
+          priority: 'high',
+          actionUrl: `/dashboard/nfts/${event['token-id']}`,
+          actionText: 'View NFT',
+        }
+      );
       break;
 
     default:

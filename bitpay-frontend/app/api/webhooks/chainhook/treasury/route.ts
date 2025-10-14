@@ -28,6 +28,14 @@ import {
   saveWithdrawalApproval,
 } from '@/lib/webhooks/database-handlers';
 import { notifyWithdrawalProposal } from '@/lib/notifications/notification-service';
+import connectToDatabase from '@/lib/db';
+import * as NotificationService from '@/lib/notifications/notification-service';
+import {
+  fetchCallReadOnlyFunction,
+  cvToValue,
+  uintCV,
+} from '@stacks/transactions';
+import { getStacksNetwork, BITPAY_DEPLOYER_ADDRESS, CONTRACT_NAMES } from '@/lib/contracts/config';
 
 export async function POST(request: Request) {
   try {
@@ -174,20 +182,20 @@ async function handleTreasuryEvent(
         context,
       });
       
+      // Fetch treasury admins and threshold from contract
+      const adminList = await getTreasuryAdmins();
+      const proposalThreshold = await getTreasuryThreshold();
+
       // Notify all treasury admins about the new proposal
-      // TODO: Fetch actual admin list from contract or database
       await notifyWithdrawalProposal({
         proposalId: event['proposal-id'].toString(),
         proposer: event.proposer,
         recipient: event.recipient,
         amount: event.amount.toString(),
         timelockExpires: event['timelock-expires'].toString(),
-        requiredApprovals: 2, // TODO: Get from contract
+        requiredApprovals: proposalThreshold,
         currentApprovals: 0,
-        adminList: [
-          // TODO: Fetch from treasury contract
-          event.proposer, // Include proposer in list but they won't be notified
-        ],
+        adminList,
         txHash: context.txHash,
       }).catch((err) => {
         console.error('Failed to send withdrawal proposal notification:', err);
@@ -201,31 +209,241 @@ async function handleTreasuryEvent(
         approvalCount: event['approval-count'].toString(),
         context,
       });
-      // TODO: Check if threshold reached, notify proposer
+
+      // Check if threshold reached
+      const approvalThreshold = await getTreasuryThreshold();
+      const approvalCount = parseInt(event['approval-count'].toString());
+
+      if (approvalCount >= approvalThreshold) {
+        // Threshold reached - notify proposer they can execute
+        const mongoose = await connectToDatabase();
+        const db = mongoose.connection.db;
+
+        if (db) {
+          const proposal = await db.collection('treasury_proposals').findOne({
+            proposalId: event['proposal-id'].toString(),
+          });
+
+          if (proposal) {
+            await NotificationService.createNotification(
+              proposal.proposer,
+              'withdrawal_approved',
+              '✅ Withdrawal Ready to Execute',
+              `Proposal #${event['proposal-id']} has reached the approval threshold (${approvalCount}/${approvalThreshold}). You can now execute the withdrawal.`,
+              {
+                proposalId: event['proposal-id'].toString(),
+                approvalCount,
+                threshold: approvalThreshold,
+                txHash: context.txHash,
+              },
+              {
+                priority: 'high',
+                actionUrl: `/dashboard/treasury/proposals/${event['proposal-id']}`,
+                actionText: 'Execute Withdrawal',
+              }
+            );
+          }
+        }
+      } else {
+        // Still needs more approvals
+        await NotificationService.createNotification(
+          event.approver,
+          'withdrawal_approved',
+          '✅ Approval Recorded',
+          `Your approval for proposal #${event['proposal-id']} has been recorded (${approvalCount}/${approvalThreshold}).`,
+          {
+            proposalId: event['proposal-id'].toString(),
+            approvalCount,
+            threshold: approvalThreshold,
+            txHash: context.txHash,
+          },
+          {
+            priority: 'normal',
+            actionUrl: `/dashboard/treasury/proposals/${event['proposal-id']}`,
+            actionText: 'View Proposal',
+          }
+        );
+      }
       break;
 
     case 'withdrawal-executed':
-      // TODO: Mark proposal as executed, notify all admins
       console.log(`💸 Withdrawal executed: ${event['proposal-id']}`);
+
+      const mongoose = await connectToDatabase();
+      const db = mongoose.connection.db;
+
+      // Mark proposal as executed
+      if (db) {
+        await db.collection('treasury_proposals').updateOne(
+          { proposalId: event['proposal-id'].toString() },
+          {
+            $set: {
+              status: 'executed',
+              executedAt: new Date(context.timestamp * 1000),
+              executedTxHash: context.txHash,
+            },
+          }
+        );
+
+        // Notify all admins
+        const admins = await getTreasuryAdmins();
+        for (const admin of admins) {
+          await NotificationService.createNotification(
+            admin,
+            'withdrawal_executed',
+            '💸 Withdrawal Executed',
+            `Treasury withdrawal proposal #${event['proposal-id']} has been executed.`,
+            {
+              proposalId: event['proposal-id'].toString(),
+              txHash: context.txHash,
+            },
+            {
+              priority: 'high',
+              actionUrl: `/dashboard/treasury`,
+              actionText: 'View Treasury',
+            }
+          );
+        }
+      }
       break;
 
     case 'add-admin-proposed':
     case 'remove-admin-proposed':
+      console.log(`👥 Admin proposal: ${event.event}`);
+
+      const adminsList = await getTreasuryAdmins();
+      for (const admin of adminsList) {
+        await NotificationService.createNotification(
+          admin,
+          'admin_action_required',
+          '👥 Admin Management Proposal',
+          `A new admin management proposal has been created. Action required.`,
+          {
+            event: event.event,
+            txHash: context.txHash,
+          },
+          {
+            priority: 'high',
+            actionUrl: `/dashboard/treasury/admin-proposals`,
+            actionText: 'Review Proposal',
+          }
+        );
+      }
+      break;
+
     case 'admin-proposal-approved':
+      console.log(`👥 Admin proposal approved: ${event.event}`);
+      break;
+
     case 'admin-proposal-executed':
-      // TODO: Handle admin management events
-      console.log(`👥 Admin event: ${event.event}`);
+      console.log(`👥 Admin proposal executed: ${event.event}`);
+
+      const allAdmins = await getTreasuryAdmins();
+      for (const admin of allAdmins) {
+        await NotificationService.createNotification(
+          admin,
+          'admin_action_required',
+          '✅ Admin Proposal Executed',
+          `An admin management proposal has been executed.`,
+          {
+            event: event.event,
+            txHash: context.txHash,
+          },
+          {
+            priority: 'high',
+            actionUrl: `/dashboard/treasury`,
+            actionText: 'View Treasury',
+          }
+        );
+      }
       break;
 
     case 'admin-transfer-proposed':
     case 'admin-transfer-completed':
     case 'admin-transfer-cancelled':
-      // TODO: Handle ownership transfer events
       console.log(`🔑 Admin transfer event: ${event.event}`);
+
+      const treasuryAdmins = await getTreasuryAdmins();
+      for (const admin of treasuryAdmins) {
+        await NotificationService.createNotification(
+          admin,
+          'admin_transfer',
+          `🔑 ${event.event.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}`,
+          `Treasury ownership transfer event: ${event.event}`,
+          {
+            event: event.event,
+            txHash: context.txHash,
+          },
+          {
+            priority: 'urgent',
+            actionUrl: `/dashboard/treasury`,
+            actionText: 'View Details',
+          }
+        );
+      }
       break;
 
     default:
       console.warn(`Unknown treasury event: ${(event as any).event}`);
+  }
+}
+
+/**
+ * Get treasury admins from contract
+ */
+async function getTreasuryAdmins(): Promise<string[]> {
+  try {
+    const network = getStacksNetwork();
+    const result = await fetchCallReadOnlyFunction({
+      contractAddress: BITPAY_DEPLOYER_ADDRESS,
+      contractName: CONTRACT_NAMES.TREASURY,
+      functionName: 'get-admins',
+      functionArgs: [],
+      network,
+      senderAddress: BITPAY_DEPLOYER_ADDRESS,
+    });
+
+    const adminsValue = cvToValue(result);
+    if (Array.isArray(adminsValue)) {
+      return adminsValue.map((admin: any) => admin.value || admin);
+    }
+
+    // Fallback to deployer address
+    return [BITPAY_DEPLOYER_ADDRESS];
+  } catch (error) {
+    console.error('Failed to fetch treasury admins:', error);
+    return [BITPAY_DEPLOYER_ADDRESS];
+  }
+}
+
+/**
+ * Get treasury approval threshold from contract
+ */
+async function getTreasuryThreshold(): Promise<number> {
+  try {
+    const network = getStacksNetwork();
+    const result = await fetchCallReadOnlyFunction({
+      contractAddress: BITPAY_DEPLOYER_ADDRESS,
+      contractName: CONTRACT_NAMES.TREASURY,
+      functionName: 'get-approval-threshold',
+      functionArgs: [],
+      network,
+      senderAddress: BITPAY_DEPLOYER_ADDRESS,
+    });
+
+    const thresholdValue = cvToValue(result);
+    if (typeof thresholdValue === 'number') {
+      return thresholdValue;
+    }
+    if (typeof thresholdValue === 'bigint') {
+      return Number(thresholdValue);
+    }
+
+    // Default to 3 for 3-of-5 multisig
+    return 3;
+  } catch (error) {
+    console.error('Failed to fetch treasury threshold:', error);
+    return 3;
   }
 }
 

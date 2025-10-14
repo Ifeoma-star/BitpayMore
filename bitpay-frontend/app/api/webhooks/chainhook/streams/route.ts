@@ -38,6 +38,8 @@ import {
   notifyStreamWithdrawal,
   notifyStreamCancelled,
 } from '@/lib/notifications/notification-service';
+import connectToDatabase from '@/lib/db';
+import * as NotificationService from '@/lib/notifications/notification-service';
 
 export async function POST(request: Request) {
   try {
@@ -221,14 +223,33 @@ async function handleStreamWithdrawal(
     context,
   });
 
-  // TODO: Get stream details for sender and remaining amount
-  // For now, send basic notification
+  // Fetch stream details from database
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
+  let sender = '';
+  let remainingAmount = '0';
+
+  if (db) {
+    const stream = await db.collection('streams').findOne({
+      streamId: event['stream-id'].toString(),
+    });
+
+    if (stream) {
+      sender = stream.sender || '';
+      // Calculate remaining: total amount - withdrawn amount
+      const totalAmount = parseFloat(stream.amount || '0');
+      const withdrawn = parseFloat(stream.withdrawn || '0');
+      remainingAmount = (totalAmount - withdrawn).toString();
+    }
+  }
+
   await notifyStreamWithdrawal({
     streamId: event['stream-id'].toString(),
     recipient: event.recipient,
-    sender: '', // TODO: Fetch from database
+    sender,
     amount: event.amount.toString(),
-    remainingAmount: '0', // TODO: Calculate from stream data
+    remainingAmount,
     txHash: context.txHash,
   });
 }
@@ -251,12 +272,26 @@ async function handleStreamCancelled(
     context,
   });
 
-  // TODO: Get recipient from database
-  // For now, send notification with available data
+  // Fetch recipient from database
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
+  let recipient = '';
+
+  if (db) {
+    const stream = await db.collection('streams').findOne({
+      streamId: event['stream-id'].toString(),
+    });
+
+    if (stream) {
+      recipient = stream.recipient || '';
+    }
+  }
+
   await notifyStreamCancelled({
     streamId: event['stream-id'].toString(),
     sender: event.sender,
-    recipient: '', // TODO: Fetch from database
+    recipient,
     vestedPaid: event['vested-paid'].toString(),
     unvestedReturned: event['unvested-returned'].toString(),
     txHash: context.txHash,
@@ -272,9 +307,84 @@ async function handleStreamSenderUpdated(
 ): Promise<void> {
   logWebhookEvent('stream-sender-updated', event, context);
 
-  // TODO: Update stream ownership in database
-  // TODO: Send notification to old and new sender
-  // TODO: Trigger real-time UI update via WebSocket
+  const streamId = event['stream-id'].toString();
+  const oldSender = event['old-sender'];
+  const newSender = event['new-sender'];
+
+  // Update stream ownership in database
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
+  if (db) {
+    await db.collection('streams').updateOne(
+      { streamId },
+      {
+        $set: {
+          sender: newSender,
+          updatedAt: new Date(),
+        },
+        $push: {
+          senderHistory: {
+            oldSender,
+            newSender,
+            updatedAt: new Date(context.timestamp * 1000),
+            txHash: context.txHash,
+            blockHeight: context.blockHeight,
+          },
+        } as any,
+      }
+    );
+
+    // Log event
+    await db.collection('blockchain_events').insertOne({
+      type: 'stream-sender-updated',
+      streamId,
+      data: {
+        streamId,
+        oldSender,
+        newSender,
+        updatedAt: new Date(context.timestamp * 1000),
+      },
+      context,
+      processedAt: new Date(),
+    });
+  }
+
+  // Send notification to old sender
+  await NotificationService.createNotification(
+    oldSender,
+    'stream_sender_updated',
+    '🔄 Stream Ownership Transferred',
+    `You have transferred ownership of stream #${streamId} to ${newSender.slice(0, 10)}...`,
+    {
+      streamId,
+      newSender,
+    },
+    {
+      priority: 'normal',
+      actionUrl: `/dashboard/streams/${streamId}`,
+      actionText: 'View Stream',
+    }
+  );
+
+  // Send notification to new sender
+  await NotificationService.createNotification(
+    newSender,
+    'stream_sender_updated',
+    '🎁 Stream Ownership Received',
+    `You are now the sender of stream #${streamId}. You can manage this stream.`,
+    {
+      streamId,
+      oldSender,
+    },
+    {
+      priority: 'high',
+      actionUrl: `/dashboard/streams/${streamId}`,
+      actionText: 'Manage Stream',
+    }
+  );
+
+  console.log(`✅ Stream sender updated: ${streamId} from ${oldSender} to ${newSender}`);
 }
 
 /**

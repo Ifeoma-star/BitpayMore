@@ -32,6 +32,8 @@ import {
   savePurchaseInitiated,
 } from '@/lib/webhooks/database-handlers';
 import { notifyPurchaseCompleted } from '@/lib/notifications/notification-service';
+import connectToDatabase from '@/lib/db';
+import * as NotificationService from '@/lib/notifications/notification-service';
 
 export async function POST(request: Request) {
   try {
@@ -223,9 +225,106 @@ async function handlePurchaseInitiated(
     context,
   });
 
-  // TODO: Send payment link to buyer via email/notification
-  // TODO: Set up expiration timer/reminder
-  // TODO: Update UI showing pending payment
+  // Get stream details and listing price for notification
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
+  let paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/marketplace/purchase/${event['payment-id']}`;
+  let listingPrice = '0';
+
+  // Fetch listing price from database
+  if (db) {
+    const listing = await db.collection('marketplace_listings').findOne({
+      streamId: event['stream-id'].toString(),
+    });
+    if (listing && listing.price) {
+      listingPrice = listing.price.toString();
+    }
+  }
+
+  // Create StacksPay payment link if we have the integration
+  if (process.env.STACKSPAY_API_URL && listingPrice !== '0') {
+    try {
+      // Generate payment link with StacksPay
+      const stacksPayResponse = await fetch(`${process.env.STACKSPAY_API_URL}/payments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.STACKSPAY_API_KEY}`,
+        },
+        body: JSON.stringify({
+          amount: listingPrice,
+          currency: 'SBTC',
+          metadata: {
+            streamId: event['stream-id'].toString(),
+            buyer: event.buyer,
+            seller: event.seller,
+            paymentId: event['payment-id'],
+          },
+          webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/payment-gateway`,
+          returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/marketplace/purchase/${event['payment-id']}/complete`,
+        }),
+      });
+
+      if (stacksPayResponse.ok) {
+        const paymentData = await stacksPayResponse.json();
+        paymentUrl = paymentData.paymentUrl || paymentUrl;
+
+        // Store payment link in database
+        if (db) {
+          await db.collection('pending_purchases').updateOne(
+            { paymentId: event['payment-id'] },
+            {
+              $set: {
+                stacksPayPaymentUrl: paymentUrl,
+                stacksPayId: paymentData.id,
+              },
+            },
+            { upsert: true }
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create StacksPay payment link:', error);
+    }
+  }
+
+  // Send payment link to buyer
+  await NotificationService.createNotification(
+    event.buyer,
+    'purchase_initiated',
+    '💳 Complete Your Purchase',
+    `Your purchase for stream #${event['stream-id']} has been initiated. Complete payment within 30 minutes.`,
+    {
+      streamId: event['stream-id'].toString(),
+      seller: event.seller,
+      paymentId: event['payment-id'],
+      expiresAt: event['expires-at'].toString(),
+    },
+    {
+      priority: 'urgent',
+      actionUrl: paymentUrl,
+      actionText: 'Complete Payment',
+    }
+  );
+
+  // Notify seller that purchase is pending
+  await NotificationService.createNotification(
+    event.seller,
+    'purchase_initiated',
+    '⏳ Purchase Pending',
+    `A buyer has initiated purchase for stream #${event['stream-id']}. Awaiting payment confirmation.`,
+    {
+      streamId: event['stream-id'].toString(),
+      buyer: event.buyer,
+      paymentId: event['payment-id'],
+    },
+    {
+      priority: 'normal',
+      actionUrl: `/dashboard/marketplace/listings/${event['stream-id']}`,
+      actionText: 'View Details',
+    }
+  );
 }
 
 /**
@@ -269,9 +368,96 @@ async function handlePurchaseExpired(
 ): Promise<void> {
   logWebhookEvent('purchase-expired', event, context);
 
-  // TODO: Mark purchase as expired in database
-  // TODO: Notify buyer that payment window expired
-  // TODO: Make listing available again
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
+  // Mark purchase as expired in database
+  if (db) {
+    // Fetch the listing to get seller info since PurchaseExpiredEvent doesn't include seller
+    const listing = await db.collection('marketplace_listings').findOne({
+      streamId: event['stream-id'].toString(),
+      status: 'pending_payment',
+    });
+
+    const seller = listing?.seller || 'unknown';
+
+    await db.collection('pending_purchases').updateOne(
+      { paymentId: event['payment-id'] },
+      {
+        $set: {
+          status: 'expired',
+          expiredAt: new Date(context.timestamp * 1000),
+          expiredTxHash: context.txHash,
+        },
+      }
+    );
+
+    // Make listing available again
+    await db.collection('marketplace_listings').updateOne(
+      { streamId: event['stream-id'].toString(), status: 'pending_payment' },
+      {
+        $set: {
+          status: 'active',
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    // Log event
+    await db.collection('blockchain_events').insertOne({
+      type: 'purchase-expired',
+      streamId: event['stream-id'].toString(),
+      data: {
+        streamId: event['stream-id'].toString(),
+        buyer: event.buyer,
+        seller: seller,
+        paymentId: event['payment-id'],
+        expiredAt: new Date(context.timestamp * 1000),
+      },
+      context,
+      processedAt: new Date(),
+    });
+
+    // Notify buyer that payment window expired
+    await NotificationService.createNotification(
+      event.buyer,
+      'purchase_expired',
+      '⏰ Purchase Expired',
+      `Your purchase for stream #${event['stream-id']} has expired. The payment window has closed.`,
+      {
+        streamId: event['stream-id'].toString(),
+        seller: seller,
+        paymentId: event['payment-id'],
+        txHash: context.txHash,
+      },
+      {
+        priority: 'normal',
+        actionUrl: `/dashboard/marketplace`,
+        actionText: 'Browse Marketplace',
+      }
+    );
+
+    // Notify seller that purchase expired (if seller found)
+    if (seller !== 'unknown') {
+      await NotificationService.createNotification(
+        seller,
+        'purchase_expired',
+        '⏰ Purchase Expired',
+        `The pending purchase for stream #${event['stream-id']} has expired. Your listing is now available again.`,
+        {
+          streamId: event['stream-id'].toString(),
+          buyer: event.buyer,
+          paymentId: event['payment-id'],
+          txHash: context.txHash,
+        },
+        {
+          priority: 'low',
+          actionUrl: `/dashboard/marketplace/listings/${event['stream-id']}`,
+          actionText: 'View Listing',
+        }
+      );
+    }
+  }
 }
 
 /**

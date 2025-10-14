@@ -60,13 +60,19 @@ export default function RootLayout({
               </ConditionalLayout>
               <Toaster
                 position="top-right"
+                expand={true}
+                richColors
+                closeButton
                 toastOptions={{
-                  duration: 4000,
+                  duration: 5000,
                   style: {
                     background: 'hsl(var(--background))',
                     color: 'hsl(var(--foreground))',
                     border: '1px solid hsl(var(--border))',
+                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+                    backdropFilter: 'blur(10px)',
                   },
+                  className: 'sonner-toast',
                 }}
               />
             </AuthProvider>

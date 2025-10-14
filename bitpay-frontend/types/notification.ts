@@ -16,6 +16,8 @@ export type NotificationType =
   | 'purchase_completed'
   | 'purchase_received'
   | 'purchase_expired'
+  | 'purchase_failed'
+  | 'purchase_cancelled'
   | 'sale_completed'
   // Treasury notifications
   | 'fee_collected'

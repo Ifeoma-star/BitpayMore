@@ -3,19 +3,25 @@
  * Mark all notifications as read for the current user
  */
 
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { getTokenFromRequest, verifyToken } from '@/lib/auth/auth';
 import { clientPromise } from '@/lib/db';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user
-    const session = await getServerSession();
-    if (!session || !session.user) {
+    // Get token from request
+    const token = getTokenFromRequest(request);
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = (session.user as any).address || (session.user as any).id;
+    // Verify token
+    const payload = verifyToken(token);
+    if (!payload || !payload.userId) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    const userId = payload.userId;
 
     // Update all unread notifications to read
     const client = await clientPromise;
