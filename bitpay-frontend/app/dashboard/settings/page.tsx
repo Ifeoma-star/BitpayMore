@@ -1,26 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SettingsHeader } from "@/components/dashboard/settings/SettingsHeader";
+import { ProfileInfo } from "@/components/dashboard/settings/profile/ProfileInfo";
+import { AppearanceSettings } from "@/components/dashboard/settings/profile/AppearanceSettings";
+import { ConnectedWallet } from "@/components/dashboard/settings/wallet/ConnectedWallet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import {
   User,
   Wallet,
   Bell,
   Shield,
-  Moon,
-  Sun,
   Mail,
   Key,
-  LogOut,
-  Copy,
-  Check,
-  ExternalLink,
   Image as ImageIcon,
   UserCog,
   Settings as SettingsIcon,
@@ -72,13 +69,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your account preferences and wallet settings
-        </p>
-      </div>
+      <SettingsHeader />
 
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 lg:w-auto">
@@ -112,177 +103,26 @@ export default function SettingsPage() {
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                Your account details and preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="wallet-address">Wallet Address</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="wallet-address"
-                    value={userAddress || "Not connected"}
-                    readOnly
-                    className="font-mono text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyAddress}
-                    disabled={!userAddress}
-                  >
-                    {copiedAddress ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
+          <ProfileInfo
+            userAddress={userAddress}
+            copiedAddress={copiedAddress}
+            onCopyAddress={handleCopyAddress}
+          />
 
-              <Separator />
-
-              <div className="space-y-3">
-                <Label htmlFor="display-name">Display Name (Optional)</Label>
-                <Input
-                  id="display-name"
-                  placeholder="Enter your display name"
-                  defaultValue=""
-                />
-                <p className="text-sm text-muted-foreground">
-                  This name will be visible to stream recipients
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <Label htmlFor="email">Email (Optional)</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  defaultValue=""
-                />
-                <p className="text-sm text-muted-foreground">
-                  Receive notifications about your streams
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline">Cancel</Button>
-                <Button className="bg-brand-pink hover:bg-brand-pink/90">
-                  Save Changes
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Appearance */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>
-                Customize how BitPay looks for you
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    {darkMode ? (
-                      <Moon className="h-4 w-4" />
-                    ) : (
-                      <Sun className="h-4 w-4" />
-                    )}
-                    <Label>Dark Mode</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Use dark theme across the application
-                  </p>
-                </div>
-                <Switch
-                  checked={darkMode}
-                  onCheckedChange={setDarkMode}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <AppearanceSettings
+            darkMode={darkMode}
+            onDarkModeChange={setDarkMode}
+          />
         </TabsContent>
 
         {/* Wallet Tab */}
         <TabsContent value="wallet" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Connected Wallet</CardTitle>
-              <CardDescription>
-                Manage your connected Stacks wallet
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {userAddress ? (
-                <>
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Current Wallet</p>
-                      <p className="text-xs font-mono text-muted-foreground">
-                        {userAddress.slice(0, 8)}...{userAddress.slice(-8)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-sm text-green-600 dark:text-green-400">Connected</span>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start gap-2"
-                      onClick={() => window.open(`https://explorer.stacks.co/address/${userAddress}?chain=testnet`, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      View on Explorer
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start gap-2"
-                      onClick={handleCopyAddress}
-                    >
-                      {copiedAddress ? (
-                        <Check className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                      Copy Address
-                    </Button>
-
-                    <Button
-                      variant="destructive"
-                      className="w-full justify-start gap-2"
-                      onClick={handleDisconnectWallet}
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Disconnect Wallet
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-12">
-                  <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground mb-4">No wallet connected</p>
-                  <Button className="bg-brand-pink hover:bg-brand-pink/90">
-                    Connect Wallet
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ConnectedWallet
+            userAddress={userAddress}
+            copiedAddress={copiedAddress}
+            onCopyAddress={handleCopyAddress}
+            onDisconnectWallet={handleDisconnectWallet}
+          />
 
           {/* Network Info */}
           <Card>

@@ -27,6 +27,7 @@ import {
   saveWithdrawalProposal,
   saveWithdrawalApproval,
 } from '@/lib/webhooks/database-handlers';
+import { notifyWithdrawalProposal } from '@/lib/notifications/notification-service';
 
 export async function POST(request: Request) {
   try {
@@ -172,7 +173,25 @@ async function handleTreasuryEvent(
         timelockExpires: event['timelock-expires'].toString(),
         context,
       });
-      // TODO: Notify other admins to approve
+      
+      // Notify all treasury admins about the new proposal
+      // TODO: Fetch actual admin list from contract or database
+      await notifyWithdrawalProposal({
+        proposalId: event['proposal-id'].toString(),
+        proposer: event.proposer,
+        recipient: event.recipient,
+        amount: event.amount.toString(),
+        timelockExpires: event['timelock-expires'].toString(),
+        requiredApprovals: 2, // TODO: Get from contract
+        currentApprovals: 0,
+        adminList: [
+          // TODO: Fetch from treasury contract
+          event.proposer, // Include proposer in list but they won't be notified
+        ],
+        txHash: context.txHash,
+      }).catch((err) => {
+        console.error('Failed to send withdrawal proposal notification:', err);
+      });
       break;
 
     case 'withdrawal-approved':

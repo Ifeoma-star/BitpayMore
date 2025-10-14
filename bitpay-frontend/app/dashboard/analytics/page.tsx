@@ -1,19 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AnalyticsHeader } from "@/components/dashboard/analytics/AnalyticsHeader";
+import { KeyMetricsGrid } from "@/components/dashboard/analytics/metrics/KeyMetricsGrid";
+import { VestingChart } from "@/components/dashboard/analytics/charts/VestingChart";
+import { StatusPieChart } from "@/components/dashboard/analytics/charts/StatusPieChart";
+import { ParticipationBreakdown } from "@/components/dashboard/analytics/overview/ParticipationBreakdown";
+import { KeyStatistics } from "@/components/dashboard/analytics/overview/KeyStatistics";
 import {
   LineChart,
   Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -22,16 +22,11 @@ import {
   Legend,
 } from "recharts";
 import {
-  TrendingUp,
   Activity,
-  DollarSign,
-  Users,
   Loader2,
   BarChart3,
-  XCircle,
   Shuffle,
   Shield,
-  Download,
   Clock
 } from "lucide-react";
 import walletService from "@/lib/wallet/wallet-service";
@@ -167,68 +162,17 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-        <p className="text-muted-foreground">
-          Comprehensive insights from blockchain data
-        </p>
-      </div>
+      <AnalyticsHeader />
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{microToDisplay(totalVolume)} sBTC</div>
-            <p className="text-xs text-muted-foreground">Across {allStreams?.length || 0} streams</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Vested</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-brand-teal">
-              {microToDisplay(totalStreamed)} sBTC
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {((Number(totalStreamed) / Number(totalVolume || 1)) * 100).toFixed(1)}% of total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available</CardTitle>
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-brand-pink">
-              {microToDisplay(totalAvailable)} sBTC
-            </div>
-            <p className="text-xs text-muted-foreground">Ready to withdraw</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cancellation Rate</CardTitle>
-            <XCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {cancellationRate.toFixed(1)}%
-            </div>
-            <p className="text-xs text-muted-foreground">{cancelledStreams.length} cancelled</p>
-          </CardContent>
-        </Card>
-      </div>
+      <KeyMetricsGrid
+        totalVolume={microToDisplay(totalVolume)}
+        totalStreams={allStreams?.length || 0}
+        totalVested={microToDisplay(totalStreamed)}
+        vestedPercentage={((Number(totalStreamed) / Number(totalVolume || 1)) * 100).toFixed(1)}
+        totalAvailable={microToDisplay(totalAvailable)}
+        cancellationRate={cancellationRate.toFixed(1)}
+        cancelledCount={cancelledStreams.length}
+      />
 
       {/* Charts Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
@@ -265,187 +209,30 @@ export default function AnalyticsPage() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Vesting Over Time</CardTitle>
-              <CardDescription>Stream volume and vested amounts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {monthlyData.length > 0 ? (
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyData}>
-                      <defs>
-                        <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#e91e63" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#e91e63" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorVested" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#14b8a6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="month" className="text-xs" tickLine={false} />
-                      <YAxis className="text-xs" tickLine={false} axisLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="volume"
-                        stroke="#e91e63"
-                        fillOpacity={1}
-                        fill="url(#colorVolume)"
-                        name="Total Volume"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="vested"
-                        stroke="#14b8a6"
-                        fillOpacity={1}
-                        fill="url(#colorVested)"
-                        name="Vested Amount"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No data available</p>
-                    <p className="text-sm">Create streams to see analytics</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <VestingChart data={monthlyData} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Streams Sent vs Received</CardTitle>
-                <CardDescription>Your participation breakdown</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Sent ({outgoingStreams.length})</span>
-                      <span className="text-sm text-muted-foreground">
-                        {microToDisplay(outgoingStreams.reduce((sum, s) => sum + s.amount, BigInt(0)))} sBTC
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-brand-pink"
-                        style={{
-                          width: `${allStreams && allStreams.length > 0 ? (outgoingStreams.length / allStreams.length) * 100 : 0}%`
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Received ({incomingStreams.length})</span>
-                      <span className="text-sm text-muted-foreground">
-                        {microToDisplay(incomingStreams.reduce((sum, s) => sum + s.amount, BigInt(0)))} sBTC
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-brand-teal"
-                        style={{
-                          width: `${allStreams && allStreams.length > 0 ? (incomingStreams.length / allStreams.length) * 100 : 0}%`
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ParticipationBreakdown
+              sentCount={outgoingStreams.length}
+              sentAmount={microToDisplay(outgoingStreams.reduce((sum, s) => sum + s.amount, BigInt(0)))}
+              receivedCount={incomingStreams.length}
+              receivedAmount={microToDisplay(incomingStreams.reduce((sum, s) => sum + s.amount, BigInt(0)))}
+              totalCount={allStreams?.length || 0}
+            />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Key Statistics</CardTitle>
-                <CardDescription>Important metrics</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Avg Stream Size</span>
-                  <Badge variant="outline">
-                    {allStreams && allStreams.length > 0
-                      ? microToDisplay(totalVolume / BigInt(allStreams.length))
-                      : "0"} sBTC
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Avg Duration</span>
-                  <Badge variant="outline">
-                    {Math.round(avgDuration).toLocaleString()} blocks
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Success Rate</span>
-                  <Badge className="bg-green-500 text-white">
-                    {allStreams && allStreams.length > 0
-                      ? ((completedStreams.length / allStreams.length) * 100).toFixed(1)
-                      : 0}%
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Platform Fees</span>
-                  <Badge variant="outline">{totalFees ? microToDisplay(totalFees) : "0"} sBTC</Badge>
-                </div>
-              </CardContent>
-            </Card>
+            <KeyStatistics
+              avgStreamSize={allStreams && allStreams.length > 0 ? microToDisplay(totalVolume / BigInt(allStreams.length)) : "0"}
+              avgDuration={Math.round(avgDuration).toLocaleString()}
+              successRate={allStreams && allStreams.length > 0 ? ((completedStreams.length / allStreams.length) * 100).toFixed(1) : "0"}
+              platformFees={totalFees ? microToDisplay(totalFees) : "0"}
+            />
           </div>
         </TabsContent>
 
         {/* Distribution Tab */}
         <TabsContent value="distribution" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Stream Status Distribution</CardTitle>
-                <CardDescription>Breakdown by status</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {statusData.length > 0 ? (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statusData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, value }) => `${name}: ${value}`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {statusData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    No streams yet
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <StatusPieChart data={statusData} />
 
             <Card>
               <CardHeader>

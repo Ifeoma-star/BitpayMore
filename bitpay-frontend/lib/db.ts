@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -8,6 +9,18 @@ if (!MONGODB_URI) {
   );
 }
 
+// MongoDB native client for direct database operations
+let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
+
+if (!global._mongoClientPromise) {
+  client = new MongoClient(MONGODB_URI);
+  global._mongoClientPromise = client.connect();
+}
+clientPromise = global._mongoClientPromise;
+
+export { clientPromise };
+
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -15,6 +28,7 @@ interface MongooseCache {
 
 declare global {
   var mongoose: MongooseCache;
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
 let cached = global.mongoose;

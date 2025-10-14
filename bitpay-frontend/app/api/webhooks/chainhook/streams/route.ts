@@ -33,6 +33,11 @@ import {
   saveStreamWithdrawal,
   saveStreamCancelled,
 } from '@/lib/webhooks/database-handlers';
+import {
+  notifyStreamCreated,
+  notifyStreamWithdrawal,
+  notifyStreamCancelled,
+} from '@/lib/notifications/notification-service';
 
 export async function POST(request: Request) {
   try {
@@ -188,8 +193,16 @@ async function handleStreamCreated(
     context,
   });
 
-  // TODO: Send notification to recipient
-  // TODO: Trigger real-time UI update via WebSocket
+  // Send notifications
+  await notifyStreamCreated({
+    streamId: event['stream-id'].toString(),
+    sender: event.sender,
+    recipient: event.recipient,
+    amount: event.amount.toString(),
+    startBlock: event['start-block'].toString(),
+    endBlock: event['end-block'].toString(),
+    txHash: context.txHash,
+  });
 }
 
 /**
@@ -208,8 +221,16 @@ async function handleStreamWithdrawal(
     context,
   });
 
-  // TODO: Send notification to sender and recipient
-  // TODO: Trigger real-time UI update via WebSocket
+  // TODO: Get stream details for sender and remaining amount
+  // For now, send basic notification
+  await notifyStreamWithdrawal({
+    streamId: event['stream-id'].toString(),
+    recipient: event.recipient,
+    sender: '', // TODO: Fetch from database
+    amount: event.amount.toString(),
+    remainingAmount: '0', // TODO: Calculate from stream data
+    txHash: context.txHash,
+  });
 }
 
 /**
@@ -230,8 +251,16 @@ async function handleStreamCancelled(
     context,
   });
 
-  // TODO: Send notification to sender and recipient
-  // TODO: Trigger real-time UI update via WebSocket
+  // TODO: Get recipient from database
+  // For now, send notification with available data
+  await notifyStreamCancelled({
+    streamId: event['stream-id'].toString(),
+    sender: event.sender,
+    recipient: '', // TODO: Fetch from database
+    vestedPaid: event['vested-paid'].toString(),
+    unvestedReturned: event['unvested-returned'].toString(),
+    txHash: context.txHash,
+  });
 }
 
 /**

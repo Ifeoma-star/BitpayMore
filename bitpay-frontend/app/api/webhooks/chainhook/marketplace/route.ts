@@ -31,6 +31,7 @@ import {
   saveGatewayPurchase,
   savePurchaseInitiated,
 } from '@/lib/webhooks/database-handlers';
+import { notifyPurchaseCompleted } from '@/lib/notifications/notification-service';
 
 export async function POST(request: Request) {
   try {
@@ -191,9 +192,16 @@ async function handleDirectPurchase(
     context,
   });
 
-  // TODO: Send notifications to buyer and seller
-  // TODO: Update UI in real-time
-  // TODO: Trigger analytics/metrics update
+  // Send notifications to both buyer and seller
+  await notifyPurchaseCompleted({
+    streamId: event['stream-id'].toString(),
+    buyer: event.buyer,
+    seller: event.seller,
+    price: event.price.toString(),
+    marketplaceFee: event['marketplace-fee'].toString(),
+    saleId: event['sale-id'].toString(),
+    txHash: context.txHash,
+  });
 }
 
 /**
@@ -240,9 +248,16 @@ async function handleGatewayPurchase(
     context,
   });
 
-  // TODO: Send confirmation to buyer and seller
-  // TODO: Update UI showing completed sale
-  // TODO: Trigger seller payout process
+  // Send notifications to both buyer and seller
+  await notifyPurchaseCompleted({
+    streamId: event['stream-id'].toString(),
+    buyer: event.buyer,
+    seller: event.seller,
+    price: event.price.toString(),
+    marketplaceFee: event['marketplace-fee'].toString(),
+    saleId: event['sale-id'].toString(),
+    txHash: context.txHash,
+  });
 }
 
 /**
