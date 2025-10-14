@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useBitPayRead, useBitPayWrite } from './use-bitpay-read';
+import { useBitPayRead } from './use-bitpay-read';
+import { useBitPayWrite } from './use-bitpay-write';
 import { CONTRACT_NAMES } from '@/lib/contracts/config';
 import { uintCV, principalCV, stringAsciiCV } from '@stacks/transactions';
 import { cvToJSON, hexToCV } from '@stacks/transactions';

@@ -154,9 +154,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: Image, label: "NFT Gallery", href: "/dashboard/nfts", active: pathname === "/dashboard/nfts" },
     { icon: Users, label: "Marketplace", href: "/dashboard/marketplace", active: pathname === "/dashboard/marketplace" },
     { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics", active: pathname === "/dashboard/analytics" },
-    ...(user?.role === 'admin' ? [
-      { icon: DollarSign, label: "Treasury", href: "/dashboard/treasury", active: pathname === "/dashboard/treasury" }
-    ] : []),
+    // TODO: Uncomment after deployment for role-based access
+    // ...(user?.role === 'admin' ? [
+      { icon: DollarSign, label: "Treasury", href: "/dashboard/treasury", active: pathname === "/dashboard/treasury" },
+    // ] : []),
     { icon: Settings, label: "Settings", href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
   ];
 
