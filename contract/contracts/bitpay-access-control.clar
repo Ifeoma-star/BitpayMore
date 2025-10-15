@@ -68,7 +68,15 @@
         (asserts! (not (is-admin new-admin)) ERR_ALREADY_ADMIN)
 
         ;; Grant admin role
-        (ok (map-set admins new-admin true))
+        (map-set admins new-admin true)
+
+        (print {
+            event: "access-admin-added",
+            admin: new-admin,
+            added-by: tx-sender,
+        })
+
+        (ok true)
     )
 )
 
@@ -87,7 +95,15 @@
         (asserts! (is-admin admin) ERR_NOT_ADMIN)
 
         ;; Revoke admin role
-        (ok (map-delete admins admin))
+        (map-delete admins admin)
+
+        (print {
+            event: "access-admin-removed",
+            admin: admin,
+            removed-by: tx-sender,
+        })
+
+        (ok true)
     )
 )
 
@@ -101,7 +117,15 @@
         (asserts! (is-admin tx-sender) ERR_UNAUTHORIZED)
 
         ;; Grant operator role
-        (ok (map-set operators new-operator true))
+        (map-set operators new-operator true)
+
+        (print {
+            event: "access-operator-added",
+            operator: new-operator,
+            added-by: tx-sender,
+        })
+
+        (ok true)
     )
 )
 
@@ -115,7 +139,15 @@
         (asserts! (is-admin tx-sender) ERR_UNAUTHORIZED)
 
         ;; Revoke operator role
-        (ok (map-delete operators operator))
+        (map-delete operators operator)
+
+        (print {
+            event: "access-operator-removed",
+            operator: operator,
+            removed-by: tx-sender,
+        })
+
+        (ok true)
     )
 )
 
@@ -131,7 +163,7 @@
         ;; Grant authorization
         (map-set authorized-contracts contract true)
         (print {
-            event: "contract-authorized",
+            event: "access-contract-authorized",
             contract: contract,
             authorized-by: tx-sender,
         })
@@ -151,7 +183,7 @@
         ;; Revoke authorization
         (map-delete authorized-contracts contract)
         (print {
-            event: "contract-revoked",
+            event: "access-contract-revoked",
             contract: contract,
             revoked-by: tx-sender,
         })
@@ -174,7 +206,7 @@
         ;; Set paused state
         (var-set protocol-paused true)
         (print {
-            event: "protocol-paused",
+            event: "access-protocol-paused",
             paused-by: tx-sender,
         })
         (ok true)
@@ -195,7 +227,7 @@
         ;; Set unpaused state
         (var-set protocol-paused false)
         (print {
-            event: "protocol-unpaused",
+            event: "access-protocol-unpaused",
             unpaused-by: tx-sender,
         })
         (ok true)
@@ -214,7 +246,7 @@
         ;; Set pending admin
         (var-set pending-admin (some new-admin))
         (print {
-            event: "admin-transfer-initiated",
+            event: "access-admin-transfer-initiated",
             from: CONTRACT_OWNER,
             to: new-admin,
         })
@@ -243,7 +275,7 @@
             (var-set pending-admin none)
 
             (print {
-                event: "admin-transfer-completed",
+                event: "access-admin-transfer-completed",
                 new-admin: tx-sender,
             })
             (ok true)

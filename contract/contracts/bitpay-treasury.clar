@@ -163,6 +163,13 @@
             (var-set treasury-balance (+ (var-get treasury-balance) fee))
             (var-set total-fees-collected (+ (var-get total-fees-collected) fee))
 
+            (print {
+                event: "treasury-fee-collected",
+                amount: fee,
+                caller: tx-sender,
+                new-balance: (var-get treasury-balance),
+            })
+
             (ok fee)
         )
     )
@@ -193,7 +200,7 @@
         (var-set total-fees-collected (+ (var-get total-fees-collected) amount))
 
         (print {
-            event: "cancellation-fee-collected",
+            event: "treasury-cancellation-fee-collected",
             amount: amount,
             caller: contract-caller,
             new-balance: (var-get treasury-balance),
@@ -224,7 +231,7 @@
         (var-set total-fees-collected (+ (var-get total-fees-collected) amount))
 
         (print {
-            event: "marketplace-fee-collected",
+            event: "treasury-marketplace-fee-collected",
             amount: amount,
             caller: contract-caller,
             new-balance: (var-get treasury-balance),
@@ -256,6 +263,14 @@
         ;; Update treasury balance
         (var-set treasury-balance (- (var-get treasury-balance) amount))
 
+        (print {
+            event: "treasury-withdrawal",
+            amount: amount,
+            recipient: recipient,
+            admin: tx-sender,
+            new-balance: (var-get treasury-balance),
+        })
+
         (ok amount)
     )
 )
@@ -285,6 +300,14 @@
             (+ (default-to u0 (map-get? fee-recipients recipient)) amount)
         )
 
+        (print {
+            event: "treasury-distribution",
+            amount: amount,
+            recipient: recipient,
+            admin: tx-sender,
+            new-balance: (var-get treasury-balance),
+        })
+
         (ok amount)
     )
 )
@@ -298,8 +321,18 @@
         (asserts! (is-admin) ERR_UNAUTHORIZED)
         (asserts! (<= new-fee-bps u1000) ERR_INVALID_AMOUNT) ;; Max 10% fee
 
-        (var-set fee-bps new-fee-bps)
-        (ok new-fee-bps)
+        (let ((old-fee (var-get fee-bps)))
+            (var-set fee-bps new-fee-bps)
+
+            (print {
+                event: "treasury-fee-updated",
+                old-fee-bps: old-fee,
+                new-fee-bps: new-fee-bps,
+                admin: tx-sender,
+            })
+
+            (ok new-fee-bps)
+        )
     )
 )
 
@@ -315,7 +348,7 @@
         (var-set pending-admin (some new-admin))
 
         (print {
-            event: "admin-transfer-proposed",
+            event: "treasury-admin-transfer-proposed",
             current-admin: (var-get admin),
             proposed-admin: new-admin,
         })
@@ -337,7 +370,7 @@
             (var-set pending-admin none)
 
             (print {
-                event: "admin-transfer-completed",
+                event: "treasury-admin-transfer-completed",
                 old-admin: old-admin,
                 new-admin: tx-sender,
             })
@@ -358,7 +391,7 @@
         (var-set pending-admin none)
 
         (print {
-            event: "admin-transfer-cancelled",
+            event: "treasury-admin-transfer-cancelled",
             cancelled-by: tx-sender,
         })
 
@@ -457,7 +490,7 @@
         (var-set next-proposal-id (+ proposal-id u1))
 
         (print {
-            event: "withdrawal-proposed",
+            event: "treasury-withdrawal-proposed",
             proposal-id: proposal-id,
             amount: amount,
             recipient: recipient,
@@ -499,7 +532,7 @@
             ))
 
         (print {
-            event: "withdrawal-approved",
+            event: "treasury-withdrawal-approved",
             proposal-id: proposal-id,
             approver: tx-sender,
             total-approvals: (+ (len current-approvals) u1),
@@ -555,7 +588,7 @@
         (update-daily-limit amount)
 
         (print {
-            event: "withdrawal-executed",
+            event: "treasury-withdrawal-executed",
             proposal-id: proposal-id,
             amount: amount,
             recipient: (get recipient proposal),
@@ -633,7 +666,7 @@
         (var-set next-proposal-id (+ proposal-id u1))
 
         (print {
-            event: "add-admin-proposed",
+            event: "treasury-add-admin-proposed",
             proposal-id: proposal-id,
             new-admin: new-admin,
             proposer: tx-sender,
@@ -672,7 +705,7 @@
         (var-set next-proposal-id (+ proposal-id u1))
 
         (print {
-            event: "remove-admin-proposed",
+            event: "treasury-remove-admin-proposed",
             proposal-id: proposal-id,
             target-admin: target-admin,
             proposer: tx-sender,
@@ -711,7 +744,7 @@
             ))
 
         (print {
-            event: "admin-proposal-approved",
+            event: "treasury-admin-proposal-approved",
             proposal-id: proposal-id,
             approver: tx-sender,
             total-approvals: (+ (len current-approvals) u1),
@@ -759,7 +792,7 @@
         (map-set admin-proposals proposal-id (merge proposal { executed: true }))
 
         (print {
-            event: "admin-proposal-executed",
+            event: "treasury-admin-proposal-executed",
             proposal-id: proposal-id,
             action: action,
             target-admin: target,

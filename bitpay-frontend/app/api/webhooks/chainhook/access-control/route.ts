@@ -24,6 +24,7 @@ import {
 } from '@/lib/webhooks/chainhook-utils';
 import connectToDatabase from '@/lib/db';
 import * as NotificationService from '@/lib/notifications/notification-service';
+import { broadcastToUser } from '@/lib/socket/server';
 
 export async function POST(request: Request) {
   try {
@@ -138,7 +139,143 @@ async function handleAccessControlEvent(
   const db = mongoose.connection.db;
 
   switch (event.event) {
-    case 'contract-authorized':
+    case 'access-admin-added':
+      const mongoose1 = await connectToDatabase();
+      const db1 = mongoose1.connection.db;
+      if (db1) {
+        await db1.collection('access_control_events').insertOne({
+          type: 'admin-added',
+          admin: event.admin,
+          addedBy: event['added-by'],
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+        await NotificationService.createNotification(
+          event.admin,
+          'admin_added',
+          '👑 Admin Role Granted',
+          `You have been granted admin privileges by ${event['added-by'].slice(0, 8)}...`,
+          { addedBy: event['added-by'], txHash: context.txHash },
+          { priority: 'high' }
+        );
+
+        // Broadcast real-time update
+        broadcastToUser(event.admin, 'access-control:role-changed', {
+          type: 'admin-added',
+          data: {
+            admin: event.admin,
+            addedBy: event['added-by'],
+            txHash: context.txHash,
+          },
+        });
+      }
+      break;
+
+    case 'access-admin-removed':
+      const mongoose2 = await connectToDatabase();
+      const db2 = mongoose2.connection.db;
+      if (db2) {
+        await db2.collection('access_control_events').insertOne({
+          type: 'admin-removed',
+          admin: event.admin,
+          removedBy: event['removed-by'],
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+        await NotificationService.createNotification(
+          event.admin,
+          'admin_removed',
+          '⚠️ Admin Role Revoked',
+          `Your admin privileges have been revoked by ${event['removed-by'].slice(0, 8)}...`,
+          { removedBy: event['removed-by'], txHash: context.txHash },
+          { priority: 'urgent' }
+        );
+
+        // Broadcast real-time update
+        broadcastToUser(event.admin, 'access-control:role-changed', {
+          type: 'admin-removed',
+          data: {
+            admin: event.admin,
+            removedBy: event['removed-by'],
+            txHash: context.txHash,
+          },
+        });
+      }
+      break;
+
+    case 'access-operator-added':
+      const mongoose3 = await connectToDatabase();
+      const db3 = mongoose3.connection.db;
+      if (db3) {
+        await db3.collection('access_control_events').insertOne({
+          type: 'operator-added',
+          operator: event.operator,
+          addedBy: event['added-by'],
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+        await NotificationService.createNotification(
+          event.operator,
+          'operator_added',
+          '🔧 Operator Role Granted',
+          `You have been granted operator privileges by ${event['added-by'].slice(0, 8)}...`,
+          { addedBy: event['added-by'], txHash: context.txHash },
+          { priority: 'normal' }
+        );
+
+        // Broadcast real-time update
+        broadcastToUser(event.operator, 'access-control:role-changed', {
+          type: 'operator-added',
+          data: {
+            operator: event.operator,
+            addedBy: event['added-by'],
+            txHash: context.txHash,
+          },
+        });
+      }
+      break;
+
+    case 'access-operator-removed':
+      const mongoose4 = await connectToDatabase();
+      const db4 = mongoose4.connection.db;
+      if (db4) {
+        await db4.collection('access_control_events').insertOne({
+          type: 'operator-removed',
+          operator: event.operator,
+          removedBy: event['removed-by'],
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+        await NotificationService.createNotification(
+          event.operator,
+          'operator_removed',
+          '⚠️ Operator Role Revoked',
+          `Your operator privileges have been revoked by ${event['removed-by'].slice(0, 8)}...`,
+          { removedBy: event['removed-by'], txHash: context.txHash },
+          { priority: 'normal' }
+        );
+
+        // Broadcast real-time update
+        broadcastToUser(event.operator, 'access-control:role-changed', {
+          type: 'operator-removed',
+          data: {
+            operator: event.operator,
+            removedBy: event['removed-by'],
+            txHash: context.txHash,
+          },
+        });
+      }
+      break;
+
+    case 'access-contract-authorized':
       console.log(`✅ Contract authorized: ${event.contract}`);
 
       // Update authorized contracts list
@@ -155,6 +292,12 @@ async function handleAccessControlEvent(
 
       // Send alert to admins
       const admins = await getAdminList(db);
+      const contractAuthData = {
+        contract: event.contract,
+        authorizedBy: event['authorized-by'],
+        txHash: context.txHash,
+      };
+
       for (const admin of admins) {
         await NotificationService.createNotification(
           admin,
@@ -172,10 +315,16 @@ async function handleAccessControlEvent(
             actionText: 'View Details',
           }
         );
+
+        // Broadcast to each admin
+        broadcastToUser(admin, 'access-control:contract', {
+          type: 'contract-authorized',
+          data: contractAuthData,
+        });
       }
       break;
 
-    case 'contract-revoked':
+    case 'access-contract-revoked':
       console.log(`❌ Contract revoked: ${event.contract}`);
 
       // Update authorized contracts list
@@ -195,6 +344,12 @@ async function handleAccessControlEvent(
 
       // Send critical alert to admins
       const adminList = await getAdminList(db);
+      const contractRevokeData = {
+        contract: event.contract,
+        revokedBy: event['revoked-by'],
+        txHash: context.txHash,
+      };
+
       for (const admin of adminList) {
         await NotificationService.createNotification(
           admin,
@@ -212,10 +367,16 @@ async function handleAccessControlEvent(
             actionText: 'Review Now',
           }
         );
+
+        // Broadcast to each admin
+        broadcastToUser(admin, 'access-control:contract', {
+          type: 'contract-revoked',
+          data: contractRevokeData,
+        });
       }
       break;
 
-    case 'protocol-paused':
+    case 'access-protocol-paused':
       console.warn(`⚠️ PROTOCOL PAUSED by ${event['paused-by']}`);
 
       // Update system status
@@ -236,6 +397,12 @@ async function handleAccessControlEvent(
 
       // Send emergency alerts to all admins
       const allAdmins = await getAdminList(db);
+      const pauseData = {
+        pausedBy: event['paused-by'],
+        pausedAt: event['paused-at'].toString(),
+        txHash: context.txHash,
+      };
+
       for (const admin of allAdmins) {
         await NotificationService.createNotification(
           admin,
@@ -252,10 +419,16 @@ async function handleAccessControlEvent(
             actionText: 'View Status',
           }
         );
+
+        // Broadcast critical alert to each admin
+        broadcastToUser(admin, 'access-control:protocol', {
+          type: 'protocol-paused',
+          data: pauseData,
+        });
       }
       break;
 
-    case 'protocol-unpaused':
+    case 'access-protocol-unpaused':
       console.log(`✅ Protocol unpaused by ${event['unpaused-by']}`);
 
       // Update system status
@@ -276,6 +449,12 @@ async function handleAccessControlEvent(
 
       // Send notifications to all admins
       const adminsList = await getAdminList(db);
+      const unpauseData = {
+        unpausedBy: event['unpaused-by'],
+        unpausedAt: event['unpaused-at'].toString(),
+        txHash: context.txHash,
+      };
+
       for (const admin of adminsList) {
         await NotificationService.createNotification(
           admin,
@@ -292,10 +471,16 @@ async function handleAccessControlEvent(
             actionText: 'View Status',
           }
         );
+
+        // Broadcast to each admin
+        broadcastToUser(admin, 'access-control:protocol', {
+          type: 'protocol-unpaused',
+          data: unpauseData,
+        });
       }
       break;
 
-    case 'admin-transfer-initiated':
+    case 'access-admin-transfer-initiated':
       console.log(`🔑 Admin transfer initiated: ${event['current-admin']} → ${event['new-admin']}`);
 
       // Notify current admin
@@ -333,7 +518,7 @@ async function handleAccessControlEvent(
       );
       break;
 
-    case 'admin-transfer-completed':
+    case 'access-admin-transfer-completed':
       console.log(`✅ Admin transfer completed: ${event['old-admin']} → ${event['new-admin']}`);
 
       // Update admin records
@@ -413,12 +598,12 @@ export async function GET() {
     message: 'BitPay Access Control Events webhook endpoint',
     status: 'active',
     events: [
-      'contract-authorized',
-      'contract-revoked',
-      'protocol-paused',
-      'protocol-unpaused',
-      'admin-transfer-initiated',
-      'admin-transfer-completed',
+      'access-contract-authorized',
+      'access-contract-revoked',
+      'access-protocol-paused',
+      'access-protocol-unpaused',
+      'access-admin-transfer-initiated',
+      'access-admin-transfer-completed',
     ],
   });
 }

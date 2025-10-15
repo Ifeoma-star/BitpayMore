@@ -119,7 +119,7 @@ export type CoreStreamEvent =
 // ============================================================================
 
 export interface DirectPurchaseCompletedEvent {
-  event: 'direct-purchase-completed';
+  event: 'market-direct-purchase-completed';
   'stream-id': bigint | number;
   seller: string;
   buyer: string;
@@ -129,7 +129,7 @@ export interface DirectPurchaseCompletedEvent {
 }
 
 export interface PurchaseInitiatedEvent {
-  event: 'purchase-initiated';
+  event: 'market-purchase-initiated';
   'stream-id': bigint | number;
   seller: string;
   buyer: string;
@@ -139,7 +139,7 @@ export interface PurchaseInitiatedEvent {
 }
 
 export interface GatewayPurchaseCompletedEvent {
-  event: 'gateway-purchase-completed';
+  event: 'market-gateway-purchase-completed';
   'stream-id': bigint | number;
   seller: string;
   buyer: string;
@@ -150,32 +150,57 @@ export interface GatewayPurchaseCompletedEvent {
 }
 
 export interface PurchaseExpiredEvent {
-  event: 'purchase-expired';
+  event: 'market-purchase-expired';
   'stream-id': bigint | number;
   buyer: string;
   'payment-id': string;
 }
 
 export interface BackendAuthorizedEvent {
-  event: 'backend-authorized';
+  event: 'market-backend-authorized';
   backend: string;
   'authorized-by': string;
 }
 
 export interface BackendDeauthorizedEvent {
-  event: 'backend-deauthorized';
+  event: 'market-backend-deauthorized';
   backend: string;
   'deauthorized-by': string;
 }
 
 export interface MarketplaceFeeUpdatedEvent {
-  event: 'marketplace-fee-updated';
+  event: 'market-marketplace-fee-updated';
   'old-fee': bigint | number;
   'new-fee': bigint | number;
   'updated-by': string;
 }
 
+export interface NFTListedEvent {
+  event: 'market-nft-listed';
+  'stream-id': bigint | number;
+  seller: string;
+  price: bigint | number;
+  'listed-at': bigint | number;
+}
+
+export interface ListingPriceUpdatedEvent {
+  event: 'market-listing-price-updated';
+  'stream-id': bigint | number;
+  seller: string;
+  'old-price': bigint | number;
+  'new-price': bigint | number;
+}
+
+export interface ListingCancelledEvent {
+  event: 'market-listing-cancelled';
+  'stream-id': bigint | number;
+  seller: string;
+}
+
 export type MarketplaceEvent =
+  | NFTListedEvent
+  | ListingPriceUpdatedEvent
+  | ListingCancelledEvent
   | DirectPurchaseCompletedEvent
   | PurchaseInitiatedEvent
   | GatewayPurchaseCompletedEvent
@@ -188,42 +213,72 @@ export type MarketplaceEvent =
 // BitPay Treasury Events
 // ============================================================================
 
-export interface CancellationFeeCollectedEvent {
-  event: 'cancellation-fee-collected';
-  'stream-id': bigint | number;
+export interface FeeCollectedEvent {
+  event: 'treasury-fee-collected';
   amount: bigint | number;
-  'collected-from': string;
+  caller: string;
+  'new-balance': bigint | number;
+}
+
+export interface CancellationFeeCollectedEvent {
+  event: 'treasury-cancellation-fee-collected';
+  amount: bigint | number;
+  caller: string;
+  'new-balance': bigint | number;
 }
 
 export interface MarketplaceFeeCollectedEvent {
-  event: 'marketplace-fee-collected';
-  'stream-id': bigint | number;
+  event: 'treasury-marketplace-fee-collected';
   amount: bigint | number;
-  'collected-from': string;
+  caller: string;
+  'new-balance': bigint | number;
+}
+
+export interface TreasuryWithdrawalEvent {
+  event: 'treasury-withdrawal';
+  amount: bigint | number;
+  recipient: string;
+  admin: string;
+  'new-balance': bigint | number;
+}
+
+export interface TreasuryDistributionEvent {
+  event: 'treasury-distribution';
+  amount: bigint | number;
+  recipient: string;
+  admin: string;
+  'new-balance': bigint | number;
+}
+
+export interface TreasuryFeeUpdatedEvent {
+  event: 'treasury-fee-updated';
+  'old-fee-bps': bigint | number;
+  'new-fee-bps': bigint | number;
+  admin: string;
 }
 
 export interface AdminTransferProposedEvent {
-  event: 'admin-transfer-proposed';
+  event: 'treasury-admin-transfer-proposed';
   'current-admin': string;
   'new-admin': string;
   'proposed-at': bigint | number;
 }
 
 export interface AdminTransferCompletedEvent {
-  event: 'admin-transfer-completed';
+  event: 'treasury-admin-transfer-completed';
   'old-admin': string;
   'new-admin': string;
   'completed-at': bigint | number;
 }
 
 export interface AdminTransferCancelledEvent {
-  event: 'admin-transfer-cancelled';
+  event: 'treasury-admin-transfer-cancelled';
   admin: string;
   'cancelled-at': bigint | number;
 }
 
 export interface WithdrawalProposedEvent {
-  event: 'withdrawal-proposed';
+  event: 'treasury-withdrawal-proposed';
   'proposal-id': bigint | number;
   proposer: string;
   recipient: string;
@@ -233,14 +288,14 @@ export interface WithdrawalProposedEvent {
 }
 
 export interface WithdrawalApprovedEvent {
-  event: 'withdrawal-approved';
+  event: 'treasury-withdrawal-approved';
   'proposal-id': bigint | number;
   approver: string;
   'approval-count': bigint | number;
 }
 
 export interface WithdrawalExecutedEvent {
-  event: 'withdrawal-executed';
+  event: 'treasury-withdrawal-executed';
   'proposal-id': bigint | number;
   recipient: string;
   amount: bigint | number;
@@ -248,7 +303,7 @@ export interface WithdrawalExecutedEvent {
 }
 
 export interface AddAdminProposedEvent {
-  event: 'add-admin-proposed';
+  event: 'treasury-add-admin-proposed';
   'proposal-id': bigint | number;
   proposer: string;
   'new-admin': string;
@@ -256,7 +311,7 @@ export interface AddAdminProposedEvent {
 }
 
 export interface RemoveAdminProposedEvent {
-  event: 'remove-admin-proposed';
+  event: 'treasury-remove-admin-proposed';
   'proposal-id': bigint | number;
   proposer: string;
   'admin-to-remove': string;
@@ -264,22 +319,26 @@ export interface RemoveAdminProposedEvent {
 }
 
 export interface AdminProposalApprovedEvent {
-  event: 'admin-proposal-approved';
+  event: 'treasury-admin-proposal-approved';
   'proposal-id': bigint | number;
   approver: string;
   'approval-count': bigint | number;
 }
 
 export interface AdminProposalExecutedEvent {
-  event: 'admin-proposal-executed';
+  event: 'treasury-admin-proposal-executed';
   'proposal-id': bigint | number;
   'proposal-type': string;
   'executed-at': bigint | number;
 }
 
 export type TreasuryEvent =
+  | FeeCollectedEvent
   | CancellationFeeCollectedEvent
   | MarketplaceFeeCollectedEvent
+  | TreasuryWithdrawalEvent
+  | TreasuryDistributionEvent
+  | TreasuryFeeUpdatedEvent
   | AdminTransferProposedEvent
   | AdminTransferCompletedEvent
   | AdminTransferCancelledEvent
@@ -295,45 +354,73 @@ export type TreasuryEvent =
 // BitPay Access Control Events
 // ============================================================================
 
+export interface AdminAddedEvent {
+  event: 'access-admin-added';
+  admin: string;
+  'added-by': string;
+}
+
+export interface AdminRemovedEvent {
+  event: 'access-admin-removed';
+  admin: string;
+  'removed-by': string;
+}
+
+export interface OperatorAddedEvent {
+  event: 'access-operator-added';
+  operator: string;
+  'added-by': string;
+}
+
+export interface OperatorRemovedEvent {
+  event: 'access-operator-removed';
+  operator: string;
+  'removed-by': string;
+}
+
 export interface ContractAuthorizedEvent {
-  event: 'contract-authorized';
+  event: 'access-contract-authorized';
   contract: string;
   'authorized-by': string;
 }
 
 export interface ContractRevokedEvent {
-  event: 'contract-revoked';
+  event: 'access-contract-revoked';
   contract: string;
   'revoked-by': string;
 }
 
 export interface ProtocolPausedEvent {
-  event: 'protocol-paused';
+  event: 'access-protocol-paused';
   'paused-by': string;
   'paused-at': bigint | number;
 }
 
 export interface ProtocolUnpausedEvent {
-  event: 'protocol-unpaused';
+  event: 'access-protocol-unpaused';
   'unpaused-by': string;
   'unpaused-at': bigint | number;
 }
 
 export interface AccessControlAdminTransferInitiatedEvent {
-  event: 'admin-transfer-initiated';
+  event: 'access-admin-transfer-initiated';
   'current-admin': string;
   'new-admin': string;
   'initiated-at': bigint | number;
 }
 
 export interface AccessControlAdminTransferCompletedEvent {
-  event: 'admin-transfer-completed';
+  event: 'access-admin-transfer-completed';
   'old-admin': string;
   'new-admin': string;
   'completed-at': bigint | number;
 }
 
 export type AccessControlEvent =
+  | AdminAddedEvent
+  | AdminRemovedEvent
+  | OperatorAddedEvent
+  | OperatorRemovedEvent
   | ContractAuthorizedEvent
   | ContractRevokedEvent
   | ProtocolPausedEvent

@@ -19,13 +19,14 @@ interface Stream {
   totalAmount: string;
   vestedAmount: string;
   withdrawnAmount: string;
+  withdrawableAmount?: string;
 }
 
 interface WithdrawModalProps {
   isOpen: boolean;
   onClose: () => void;
   stream: Stream | null;
-  onSuccess?: () => void;
+  onSuccess?: (amount?: string) => void;
 }
 
 export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawModalProps) {
@@ -34,7 +35,10 @@ export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawMo
 
   if (!stream) return null;
 
-  const availableAmount = parseFloat(stream.vestedAmount) - parseFloat(stream.withdrawnAmount);
+  // Use withdrawableAmount if provided (calculated by contract), otherwise calculate manually
+  const availableAmount = stream.withdrawableAmount
+    ? parseFloat(stream.withdrawableAmount)
+    : parseFloat(stream.vestedAmount) - parseFloat(stream.withdrawnAmount);
   const maxWithdraw = availableAmount.toFixed(8);
 
   const handleWithdraw = async () => {
@@ -48,22 +52,18 @@ export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawMo
       return;
     }
 
-    setIsLoading(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success(`Successfully withdrew ${withdrawAmount} sBTC`);
-      onClose();
-      setWithdrawAmount("");
-      onSuccess?.(); // Call success callback to refresh data
-      
-      // In real app, refresh stream data
-    } catch (error) {
-      toast.error("Failed to process withdrawal");
-    } finally {
-      setIsLoading(false);
+    // Call parent's onSuccess handler with the amount
+    // Parent will use withdraw-partial for custom amount
+    if (onSuccess) {
+      onSuccess(withdrawAmount);
+    }
+  };
+
+  const handleWithdrawAll = () => {
+    // Call parent's onSuccess handler without amount
+    // Parent will use withdraw-from-stream to get all available
+    if (onSuccess) {
+      onSuccess();
     }
   };
 
@@ -156,25 +156,33 @@ export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawMo
               </div>
             </div>
 
-            {/* Warning */}
-            <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <AlertCircle className="h-3 w-3 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="text-xs text-yellow-800 dark:text-yellow-200">
-                <p className="font-medium">Transaction Fee Notice</p>
-                <p className="text-[11px] mt-0.5">A small network fee will be deducted from your withdrawal.</p>
+            {/* Notices */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <AlertCircle className="h-3 w-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-blue-800 dark:text-blue-200">
+                  <p className="font-medium">Smart Contract Calculation</p>
+                  <p className="text-[11px] mt-0.5">The exact withdrawal amount will be calculated by the smart contract at the current block height when you confirm the transaction.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <AlertCircle className="h-3 w-3 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-yellow-800 dark:text-yellow-200">
+                  <p className="font-medium">Transaction Fee Notice</p>
+                  <p className="text-[11px] mt-0.5">A small STX network fee will be required to process this withdrawal.</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={onClose} className="flex-1 h-9 text-sm">
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleWithdraw} 
+          <div className="space-y-2 pt-2">
+            {/* Withdraw Custom Amount */}
+            <Button
+              onClick={handleWithdraw}
               disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || isLoading}
-              className="flex-1 h-9 text-sm bg-brand-teal hover:bg-brand-teal/90 text-white"
+              className="w-full h-9 text-sm bg-brand-teal hover:bg-brand-teal/90 text-white"
             >
               {isLoading ? (
                 <>
@@ -184,9 +192,24 @@ export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawMo
               ) : (
                 <>
                   <Wallet className="h-3 w-3 mr-1.5" />
-                  Withdraw
+                  Withdraw {withdrawAmount || "0.00000000"} sBTC
                 </>
               )}
+            </Button>
+
+            {/* Withdraw All Available */}
+            <Button
+              onClick={handleWithdrawAll}
+              disabled={isLoading || availableAmount <= 0}
+              variant="outline"
+              className="w-full h-9 text-sm"
+            >
+              <Wallet className="h-3 w-3 mr-1.5" />
+              Withdraw All Available ({maxWithdraw} sBTC)
+            </Button>
+
+            <Button variant="ghost" onClick={onClose} className="w-full h-9 text-sm">
+              Cancel
             </Button>
           </div>
         </div>

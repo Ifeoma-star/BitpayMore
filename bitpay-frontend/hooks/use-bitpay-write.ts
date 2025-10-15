@@ -106,7 +106,7 @@ export function useCreateStream(): UseWriteReturn {
 }
 
 /**
- * Hook for withdrawing from a stream
+ * Hook for withdrawing from a stream (full amount)
  */
 export function useWithdrawFromStream(): UseWriteReturn {
   const [txId, setTxId] = useState<string | null>(null);
@@ -132,6 +132,64 @@ export function useWithdrawFromStream(): UseWriteReturn {
         postConditionMode: PostConditionMode.Allow, // Allow because we're receiving funds
         onFinish: (data) => {
           console.log('Withdrawal successful:', data.txId);
+          setTxId(data.txId);
+          setIsLoading(false);
+        },
+        onCancel: () => {
+          console.log('Transaction cancelled by user');
+          setError('Transaction cancelled');
+          setIsLoading(false);
+        },
+      };
+
+      await openContractCall(options);
+      return txId;
+    } catch (err) {
+      console.error('Error withdrawing from stream:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to withdraw';
+      setError(errorMessage);
+      setIsLoading(false);
+      return null;
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    setTxId(null);
+    setError(null);
+    setIsLoading(false);
+  }, []);
+
+  return { write, txId, isLoading, error, reset };
+}
+
+/**
+ * Hook for withdrawing a specific amount from a stream (partial withdrawal)
+ */
+export function useWithdrawPartial(): UseWriteReturn {
+  const [txId, setTxId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const write = useCallback(async (streamId: number | bigint, amount: number | string): Promise<string | null> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setTxId(null);
+
+      const network = getStacksNetwork();
+      const streamIdUint = typeof streamId === 'bigint' ? streamId : BigInt(streamId);
+      const amountInSats = displayToMicro(amount);
+
+      const options: ContractCallOptions = {
+        network,
+        anchorMode: AnchorMode.Any,
+        contractAddress: BITPAY_DEPLOYER_ADDRESS,
+        contractName: CONTRACT_NAMES.CORE,
+        functionName: CORE_FUNCTIONS.WITHDRAW_PARTIAL,
+        functionArgs: [uintCV(streamIdUint), uintCV(amountInSats)],
+        postConditionMode: PostConditionMode.Allow, // Allow because we're receiving funds
+        onFinish: (data) => {
+          console.log('Partial withdrawal successful:', data.txId);
           setTxId(data.txId);
           setIsLoading(false);
         },

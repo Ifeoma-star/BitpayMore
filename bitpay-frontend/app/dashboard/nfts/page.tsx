@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Shield, Shuffle, Lock } from "lucide-react";
-import walletService from "@/lib/wallet/wallet-service";
+import { useAuth } from "@/hooks/use-auth";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
 import { microToDisplay } from "@/lib/contracts/config";
 import { TransferObligationNFTModal } from "@/components/dashboard/modals/TransferObligationNFTModal";
@@ -18,9 +18,12 @@ import { ObligationNFTCard } from "@/components/dashboard/nfts/obligation/Obliga
 import { EmptyObligationNFTs } from "@/components/dashboard/nfts/obligation/EmptyObligationNFTs";
 
 export default function NFTGalleryPage() {
-  const [userAddress, setUserAddress] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStreamForTransfer, setSelectedStreamForTransfer] = useState<any>(null);
+
+  // Get user address from authenticated session instead of wallet
+  const { user } = useAuth();
+  const userAddress = user?.walletAddress || null;
 
   const {
     outgoingStreams,
@@ -28,14 +31,6 @@ export default function NFTGalleryPage() {
     isLoading,
     refetch
   } = useUserStreamsByRole(userAddress);
-
-  useEffect(() => {
-    const loadWallet = async () => {
-      const address = await walletService.getCurrentAddress();
-      setUserAddress(address);
-    };
-    loadWallet();
-  }, []);
 
   // Filter by search
   const filteredRecipientNFTs = incomingStreams.filter((stream) =>

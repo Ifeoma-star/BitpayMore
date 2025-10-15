@@ -84,16 +84,39 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [userAddress, refetch]);
 
-  // Calculate combined stats
+  // Calculate combined stats with proper BigInt handling
   const activeStreams = allStreams?.filter(s => s.status === StreamStatus.ACTIVE).length || 0;
   const completedStreams = allStreams?.filter(s => s.status === StreamStatus.COMPLETED).length || 0;
-  const totalStreamed = allStreams?.reduce((sum, stream) => sum + stream.vestedAmount, BigInt(0)) || BigInt(0);
-  const totalVolume = allStreams?.reduce((sum, stream) => sum + stream.amount, BigInt(0)) || BigInt(0);
+
+  // Helper to ensure BigInt
+  const toBigInt = (val: any): bigint => {
+    if (typeof val === 'bigint') return val;
+    if (typeof val === 'string') return BigInt(val);
+    if (typeof val === 'number') return BigInt(Math.floor(val));
+    if (typeof val === 'object' && val !== null && 'value' in val) {
+      return toBigInt(val.value);
+    }
+    return BigInt(0);
+  };
+
+  const totalStreamed = allStreams?.reduce((sum, stream) => {
+    return sum + toBigInt(stream.vestedAmount);
+  }, BigInt(0)) || BigInt(0);
+
+  const totalVolume = allStreams?.reduce((sum, stream) => {
+    return sum + toBigInt(stream.amount);
+  }, BigInt(0)) || BigInt(0);
+
+  console.log('📊 Dashboard Stats:', {
+    totalVolume: totalVolume.toString(),
+    totalVolumeDisplay: microToDisplay(totalVolume),
+    streamCount: allStreams?.length,
+  });
 
   // Calculate role-specific stats
-  const totalSending = outgoingStreams.reduce((sum, s) => sum + s.amount, BigInt(0));
-  const totalReceiving = incomingStreams.reduce((sum, s) => sum + s.vestedAmount, BigInt(0));
-  const availableToWithdraw = incomingStreams.reduce((sum, s) => sum + s.withdrawableAmount, BigInt(0));
+  const totalSending = outgoingStreams.reduce((sum, s) => sum + toBigInt(s.amount), BigInt(0));
+  const totalReceiving = incomingStreams.reduce((sum, s) => sum + toBigInt(s.vestedAmount), BigInt(0));
+  const availableToWithdraw = incomingStreams.reduce((sum, s) => sum + toBigInt(s.withdrawableAmount), BigInt(0));
 
   const stats = [
     {

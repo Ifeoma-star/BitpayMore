@@ -8,7 +8,6 @@ import { NextResponse } from 'next/server';
 import type {
   ChainhookPayload,
   ChainhookBlock,
-  ChainhookTransaction,
   CoreStreamEvent,
   StreamCreatedEvent,
   StreamWithdrawalEvent,
@@ -26,7 +25,6 @@ import {
   handleReorg,
   validatePayload,
   webhookRateLimiter,
-  normalizeBigIntValues,
 } from '@/lib/webhooks/chainhook-utils';
 import {
   saveStreamCreated,
@@ -40,6 +38,7 @@ import {
 } from '@/lib/notifications/notification-service';
 import connectToDatabase from '@/lib/db';
 import * as NotificationService from '@/lib/notifications/notification-service';
+import { broadcastToUser, broadcastToStream } from '@/lib/socket/server';
 
 export async function POST(request: Request) {
   try {
@@ -204,6 +203,39 @@ async function handleStreamCreated(
     startBlock: event['start-block'].toString(),
     endBlock: event['end-block'].toString(),
     txHash: context.txHash,
+  });
+
+  // Broadcast real-time updates via WebSocket
+  const streamData = {
+    streamId: event['stream-id'].toString(),
+    sender: event.sender,
+    recipient: event.recipient,
+    amount: event.amount.toString(),
+    startBlock: event['start-block'].toString(),
+    endBlock: event['end-block'].toString(),
+    txHash: context.txHash,
+    blockHeight: context.blockHeight,
+    timestamp: context.timestamp,
+  };
+
+  // Notify sender
+  broadcastToUser(event.sender, 'stream:created', {
+    type: 'stream-created',
+    role: 'sender',
+    data: streamData,
+  });
+
+  // Notify recipient
+  broadcastToUser(event.recipient, 'stream:created', {
+    type: 'stream-created',
+    role: 'recipient',
+    data: streamData,
+  });
+
+  // Broadcast to stream room
+  broadcastToStream(event['stream-id'].toString(), 'stream:updated', {
+    type: 'created',
+    data: streamData,
   });
 }
 

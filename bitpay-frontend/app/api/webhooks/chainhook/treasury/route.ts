@@ -36,6 +36,7 @@ import {
   uintCV,
 } from '@stacks/transactions';
 import { getStacksNetwork, BITPAY_DEPLOYER_ADDRESS, CONTRACT_NAMES } from '@/lib/contracts/config';
+import { broadcastToUser } from '@/lib/socket/server';
 
 export async function POST(request: Request) {
   try {
@@ -151,27 +152,173 @@ async function handleTreasuryEvent(
   logWebhookEvent(event.event, event, context);
 
   switch (event.event) {
-    case 'cancellation-fee-collected':
-      await saveFeeCollected({
-        streamId: event['stream-id'].toString(),
-        amount: event.amount.toString(),
-        collectedFrom: event['collected-from'],
-        feeType: 'cancellation',
-        context,
-      });
+    case 'treasury-fee-collected':
+      // General fee collection - log to database
+      const mongooseF = await connectToDatabase();
+      const dbF = mongooseF.connection.db;
+      if (dbF) {
+        await dbF.collection('treasury_fees').insertOne({
+          type: 'general',
+          amount: event.amount.toString(),
+          caller: event.caller,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+      }
       break;
 
-    case 'marketplace-fee-collected':
-      await saveFeeCollected({
-        streamId: event['stream-id'].toString(),
-        amount: event.amount.toString(),
-        collectedFrom: event['collected-from'],
-        feeType: 'marketplace',
-        context,
-      });
+    case 'treasury-cancellation-fee-collected':
+      // Log cancellation fee - these events have caller not stream-id
+      const mongooseC = await connectToDatabase();
+      const dbC = mongooseC.connection.db;
+      if (dbC) {
+        await dbC.collection('treasury_fees').insertOne({
+          type: 'cancellation',
+          amount: event.amount.toString(),
+          caller: event.caller,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+      }
       break;
 
-    case 'withdrawal-proposed':
+    case 'treasury-marketplace-fee-collected':
+      // Log marketplace fee - these events have caller not stream-id
+      const mongooseM = await connectToDatabase();
+      const dbM = mongooseM.connection.db;
+      if (dbM) {
+        await dbM.collection('treasury_fees').insertOne({
+          type: 'marketplace',
+          amount: event.amount.toString(),
+          caller: event.caller,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+      }
+      break;
+
+    case 'treasury-withdrawal':
+      // Admin withdrawal (not multi-sig)
+      const mongoose1 = await connectToDatabase();
+      const db1 = mongoose1.connection.db;
+
+      if (db1) {
+        await db1.collection('treasury_withdrawals').insertOne({
+          type: 'admin-withdrawal',
+          amount: event.amount.toString(),
+          recipient: event.recipient,
+          admin: event.admin,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+
+        // Notify admin and recipient
+        await NotificationService.createNotification(
+          event.admin,
+          'treasury_withdrawal',
+          '💸 Treasury Withdrawal',
+          `Withdrew ${event.amount} sats to ${event.recipient.slice(0, 8)}...`,
+          { amount: event.amount.toString(), recipient: event.recipient, txHash: context.txHash },
+          { priority: 'normal' }
+        );
+
+        // Broadcast real-time updates
+        const withdrawalData = {
+          amount: event.amount.toString(),
+          recipient: event.recipient,
+          admin: event.admin,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+        };
+
+        broadcastToUser(event.admin, 'treasury:withdrawal', {
+          type: 'withdrawal',
+          data: withdrawalData,
+        });
+
+        broadcastToUser(event.recipient, 'treasury:withdrawal', {
+          type: 'withdrawal',
+          role: 'recipient',
+          data: withdrawalData,
+        });
+      }
+      break;
+
+    case 'treasury-distribution':
+      // Fee distribution to recipients
+      const mongoose2 = await connectToDatabase();
+      const db2 = mongoose2.connection.db;
+
+      if (db2) {
+        await db2.collection('treasury_distributions').insertOne({
+          amount: event.amount.toString(),
+          recipient: event.recipient,
+          admin: event.admin,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+
+        // Notify recipient
+        await NotificationService.createNotification(
+          event.recipient,
+          'treasury_distribution',
+          '💰 Fee Distribution Received',
+          `Received ${event.amount} sats from treasury`,
+          { amount: event.amount.toString(), txHash: context.txHash },
+          { priority: 'normal', actionUrl: '/dashboard' }
+        );
+
+        // Broadcast real-time updates
+        const distributionData = {
+          amount: event.amount.toString(),
+          recipient: event.recipient,
+          admin: event.admin,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+        };
+
+        broadcastToUser(event.recipient, 'treasury:distribution', {
+          type: 'distribution',
+          data: distributionData,
+        });
+      }
+      break;
+
+    case 'treasury-fee-updated':
+      // Log fee update
+      const mongoose3 = await connectToDatabase();
+      const db3 = mongoose3.connection.db;
+
+      if (db3) {
+        await db3.collection('treasury_config_changes').insertOne({
+          type: 'fee-updated',
+          oldFeeBps: event['old-fee-bps'].toString(),
+          newFeeBps: event['new-fee-bps'].toString(),
+          admin: event.admin,
+          txHash: context.txHash,
+          blockHeight: context.blockHeight,
+          timestamp: new Date(context.timestamp * 1000),
+          processedAt: new Date(),
+        });
+      }
+      break;
+
+    case 'treasury-withdrawal-proposed':
       await saveWithdrawalProposal({
         proposalId: event['proposal-id'].toString(),
         proposer: event.proposer,
@@ -200,9 +347,27 @@ async function handleTreasuryEvent(
       }).catch((err) => {
         console.error('Failed to send withdrawal proposal notification:', err);
       });
+
+      // Broadcast real-time updates to all admins
+      const proposalData = {
+        proposalId: event['proposal-id'].toString(),
+        proposer: event.proposer,
+        recipient: event.recipient,
+        amount: event.amount.toString(),
+        proposedAt: event['proposed-at'].toString(),
+        timelockExpires: event['timelock-expires'].toString(),
+        txHash: context.txHash,
+      };
+
+      for (const admin of adminList) {
+        broadcastToUser(admin, 'treasury:proposal', {
+          type: 'withdrawal-proposed',
+          data: proposalData,
+        });
+      }
       break;
 
-    case 'withdrawal-approved':
+    case 'treasury-withdrawal-approved':
       await saveWithdrawalApproval({
         proposalId: event['proposal-id'].toString(),
         approver: event.approver,
@@ -242,6 +407,17 @@ async function handleTreasuryEvent(
                 actionText: 'Execute Withdrawal',
               }
             );
+
+            // Broadcast to proposer
+            broadcastToUser(proposal.proposer, 'treasury:proposal-ready', {
+              type: 'withdrawal-approved',
+              data: {
+                proposalId: event['proposal-id'].toString(),
+                approvalCount,
+                threshold: approvalThreshold,
+                txHash: context.txHash,
+              },
+            });
           }
         }
       } else {
@@ -263,10 +439,21 @@ async function handleTreasuryEvent(
             actionText: 'View Proposal',
           }
         );
+
+        // Broadcast to approver
+        broadcastToUser(event.approver, 'treasury:approval', {
+          type: 'withdrawal-approved',
+          data: {
+            proposalId: event['proposal-id'].toString(),
+            approvalCount,
+            threshold: approvalThreshold,
+            txHash: context.txHash,
+          },
+        });
       }
       break;
 
-    case 'withdrawal-executed':
+    case 'treasury-withdrawal-executed':
       console.log(`💸 Withdrawal executed: ${event['proposal-id']}`);
 
       const mongoose = await connectToDatabase();
@@ -287,6 +474,14 @@ async function handleTreasuryEvent(
 
         // Notify all admins
         const admins = await getTreasuryAdmins();
+        const executedData = {
+          proposalId: event['proposal-id'].toString(),
+          recipient: event.recipient,
+          amount: event.amount.toString(),
+          executedAt: event['executed-at'].toString(),
+          txHash: context.txHash,
+        };
+
         for (const admin of admins) {
           await NotificationService.createNotification(
             admin,
@@ -303,12 +498,18 @@ async function handleTreasuryEvent(
               actionText: 'View Treasury',
             }
           );
+
+          // Broadcast to each admin
+          broadcastToUser(admin, 'treasury:executed', {
+            type: 'withdrawal-executed',
+            data: executedData,
+          });
         }
       }
       break;
 
-    case 'add-admin-proposed':
-    case 'remove-admin-proposed':
+    case 'treasury-add-admin-proposed':
+    case 'treasury-remove-admin-proposed':
       console.log(`👥 Admin proposal: ${event.event}`);
 
       const adminsList = await getTreasuryAdmins();
@@ -331,11 +532,11 @@ async function handleTreasuryEvent(
       }
       break;
 
-    case 'admin-proposal-approved':
+    case 'treasury-admin-proposal-approved':
       console.log(`👥 Admin proposal approved: ${event.event}`);
       break;
 
-    case 'admin-proposal-executed':
+    case 'treasury-admin-proposal-executed':
       console.log(`👥 Admin proposal executed: ${event.event}`);
 
       const allAdmins = await getTreasuryAdmins();
@@ -358,9 +559,9 @@ async function handleTreasuryEvent(
       }
       break;
 
-    case 'admin-transfer-proposed':
-    case 'admin-transfer-completed':
-    case 'admin-transfer-cancelled':
+    case 'treasury-admin-transfer-proposed':
+    case 'treasury-admin-transfer-completed':
+    case 'treasury-admin-transfer-cancelled':
       console.log(`🔑 Admin transfer event: ${event.event}`);
 
       const treasuryAdmins = await getTreasuryAdmins();
@@ -456,18 +657,18 @@ export async function GET() {
     message: 'BitPay Treasury Events webhook endpoint',
     status: 'active',
     events: [
-      'cancellation-fee-collected',
-      'marketplace-fee-collected',
-      'withdrawal-proposed',
-      'withdrawal-approved',
-      'withdrawal-executed',
-      'add-admin-proposed',
-      'remove-admin-proposed',
-      'admin-proposal-approved',
-      'admin-proposal-executed',
-      'admin-transfer-proposed',
-      'admin-transfer-completed',
-      'admin-transfer-cancelled',
+      'treasury-cancellation-fee-collected',
+      'treasury-marketplace-fee-collected',
+      'treasury-withdrawal-proposed',
+      'treasury-withdrawal-approved',
+      'treasury-withdrawal-executed',
+      'treasury-add-admin-proposed',
+      'treasury-remove-admin-proposed',
+      'treasury-admin-proposal-approved',
+      'treasury-admin-proposal-executed',
+      'treasury-admin-transfer-proposed',
+      'treasury-admin-transfer-completed',
+      'treasury-admin-transfer-cancelled',
     ],
   });
 }

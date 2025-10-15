@@ -9,6 +9,9 @@ import type {
   ChainhookPayload,
   ChainhookBlock,
   MarketplaceEvent,
+  NFTListedEvent,
+  ListingPriceUpdatedEvent,
+  ListingCancelledEvent,
   DirectPurchaseCompletedEvent,
   PurchaseInitiatedEvent,
   GatewayPurchaseCompletedEvent,
@@ -34,6 +37,7 @@ import {
 import { notifyPurchaseCompleted } from '@/lib/notifications/notification-service';
 import connectToDatabase from '@/lib/db';
 import * as NotificationService from '@/lib/notifications/notification-service';
+import { broadcastToUser, broadcastToMarketplace } from '@/lib/socket/server';
 
 export async function POST(request: Request) {
   try {
@@ -147,31 +151,264 @@ async function handleMarketplaceEvent(
   context: any
 ): Promise<void> {
   switch (event.event) {
-    case 'direct-purchase-completed':
+    case 'market-nft-listed':
+      await handleNFTListed(event, context);
+      break;
+
+    case 'market-listing-price-updated':
+      await handleListingPriceUpdated(event, context);
+      break;
+
+    case 'market-listing-cancelled':
+      await handleListingCancelled(event, context);
+      break;
+
+    case 'market-direct-purchase-completed':
       await handleDirectPurchase(event, context);
       break;
 
-    case 'purchase-initiated':
+    case 'market-purchase-initiated':
       await handlePurchaseInitiated(event, context);
       break;
 
-    case 'gateway-purchase-completed':
+    case 'market-gateway-purchase-completed':
       await handleGatewayPurchase(event, context);
       break;
 
-    case 'purchase-expired':
+    case 'market-purchase-expired':
       await handlePurchaseExpired(event, context);
       break;
 
-    case 'backend-authorized':
-    case 'backend-deauthorized':
-    case 'marketplace-fee-updated':
+    case 'market-backend-authorized':
+    case 'market-backend-deauthorized':
+    case 'market-marketplace-fee-updated':
       // Log these admin events but don't require special handling
       logWebhookEvent(event.event, event, context);
       break;
 
     default:
       console.warn(`Unknown marketplace event: ${(event as any).event}`);
+  }
+}
+
+/**
+ * Handle nft-listed event
+ */
+async function handleNFTListed(
+  event: NFTListedEvent,
+  context: any
+): Promise<void> {
+  logWebhookEvent('nft-listed', event, context);
+
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
+  if (db) {
+    // Save listing to database
+    await db.collection('marketplace_listings').insertOne({
+      streamId: event['stream-id'].toString(),
+      seller: event.seller,
+      price: event.price.toString(),
+      status: 'active',
+      listedAt: new Date(event['listed-at'].toString()),
+      createdAt: new Date(context.timestamp * 1000),
+      blockHeight: context.blockHeight,
+      txHash: context.txHash,
+    });
+
+    // Log blockchain event
+    await db.collection('blockchain_events').insertOne({
+      type: 'nft-listed',
+      streamId: event['stream-id'].toString(),
+      data: event,
+      context,
+      processedAt: new Date(),
+    });
+
+    // Notify seller
+    await NotificationService.createNotification(
+      event.seller,
+      'nft_listed',
+      '📝 NFT Listed',
+      `Your obligation NFT for stream #${event['stream-id']} is now listed for ${event.price} sats`,
+      {
+        streamId: event['stream-id'].toString(),
+        price: event.price.toString(),
+        txHash: context.txHash,
+      },
+      {
+        priority: 'normal',
+        actionUrl: `/dashboard/marketplace/listings/${event['stream-id']}`,
+        actionText: 'View Listing',
+      }
+    );
+
+    // Broadcast real-time updates
+    const listingData = {
+      streamId: event['stream-id'].toString(),
+      seller: event.seller,
+      price: event.price.toString(),
+      listedAt: event['listed-at'].toString(),
+      txHash: context.txHash,
+    };
+
+    // Notify seller
+    broadcastToUser(event.seller, 'marketplace:new-listing', {
+      type: 'nft-listed',
+      data: listingData,
+    });
+
+    // Broadcast to all marketplace viewers
+    broadcastToMarketplace('marketplace:new-listing', listingData);
+  }
+}
+
+/**
+ * Handle listing-price-updated event
+ */
+async function handleListingPriceUpdated(
+  event: ListingPriceUpdatedEvent,
+  context: any
+): Promise<void> {
+  logWebhookEvent('listing-price-updated', event, context);
+
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
+  if (db) {
+    // Update listing price
+    await db.collection('marketplace_listings').updateOne(
+      { streamId: event['stream-id'].toString() },
+      {
+        $set: {
+          price: event['new-price'].toString(),
+          updatedAt: new Date(context.timestamp * 1000),
+        },
+        $push: {
+          priceHistory: {
+            oldPrice: event['old-price'].toString(),
+            newPrice: event['new-price'].toString(),
+            updatedAt: new Date(context.timestamp * 1000),
+            txHash: context.txHash,
+          },
+        } as any,
+      }
+    );
+
+    // Log blockchain event
+    await db.collection('blockchain_events').insertOne({
+      type: 'listing-price-updated',
+      streamId: event['stream-id'].toString(),
+      data: event,
+      context,
+      processedAt: new Date(),
+    });
+
+    // Notify seller
+    await NotificationService.createNotification(
+      event.seller,
+      'listing_updated',
+      '💰 Listing Price Updated',
+      `Price for stream #${event['stream-id']} updated from ${event['old-price']} to ${event['new-price']} sats`,
+      {
+        streamId: event['stream-id'].toString(),
+        oldPrice: event['old-price'].toString(),
+        newPrice: event['new-price'].toString(),
+        txHash: context.txHash,
+      },
+      {
+        priority: 'low',
+        actionUrl: `/dashboard/marketplace/listings/${event['stream-id']}`,
+        actionText: 'View Listing',
+      }
+    );
+
+    // Broadcast real-time updates
+    const priceUpdateData = {
+      streamId: event['stream-id'].toString(),
+      seller: event.seller,
+      oldPrice: event['old-price'].toString(),
+      newPrice: event['new-price'].toString(),
+      txHash: context.txHash,
+    };
+
+    // Notify seller
+    broadcastToUser(event.seller, 'marketplace:listing-updated', {
+      type: 'listing-price-updated',
+      data: priceUpdateData,
+    });
+
+    // Broadcast to all marketplace viewers
+    broadcastToMarketplace('marketplace:listing-updated', priceUpdateData);
+  }
+}
+
+/**
+ * Handle listing-cancelled event
+ */
+async function handleListingCancelled(
+  event: ListingCancelledEvent,
+  context: any
+): Promise<void> {
+  logWebhookEvent('listing-cancelled', event, context);
+
+  const mongoose = await connectToDatabase();
+  const db = mongoose.connection.db;
+
+  if (db) {
+    // Update listing status
+    await db.collection('marketplace_listings').updateOne(
+      { streamId: event['stream-id'].toString() },
+      {
+        $set: {
+          status: 'cancelled',
+          cancelledAt: new Date(context.timestamp * 1000),
+          cancelledTxHash: context.txHash,
+        },
+      }
+    );
+
+    // Log blockchain event
+    await db.collection('blockchain_events').insertOne({
+      type: 'listing-cancelled',
+      streamId: event['stream-id'].toString(),
+      data: event,
+      context,
+      processedAt: new Date(),
+    });
+
+    // Notify seller
+    await NotificationService.createNotification(
+      event.seller,
+      'listing_cancelled',
+      '❌ Listing Cancelled',
+      `Your listing for stream #${event['stream-id']} has been cancelled`,
+      {
+        streamId: event['stream-id'].toString(),
+        txHash: context.txHash,
+      },
+      {
+        priority: 'low',
+        actionUrl: `/dashboard/marketplace`,
+        actionText: 'View Marketplace',
+      }
+    );
+
+    // Broadcast real-time updates
+    const cancelData = {
+      streamId: event['stream-id'].toString(),
+      seller: event.seller,
+      txHash: context.txHash,
+    };
+
+    // Notify seller
+    broadcastToUser(event.seller, 'marketplace:listing-cancelled', {
+      type: 'listing-cancelled',
+      data: cancelData,
+    });
+
+    // Broadcast to all marketplace viewers
+    broadcastToMarketplace('marketplace:listing-cancelled', cancelData);
   }
 }
 
@@ -204,6 +441,34 @@ async function handleDirectPurchase(
     saleId: event['sale-id'].toString(),
     txHash: context.txHash,
   });
+
+  // Broadcast real-time updates
+  const saleData = {
+    streamId: event['stream-id'].toString(),
+    seller: event.seller,
+    buyer: event.buyer,
+    price: event.price.toString(),
+    marketplaceFee: event['marketplace-fee'].toString(),
+    saleId: event['sale-id'].toString(),
+    txHash: context.txHash,
+  };
+
+  // Notify buyer
+  broadcastToUser(event.buyer, 'marketplace:sale', {
+    type: 'purchase-completed',
+    role: 'buyer',
+    data: saleData,
+  });
+
+  // Notify seller
+  broadcastToUser(event.seller, 'marketplace:sale', {
+    type: 'sale-completed',
+    role: 'seller',
+    data: saleData,
+  });
+
+  // Broadcast to all marketplace viewers
+  broadcastToMarketplace('marketplace:sale', saleData);
 }
 
 /**
@@ -357,6 +622,35 @@ async function handleGatewayPurchase(
     saleId: event['sale-id'].toString(),
     txHash: context.txHash,
   });
+
+  // Broadcast real-time updates
+  const saleData = {
+    streamId: event['stream-id'].toString(),
+    seller: event.seller,
+    buyer: event.buyer,
+    price: event.price.toString(),
+    marketplaceFee: event['marketplace-fee'].toString(),
+    paymentId: event['payment-id'],
+    saleId: event['sale-id'].toString(),
+    txHash: context.txHash,
+  };
+
+  // Notify buyer
+  broadcastToUser(event.buyer, 'marketplace:sale', {
+    type: 'purchase-completed',
+    role: 'buyer',
+    data: saleData,
+  });
+
+  // Notify seller
+  broadcastToUser(event.seller, 'marketplace:sale', {
+    type: 'sale-completed',
+    role: 'seller',
+    data: saleData,
+  });
+
+  // Broadcast to all marketplace viewers
+  broadcastToMarketplace('marketplace:sale', saleData);
 }
 
 /**
@@ -469,13 +763,16 @@ export async function GET() {
     message: 'BitPay Marketplace Events webhook endpoint',
     status: 'active',
     events: [
-      'direct-purchase-completed',
-      'purchase-initiated',
-      'gateway-purchase-completed',
-      'purchase-expired',
-      'backend-authorized',
-      'backend-deauthorized',
-      'marketplace-fee-updated',
+      'market-nft-listed',
+      'market-listing-price-updated',
+      'market-listing-cancelled',
+      'market-direct-purchase-completed',
+      'market-purchase-initiated',
+      'market-gateway-purchase-completed',
+      'market-purchase-expired',
+      'market-backend-authorized',
+      'market-backend-deauthorized',
+      'market-marketplace-fee-updated',
     ],
   });
 }

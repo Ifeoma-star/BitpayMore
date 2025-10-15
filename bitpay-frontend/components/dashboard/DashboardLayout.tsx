@@ -43,6 +43,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
+import { useSBTCBalance } from "@/hooks/use-sbtc-balance";
+import { Bitcoin } from "lucide-react";
 
 interface User {
   id: string;
@@ -66,6 +68,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const pathname = usePathname();
+
+  // Fetch sBTC balance for wallet users
+  const { balanceDisplay, isLoading: balanceLoading, error: balanceError } = useSBTCBalance(
+    user?.authMethod === 'wallet' && user.walletAddress ? user.walletAddress : null
+  );
+
+  // Debug sBTC balance
+  useEffect(() => {
+    if (user?.authMethod === 'wallet' && user.walletAddress) {
+      console.log('🔍 sBTC Balance Debug:', {
+        address: user.walletAddress,
+        balance: balanceDisplay,
+        loading: balanceLoading,
+        error: balanceError,
+      });
+    }
+  }, [user, balanceDisplay, balanceLoading, balanceError]);
 
   // Format wallet address for display (first 6 + last 4 characters)
   const formatWalletAddress = (address: string) => {
@@ -402,6 +421,38 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     )}
                   </div>
                 </DropdownMenuLabel>
+
+                {/* sBTC Balance Section */}
+                {(() => {
+                  console.log('🎨 Rendering dropdown - user.authMethod:', user.authMethod, 'walletAddress:', user.walletAddress);
+                  return user.authMethod === 'wallet' && user.walletAddress;
+                })() && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 rounded-lg mx-2 my-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className="p-1.5 bg-orange-500 rounded-full">
+                            <Bitcoin className="h-3 w-3 text-white" />
+                          </div>
+                          <span className="text-xs font-medium text-muted-foreground">sBTC Balance</span>
+                        </div>
+                        {balanceLoading ? (
+                          <div className="flex items-center space-x-1">
+                            <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse" />
+                            <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse delay-75" />
+                            <div className="h-2 w-2 bg-orange-500 rounded-full animate-pulse delay-150" />
+                          </div>
+                        ) : (
+                          <code className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                            {balanceDisplay}
+                          </code>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard/settings">

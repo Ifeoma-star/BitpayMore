@@ -221,6 +221,15 @@
     ;; Update stats
     (var-set total-listings (+ (var-get total-listings) u1))
 
+    ;; Emit event
+    (print {
+      event: "market-nft-listed",
+      stream-id: stream-id,
+      seller: tx-sender,
+      price: price,
+      listed-at: stacks-block-height,
+    })
+
     (ok true)
   )
 )
@@ -242,6 +251,15 @@
     ;; Update listing
     (map-set listings stream-id (merge listing { price: new-price }))
 
+    ;; Emit event
+    (print {
+      event: "market-listing-price-updated",
+      stream-id: stream-id,
+      seller: tx-sender,
+      old-price: (get price listing),
+      new-price: new-price,
+    })
+
     (ok true)
   )
 )
@@ -258,6 +276,13 @@
 
     ;; Deactivate listing
     (map-set listings stream-id (merge listing { active: false }))
+
+    ;; Emit event
+    (print {
+      event: "market-listing-cancelled",
+      stream-id: stream-id,
+      seller: tx-sender,
+    })
 
     (ok true)
   )
@@ -278,6 +303,9 @@
       (marketplace-fee (calculate-marketplace-fee price))
       (seller-proceeds (calculate-seller-proceeds price))
       (sale-id (var-get total-sales))
+      (treasury-address (unwrap! (contract-call? .bitpay-treasury-v3 get-contract-address)
+        err-payment-failed
+      ))
     )
     ;; Validations
     (asserts! (get active listing) err-listing-inactive)
@@ -285,45 +313,23 @@
     (asserts! (not (is-pending-purchase stream-id)) err-already-pending)
 
     ;; Payment: buyer to seller (minus marketplace fee)
-    (unwrap!
-      (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
-        transfer seller-proceeds tx-sender seller none
-      )
-      err-payment-failed
-    )
+    (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+      transfer seller-proceeds tx-sender seller none
+    ))
 
     ;; Payment: buyer to treasury (marketplace fee)
-    ;; Send sBTC directly to treasury contract
-    (unwrap!
-      (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
-        transfer marketplace-fee tx-sender
-        (unwrap! (contract-call? .bitpay-treasury-v3 get-contract-address)
-          err-payment-failed
-        )
-        none
-      )
-      err-payment-failed
-    )
+    (try! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+      transfer marketplace-fee tx-sender treasury-address none
+    ))
 
     ;; Notify treasury to update its accounting
-    (unwrap!
-      (as-contract (contract-call? .bitpay-treasury-v3 collect-marketplace-fee marketplace-fee))
-      err-payment-failed
-    )
+    (try! (as-contract (contract-call? .bitpay-treasury-v3 collect-marketplace-fee marketplace-fee)))
 
     ;; Transfer obligation NFT: seller to buyer
-    (unwrap!
-      (contract-call? .bitpay-obligation-nft-v3 transfer stream-id seller
-        tx-sender
-      )
-      err-transfer-failed
-    )
+    (try! (contract-call? .bitpay-obligation-nft-v3 transfer stream-id seller tx-sender))
 
     ;; Update stream sender: seller to buyer
-    (unwrap!
-      (as-contract (contract-call? .bitpay-core-v3 update-stream-sender stream-id tx-sender))
-      err-transfer-failed
-    )
+    (try! (as-contract (contract-call? .bitpay-core-v3 update-stream-sender stream-id tx-sender)))
 
     ;; Deactivate listing
     (map-set listings stream-id (merge listing { active: false }))
@@ -344,7 +350,7 @@
 
     ;; Emit event
     (print {
-      event: "direct-purchase-completed",
+      event: "market-direct-purchase-completed",
       stream-id: stream-id,
       buyer: tx-sender,
       seller: seller,
@@ -389,7 +395,7 @@
 
     ;; Emit event for monitoring
     (print {
-      event: "purchase-initiated",
+      event: "market-purchase-initiated",
       stream-id: stream-id,
       buyer: tx-sender,
       payment-id: payment-id,
@@ -459,7 +465,7 @@
 
     ;; Emit event for chainhook monitoring
     (print {
-      event: "gateway-purchase-completed",
+      event: "market-gateway-purchase-completed",
       stream-id: stream-id,
       buyer: buyer,
       seller: seller,
@@ -482,7 +488,7 @@
     (map-delete pending-purchases stream-id)
 
     (print {
-      event: "purchase-expired",
+      event: "market-purchase-expired",
       stream-id: stream-id,
       buyer: (get buyer pending),
     })
@@ -504,7 +510,7 @@
     (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
     (map-set authorized-backends backend true)
     (print {
-      event: "backend-authorized",
+      event: "market-backend-authorized",
       backend: backend,
     })
     (ok true)
@@ -520,7 +526,7 @@
     (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
     (map-delete authorized-backends backend)
     (print {
-      event: "backend-deauthorized",
+      event: "market-backend-deauthorized",
       backend: backend,
     })
     (ok true)
@@ -536,7 +542,7 @@
     (asserts! (<= new-fee-bps u1000) err-invalid-price) ;; Max 10% fee
     (var-set marketplace-fee-bps new-fee-bps)
     (print {
-      event: "marketplace-fee-updated",
+      event: "market-marketplace-fee-updated",
       old-fee: (var-get marketplace-fee-bps),
       new-fee: new-fee-bps,
     })

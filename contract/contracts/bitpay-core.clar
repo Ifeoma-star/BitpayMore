@@ -12,6 +12,7 @@
 (define-constant ERR_INVALID_RECIPIENT (err u306))
 (define-constant ERR_START_BLOCK_IN_PAST (err u307))
 (define-constant ERR_STREAM_CANCELLED (err u308))
+(define-constant ERR_INSUFFICIENT_BALANCE (err u309))
 
 ;; Minimum stream duration (10 blocks ~100 minutes on Bitcoin)
 (define-constant MIN_STREAM_DURATION u10)
@@ -178,6 +179,51 @@
             })
 
             (ok available)
+        )
+    )
+)
+
+;; Withdraw a specific amount from a stream (partial withdrawal)
+;; @param stream-id: ID of the stream to withdraw from
+;; @param amount: Amount to withdraw (must be <= available)
+;; @returns: (ok withdrawn-amount) on success
+;; #[allow(unchecked_data)]
+(define-public (withdraw-partial
+        (stream-id uint)
+        (amount uint)
+    )
+    (let (
+            (stream (unwrap! (map-get? streams stream-id) ERR_STREAM_NOT_FOUND))
+            (available (try! (get-withdrawable-amount stream-id)))
+        )
+        (begin
+            ;; Only recipient can withdraw
+            (asserts! (is-eq tx-sender (get recipient stream)) ERR_UNAUTHORIZED)
+
+            ;; Check there's something to withdraw
+            (asserts! (> amount u0) ERR_NOTHING_TO_WITHDRAW)
+
+            ;; Check requested amount doesn't exceed available
+            (asserts! (<= amount available) ERR_INSUFFICIENT_BALANCE)
+
+            ;; Transfer from vault to recipient
+            (try! (contract-call? .bitpay-sbtc-helper-v3 transfer-from-vault amount
+                tx-sender
+            ))
+
+            ;; Update withdrawn amount
+            (map-set streams stream-id
+                (merge stream { withdrawn: (+ (get withdrawn stream) amount) })
+            )
+
+            (print {
+                event: "stream-withdrawal",
+                stream-id: stream-id,
+                recipient: tx-sender,
+                amount: amount,
+            })
+
+            (ok amount)
         )
     )
 )

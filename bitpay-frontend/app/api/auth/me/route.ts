@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       email: user.email,
       walletAddress: user.walletAddress,
       walletType: user.walletType,
+      authMethod: user.walletAddress ? 'wallet' : 'email', // Determine auth method
       profileComplete: user.profileComplete,
       isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,

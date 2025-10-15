@@ -19,16 +19,25 @@ export type NotificationType =
   | 'purchase_failed'
   | 'purchase_cancelled'
   | 'sale_completed'
+  | 'nft_listed'
+  | 'listing_updated'
+  | 'listing_cancelled'
   // Treasury notifications
   | 'fee_collected'
   | 'withdrawal_proposed'
   | 'withdrawal_approved'
   | 'withdrawal_executed'
   | 'admin_action_required'
+  | 'treasury_withdrawal'
+  | 'treasury_distribution'
   // Access control notifications
   | 'protocol_paused'
   | 'protocol_unpaused'
   | 'admin_transfer'
+  | 'admin_added'
+  | 'admin_removed'
+  | 'operator_added'
+  | 'operator_removed'
   // System notifications
   | 'system_announcement'
   | 'security_alert';

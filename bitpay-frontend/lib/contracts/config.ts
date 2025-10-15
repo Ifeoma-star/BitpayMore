@@ -52,6 +52,7 @@ export const CORE_FUNCTIONS = {
   // Write functions
   CREATE_STREAM: 'create-stream',
   WITHDRAW_FROM_STREAM: 'withdraw-from-stream',
+  WITHDRAW_PARTIAL: 'withdraw-partial',
   CANCEL_STREAM: 'cancel-stream',
 
   // Read functions
@@ -174,16 +175,6 @@ export interface StreamWithId extends StreamData {
 // Utility: Convert micro-sBTC (satoshis) to display format
 // sBTC uses 8 decimals (1 sBTC = 100,000,000 satoshis)
 export const microToDisplay = (micro: any): string => {
-  // Debug what we're receiving
-  if (typeof micro !== 'bigint' && typeof micro !== 'string' && typeof micro !== 'number') {
-    console.log('microToDisplay received unexpected type:', typeof micro, micro);
-  }
-
-  // Handle if already a decimal number (shouldn't happen but defensive)
-  if (typeof micro === 'number') {
-    return micro.toFixed(8);
-  }
-
   // Handle null/undefined
   if (micro === null || micro === undefined) {
     return '0.00000000';
@@ -194,13 +185,21 @@ export const microToDisplay = (micro: any): string => {
     return microToDisplay(micro.value);
   }
 
-  // Convert string to BigInt, or use bigint directly
   try {
+    // Handle string input
     if (typeof micro === 'string') {
-      // Check if it's a decimal string (contains a dot)
+      // Check if it's already in display format (has decimal point and reasonable value)
       if (micro.includes('.')) {
-        // Already in display format, just parse and format
-        return parseFloat(micro).toFixed(8);
+        const parsed = parseFloat(micro);
+        // If it's a reasonable BTC amount (< 21 million), it's already formatted
+        if (parsed < 21_000_000) {
+          return parsed.toFixed(8);
+        }
+        // Otherwise it might be "50000000.30000000" which is wrong - parse as int
+        const justInteger = micro.split('.')[0];
+        const value = BigInt(justInteger);
+        const btc = Number(value) / 100_000_000;
+        return btc.toFixed(8);
       }
       // Integer string - convert to BigInt
       const value = BigInt(micro);
@@ -208,9 +207,26 @@ export const microToDisplay = (micro: any): string => {
       return btc.toFixed(8);
     }
 
-    // It's a bigint
-    const btc = Number(micro) / 100_000_000;
-    return btc.toFixed(8);
+    // Handle number input (shouldn't be used for large values due to precision loss)
+    if (typeof micro === 'number') {
+      // If it's already a small decimal, it's in BTC
+      if (micro < 21_000_000 && micro % 1 !== 0) {
+        return micro.toFixed(8);
+      }
+      // Otherwise treat as satoshis
+      const btc = micro / 100_000_000;
+      return btc.toFixed(8);
+    }
+
+    // Handle bigint - convert from satoshis to BTC
+    if (typeof micro === 'bigint') {
+      const btc = Number(micro) / 100_000_000;
+      return btc.toFixed(8);
+    }
+
+    // Fallback
+    console.warn('microToDisplay received unexpected type:', typeof micro, micro);
+    return '0.00000000';
   } catch (error) {
     console.error('Error in microToDisplay:', micro, typeof micro, error);
     return '0.00000000';

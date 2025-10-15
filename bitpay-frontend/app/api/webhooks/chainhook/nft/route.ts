@@ -24,6 +24,7 @@ import {
 } from '@/lib/webhooks/chainhook-utils';
 import connectToDatabase from '@/lib/db';
 import * as NotificationService from '@/lib/notifications/notification-service';
+import { broadcastToUser } from '@/lib/socket/server';
 
 export async function POST(request: Request) {
   try {
@@ -241,6 +242,28 @@ async function handleNFTEvent(
           actionText: 'View NFT',
         }
       );
+
+      // Broadcast real-time updates
+      const transferData = {
+        tokenId: event['token-id'].toString(),
+        from: event.from,
+        to: event.to,
+        txHash: context.txHash,
+      };
+
+      // Notify sender
+      broadcastToUser(event.from, 'nft:transferred', {
+        type: 'obligation-transferred',
+        role: 'sender',
+        data: transferData,
+      });
+
+      // Notify recipient
+      broadcastToUser(event.to, 'nft:received', {
+        type: 'obligation-transferred',
+        role: 'recipient',
+        data: transferData,
+      });
       break;
 
     case 'obligation-minted':
@@ -291,6 +314,17 @@ async function handleNFTEvent(
           actionText: 'View NFT',
         }
       );
+
+      // Broadcast real-time update
+      broadcastToUser(event.recipient, 'nft:minted', {
+        type: 'obligation-minted',
+        data: {
+          tokenId: event['token-id'].toString(),
+          recipient: event.recipient,
+          streamId: (event as any)['stream-id']?.toString() || null,
+          txHash: context.txHash,
+        },
+      });
       break;
 
     default:

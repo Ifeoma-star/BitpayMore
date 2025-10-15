@@ -13,7 +13,7 @@ import {
   XCircle,
   ArrowLeft,
 } from "lucide-react";
-import walletService from "@/lib/wallet/wallet-service";
+import { useAuth } from "@/hooks/use-auth";
 import { useStream } from "@/hooks/use-bitpay-read";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { useWithdrawFromStream, useCancelStream } from "@/hooks/use-bitpay-write";
@@ -33,22 +33,17 @@ export default function StreamDetailPage() {
   const router = useRouter();
   const streamId = params.id ? BigInt(params.id as string) : null;
 
-  const [userAddress, setUserAddress] = useState<string | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showTransferNFTModal, setShowTransferNFTModal] = useState(false);
+
+  // Get user address from authenticated session instead of wallet
+  const { user } = useAuth();
+  const userAddress = user?.walletAddress || null;
 
   const { blockHeight } = useBlockHeight(30000);
   const { data: stream, isLoading, refetch } = useStream(streamId);
   const { write: withdraw, isLoading: isWithdrawing, txId: withdrawTxId } = useWithdrawFromStream();
   const { write: cancel, isLoading: isCancelling, txId: cancelTxId } = useCancelStream();
-
-  useEffect(() => {
-    const loadWallet = async () => {
-      const address = await walletService.getCurrentAddress();
-      setUserAddress(address);
-    };
-    loadWallet();
-  }, []);
 
   const handleWithdraw = async () => {
     if (!streamId) return;
@@ -215,7 +210,7 @@ export default function StreamDetailPage() {
           <CardDescription>Manage this stream</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isRecipient && stream.withdrawableAmount > BigInt(0) && stream.status === StreamStatus.ACTIVE && (
+          {isRecipient && stream.withdrawableAmount > BigInt(0) && !stream.cancelled && (
             <Button
               onClick={handleWithdraw}
               disabled={isWithdrawing}
