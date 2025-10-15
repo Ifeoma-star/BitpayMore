@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,8 +12,11 @@ import {
   Info,
   Plus,
 } from "lucide-react";
-import walletService from "@/lib/wallet/wallet-service";
+import { useAuth } from "@/hooks/use-auth";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
+import { useAllMarketplaceListings, useListing } from "@/hooks/use-marketplace";
+import { useMarketplaceEvents } from "@/hooks/use-realtime";
+import { useBlockHeight } from "@/hooks/use-block-height";
 import { StreamStatus, microToDisplay } from "@/lib/contracts/config";
 import { ListObligationNFTModal } from "@/components/dashboard/modals/ListObligationNFTModal";
 import { BuyObligationNFTModal } from "@/components/dashboard/modals/BuyObligationNFTModal";
@@ -24,6 +27,7 @@ import { ListingCard } from "@/components/dashboard/marketplace/listings/Listing
 import { EmptyMarketplace } from "@/components/dashboard/marketplace/listings/EmptyMarketplace";
 import { MarketStats } from "@/components/dashboard/marketplace/analytics/MarketStats";
 import { MarketInsights } from "@/components/dashboard/marketplace/analytics/MarketInsights";
+import { toast } from "sonner";
 
 interface MarketplaceListing {
   streamId: string;
@@ -40,7 +44,9 @@ interface MarketplaceListing {
 }
 
 export default function MarketplacePage() {
-  const [userAddress, setUserAddress] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userAddress = user?.walletAddress || null;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [selectedNFTToList, setSelectedNFTToList] = useState<any | null>(null);
@@ -50,66 +56,78 @@ export default function MarketplacePage() {
   const [sortBy, setSortBy] = useState("discount");
   const [filterDiscount, setFilterDiscount] = useState("all");
 
-  const { outgoingStreams, isLoading } = useUserStreamsByRole(userAddress);
+  const { outgoingStreams, isLoading: userStreamsLoading } = useUserStreamsByRole(userAddress);
+  const { data: allListings, isLoading: listingsLoading } = useAllMarketplaceListings();
+  const { blockHeight } = useBlockHeight(30000);
+
+  // WebSocket real-time updates
+  const { listings: realtimeListings, sales: realtimeSales, isConnected } = useMarketplaceEvents();
+
+  // Listen for WebSocket events and show toast notifications
+  useEffect(() => {
+    if (realtimeListings.length > 0) {
+      const latestListing = realtimeListings[0];
+      if (latestListing.seller === userAddress) {
+        toast.success("NFT Listed!", {
+          description: `Stream #${latestListing.streamId} is now listed for sale`,
+        });
+      } else {
+        toast.info("New Listing!", {
+          description: `Stream #${latestListing.streamId} listed on marketplace`,
+        });
+      }
+    }
+  }, [realtimeListings.length, userAddress]);
 
   useEffect(() => {
-    const loadWallet = async () => {
-      const address = await walletService.getCurrentAddress();
-      setUserAddress(address);
-    };
-    loadWallet();
-  }, []);
+    if (realtimeSales.length > 0) {
+      const latestSale = realtimeSales[0];
+      if (latestSale.buyer === userAddress) {
+        toast.success("Purchase Completed!", {
+          description: `You now own stream #${latestSale.streamId}`,
+        });
+      } else if (latestSale.seller === userAddress) {
+        toast.success("NFT Sold!", {
+          description: `Stream #${latestSale.streamId} has been sold`,
+        });
+      } else {
+        toast.info("Sale Completed!", {
+          description: `Stream #${latestSale.streamId} was purchased`,
+        });
+      }
+    }
+  }, [realtimeSales.length, userAddress]);
 
-  // Mock marketplace listings (in production, fetch from backend)
-  const mockListings: MarketplaceListing[] = [
-    {
-      streamId: "1",
-      seller: "SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7",
-      price: 9.5,
-      discount: 5,
-      totalAmount: 10,
-      vestedAmount: 3,
-      remainingAmount: 7,
-      endBlock: 150000,
-      daysRemaining: 45,
-      apr: 12.5,
-      listed: "2 days ago",
-    },
-    {
-      streamId: "2",
-      seller: "SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE",
-      price: 18,
-      discount: 10,
-      totalAmount: 20,
-      vestedAmount: 8,
-      remainingAmount: 12,
-      endBlock: 160000,
-      daysRemaining: 60,
-      apr: 18.2,
-      listed: "5 hours ago",
-    },
-    {
-      streamId: "3",
-      seller: "SP1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE",
-      price: 28.5,
-      discount: 15,
-      totalAmount: 35,
-      vestedAmount: 5,
-      remainingAmount: 30,
-      endBlock: 170000,
-      daysRemaining: 90,
-      apr: 22.8,
-      listed: "1 day ago",
-    },
-  ];
+  // Use WebSocket real-time listings
+  // These come from chainhook events broadcasted through WebSocket
+  const marketplaceListings = useMemo(() => {
+    return realtimeListings.map((listing: any) => ({
+      streamId: listing.streamId?.toString() || "",
+      seller: listing.seller || "",
+      price: Number(microToDisplay(listing.price || 0)),
+      discount: listing.discount || 0,
+      totalAmount: Number(microToDisplay(listing.totalAmount || 0)),
+      vestedAmount: Number(microToDisplay(listing.vestedAmount || 0)),
+      remainingAmount: Number(microToDisplay(listing.remainingAmount || 0)),
+      endBlock: listing.endBlock || 0,
+      daysRemaining: listing.daysRemaining || 0,
+      apr: listing.apr || 0,
+      listed: listing.listedAt || "Recently",
+    }));
+  }, [realtimeListings]);
 
   // Filter active obligation NFTs that can be listed
   const listableNFTs = outgoingStreams.filter(
-    (stream) => stream.status === StreamStatus.ACTIVE && !stream.cancelled
+    (stream) => stream.status === StreamStatus.ACTIVE
+  );
+
+  // Filter user's own listings
+  const myListings = marketplaceListings.filter(
+    (listing) => listing.seller === userAddress
   );
 
   // Filter and sort listings
-  let filteredListings = mockListings.filter((listing) =>
+  let filteredListings = marketplaceListings.filter((listing) =>
     listing.streamId.includes(searchTerm) ||
     listing.seller.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -138,6 +156,8 @@ export default function MarketplacePage() {
   const calculateDiscount = (price: number, totalAmount: number) => {
     return ((totalAmount - price) / totalAmount) * 100;
   };
+
+  const isLoading = userStreamsLoading || listingsLoading;
 
   if (isLoading) {
     return (
@@ -175,7 +195,7 @@ export default function MarketplacePage() {
           </TabsTrigger>
           <TabsTrigger value="my-listings">
             <Tag className="h-4 w-4 mr-2" />
-            My Listings (0)
+            My Listings ({myListings.length})
           </TabsTrigger>
           <TabsTrigger value="analytics">
             <TrendingUp className="h-4 w-4 mr-2" />
@@ -225,43 +245,86 @@ export default function MarketplacePage() {
 
         {/* My Listings Tab */}
         <TabsContent value="my-listings" className="space-y-6">
-          <Card className="border-dashed">
-            <CardContent className="py-16">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                  <Tag className="h-8 w-8 text-muted-foreground" />
+          {myListings.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="py-16">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                    <Tag className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No Active Listings</h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                    You haven't listed any obligation NFTs for sale yet.
+                  </p>
+                  {listableNFTs.length > 0 && (
+                    <Button
+                      onClick={() => setShowListModal(true)}
+                      className="bg-brand-pink hover:bg-brand-pink/90"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      List Your First NFT
+                    </Button>
+                  )}
                 </div>
-                <h3 className="text-lg font-semibold mb-2">No Active Listings</h3>
-                <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                  You haven't listed any obligation NFTs for sale yet.
-                </p>
-                {listableNFTs.length > 0 && (
-                  <Button
-                    onClick={() => setShowListModal(true)}
-                    className="bg-brand-pink hover:bg-brand-pink/90"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    List Your First NFT
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myListings.map((listing) => (
+                <ListingCard
+                  key={listing.streamId}
+                  listing={listing}
+                  onBuyDirect={() => {
+                    setSelectedListing(listing);
+                    setBuyMethod("direct");
+                    setShowBuyModal(true);
+                  }}
+                  onBuyViaGateway={() => {
+                    setSelectedListing(listing);
+                    setBuyMethod("gateway");
+                    setShowBuyModal(true);
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* Market Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
           <MarketStats
-            avgDiscount={10.2}
-            avgAPR={17.8}
-            totalVolume={65}
+            avgDiscount={
+              marketplaceListings.length > 0
+                ? marketplaceListings.reduce((sum, l) => sum + l.discount, 0) / marketplaceListings.length
+                : 0
+            }
+            avgAPR={
+              marketplaceListings.length > 0
+                ? marketplaceListings.reduce((sum, l) => sum + l.apr, 0) / marketplaceListings.length
+                : 0
+            }
+            totalVolume={
+              marketplaceListings.reduce((sum, l) => sum + l.remainingAmount, 0)
+            }
           />
 
           <MarketInsights
-            activeListings={mockListings.length}
-            avgDaysRemaining={65}
-            bestDiscount={15}
-            bestAPR={22.8}
+            activeListings={marketplaceListings.length}
+            avgDaysRemaining={
+              marketplaceListings.length > 0
+                ? Math.round(marketplaceListings.reduce((sum, l) => sum + l.daysRemaining, 0) / marketplaceListings.length)
+                : 0
+            }
+            bestDiscount={
+              marketplaceListings.length > 0
+                ? Math.max(...marketplaceListings.map(l => l.discount))
+                : 0
+            }
+            bestAPR={
+              marketplaceListings.length > 0
+                ? Math.max(...marketplaceListings.map(l => l.apr))
+                : 0
+            }
           />
         </TabsContent>
       </Tabs>

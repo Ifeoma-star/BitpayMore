@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useUserStreams } from "@/hooks/use-bitpay-read";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { useWithdrawFromStream, useWithdrawPartial, useCancelStream } from "@/hooks/use-bitpay-write";
+import { useUserEvents } from "@/hooks/use-realtime";
 import { StreamStatus, calculateProgress, microToDisplay } from "@/lib/contracts/config";
 import { StreamListSkeleton } from "@/components/dashboard/StreamCardSkeleton";
 import { StreamListHeader } from "@/components/dashboard/streams/list/StreamListHeader";
@@ -31,17 +32,28 @@ export default function StreamsPage() {
   const { write: withdrawPartial, isLoading: isWithdrawingPartial } = useWithdrawPartial();
   const { write: cancel, isLoading: isCancelling } = useCancelStream();
 
-  // Auto-refresh streams every 30 seconds to catch newly confirmed transactions
+  // WebSocket real-time updates (replaces polling)
+  const { events, isConnected } = useUserEvents();
+
+  // Refetch streams when WebSocket events are received
   useEffect(() => {
-    if (!userAddress) return;
+    if (events.length > 0) {
+      const lastEvent = events[0];
+      console.log('🔔 Real-time event received:', lastEvent.type);
 
-    const interval = setInterval(() => {
-      console.log('🔄 Auto-refreshing streams from blockchain...');
+      // Refetch streams data from contract
       refetch();
-    }, 30000); // Every 30 seconds
 
-    return () => clearInterval(interval);
-  }, [userAddress, refetch]);
+      // Show toast notification
+      if (lastEvent.type === 'stream:created') {
+        toast.success('New stream created!');
+      } else if (lastEvent.type === 'stream:withdrawal') {
+        toast.success('Withdrawal processed!');
+      } else if (lastEvent.type === 'stream:cancelled') {
+        toast.info('Stream cancelled');
+      }
+    }
+  }, [events, refetch]);
 
   const filteredStreams = streams?.filter((stream) => {
     const matchesSearch =

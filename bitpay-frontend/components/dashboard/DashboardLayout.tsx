@@ -174,10 +174,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: Users, label: "Marketplace", href: "/dashboard/marketplace", active: pathname === "/dashboard/marketplace" },
     { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics", active: pathname === "/dashboard/analytics" },
     { icon: Bell, label: "Notifications", href: "/dashboard/notifications", active: pathname.startsWith("/dashboard/notifications") },
-    // TODO: Uncomment after deployment for role-based access
-    // ...(user?.role === 'admin' ? [
+    ...(user?.role === 'admin' ? [
       { icon: DollarSign, label: "Treasury", href: "/dashboard/treasury", active: pathname === "/dashboard/treasury" },
-    // ] : []),
+    ] : []),
     { icon: Settings, label: "Settings", href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
   ];
 

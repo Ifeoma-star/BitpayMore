@@ -24,9 +24,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import walletService from "@/lib/wallet/wallet-service";
+import { useAuth } from "@/hooks/use-auth";
+import { useBitPayRead } from "@/hooks/use-bitpay-read";
+import { CONTRACT_NAMES } from "@/lib/contracts/config";
+import { principalCV } from "@stacks/transactions";
 
 export default function SettingsPage() {
-  const [userAddress, setUserAddress] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userAddress = user?.walletAddress || null;
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [streamNotifications, setStreamNotifications] = useState(true);
@@ -34,19 +39,82 @@ export default function SettingsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showNFTMetadata, setShowNFTMetadata] = useState(true);
   const [nftGridSize, setNftGridSize] = useState("medium");
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+
+  // Check if user is admin via ACCESS_CONTROL contract
+  const { data: isAdminData } = useBitPayRead(
+    CONTRACT_NAMES.ACCESS_CONTROL,
+    'is-admin',
+    userAddress ? [principalCV(userAddress)] : [],
+    !!userAddress
+  );
 
   useEffect(() => {
-    const loadUserData = async () => {
+    if (isAdminData !== null && isAdminData !== undefined) {
+      setIsAdmin(!!isAdminData);
+    }
+  }, [isAdminData]);
+
+  // Fetch notification preferences from API
+  useEffect(() => {
+    const fetchPreferences = async () => {
       try {
-        const address = await walletService.getCurrentAddress();
-        setUserAddress(address);
+        setPreferencesLoading(true);
+        const response = await fetch('/api/notifications/preferences', {
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.preferences) {
+            setEmailNotifications(data.preferences.emailNotifications ?? true);
+            setStreamNotifications(data.preferences.streamNotifications ?? true);
+          }
+        }
       } catch (error) {
-        console.error("Error loading user data:", error);
+        console.error('Error fetching preferences:', error);
+      } finally {
+        setPreferencesLoading(false);
       }
     };
 
-    loadUserData();
-  }, []);
+    if (userAddress) {
+      fetchPreferences();
+    }
+  }, [userAddress]);
+
+  // Save notification preferences to API
+  const updatePreferences = async (updates: any) => {
+    try {
+      const response = await fetch('/api/notifications/preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        toast.success('Preferences updated successfully');
+      } else {
+        toast.error('Failed to update preferences');
+      }
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      toast.error('Failed to update preferences');
+    }
+  };
+
+  const handleEmailNotificationsChange = (checked: boolean) => {
+    setEmailNotifications(checked);
+    updatePreferences({ emailNotifications: checked });
+  };
+
+  const handleStreamNotificationsChange = (checked: boolean) => {
+    setStreamNotifications(checked);
+    updatePreferences({ streamNotifications: checked });
+  };
 
   const handleCopyAddress = () => {
     if (userAddress) {
@@ -167,7 +235,8 @@ export default function SettingsPage() {
                 </div>
                 <Switch
                   checked={emailNotifications}
-                  onCheckedChange={setEmailNotifications}
+                  onCheckedChange={handleEmailNotificationsChange}
+                  disabled={preferencesLoading}
                 />
               </div>
 
@@ -185,7 +254,8 @@ export default function SettingsPage() {
                 </div>
                 <Switch
                   checked={streamNotifications}
-                  onCheckedChange={setStreamNotifications}
+                  onCheckedChange={handleStreamNotificationsChange}
+                  disabled={preferencesLoading}
                 />
               </div>
             </CardContent>

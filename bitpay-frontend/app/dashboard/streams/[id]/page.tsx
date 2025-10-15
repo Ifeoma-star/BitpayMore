@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useStream } from "@/hooks/use-bitpay-read";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { useWithdrawFromStream, useCancelStream } from "@/hooks/use-bitpay-write";
+import { useStreamEvents } from "@/hooks/use-realtime";
 import { microToDisplay, StreamStatus, calculateProgress, STACKS_API_URL } from "@/lib/contracts/config";
 import { toast } from "sonner";
 import { CancelStreamModal } from "@/components/dashboard/modals/CancelStreamModal";
@@ -44,6 +45,32 @@ export default function StreamDetailPage() {
   const { data: stream, isLoading, refetch } = useStream(streamId);
   const { write: withdraw, isLoading: isWithdrawing, txId: withdrawTxId } = useWithdrawFromStream();
   const { write: cancel, isLoading: isCancelling, txId: cancelTxId } = useCancelStream();
+
+  // WebSocket real-time updates for this specific stream
+  const { streamData, lastEvent, isConnected } = useStreamEvents(streamId?.toString() || null);
+
+  // Refetch stream data when WebSocket events are received
+  useEffect(() => {
+    if (lastEvent) {
+      console.log('🔔 Real-time stream update received:', lastEvent);
+      refetch();
+
+      // Show notification based on event type
+      if (lastEvent.type === 'withdrawal') {
+        toast.success('Withdrawal detected!', {
+          description: 'Stream data has been updated'
+        });
+      } else if (lastEvent.type === 'cancelled') {
+        toast.info('Stream has been cancelled', {
+          description: 'This stream is no longer active'
+        });
+      } else if (lastEvent.type === 'created') {
+        toast.success('Stream confirmed!', {
+          description: 'Stream creation confirmed on blockchain'
+        });
+      }
+    }
+  }, [lastEvent, refetch]);
 
   const handleWithdraw = async () => {
     if (!streamId) return;

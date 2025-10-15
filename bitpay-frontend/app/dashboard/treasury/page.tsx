@@ -37,6 +37,7 @@ import { MultiSigConfigCard } from "@/components/dashboard/treasury/multisig/Mul
 import { WithdrawFeesModal } from "@/components/dashboard/modals/WithdrawFeesModal";
 import { ProposeAdminModal } from "@/components/dashboard/modals/ProposeAdminModal";
 import { toast } from "sonner";
+import { useTreasuryEvents } from "@/hooks/use-realtime";
 
 export default function TreasuryPage() {
   const [userAddress, setUserAddress] = useState<string | null>(null);
@@ -45,21 +46,39 @@ export default function TreasuryPage() {
   const [showWithdrawFeesModal, setShowWithdrawFeesModal] = useState(false);
   const [showProposeAdminModal, setShowProposeAdminModal] = useState(false);
 
-  // Mock proposals data (will be fetched from contract after deployment)
-  const [mockProposals] = useState<any[]>([
-    // Example structure for when data is available:
-    // {
-    //   id: 1,
-    //   proposer: "SP1...",
-    //   amount: BigInt(50000000), // 0.5 sBTC
-    //   recipient: "SP2...",
-    //   approvals: ["SP1...", "SP2..."],
-    //   executed: false,
-    //   proposedAt: 100000,
-    //   expiresAt: 101008,
-    //   description: "Monthly operations budget"
-    // }
-  ]);
+  // WebSocket real-time updates
+  const { proposals: realtimeProposals, admins: realtimeAdmins, isConnected } = useTreasuryEvents();
+
+  // Listen for WebSocket events and show toast notifications
+  useEffect(() => {
+    if (realtimeProposals.length > 0) {
+      const latestProposal = realtimeProposals[0];
+      if (latestProposal.proposer === userAddress) {
+        toast.success("Proposal Created!", {
+          description: `Withdrawal proposal #${latestProposal.id} created`,
+        });
+      } else {
+        toast.info("New Withdrawal Proposal", {
+          description: `Proposal #${latestProposal.id} requires approval`,
+        });
+      }
+    }
+  }, [realtimeProposals.length, userAddress]);
+
+  useEffect(() => {
+    if (realtimeAdmins.length > 0) {
+      const latestAdmin = realtimeAdmins[realtimeAdmins.length - 1];
+      if (latestAdmin.address === userAddress) {
+        toast.success("Admin Access Granted!", {
+          description: "You are now a treasury admin",
+        });
+      } else {
+        toast.info("Admin Added", {
+          description: `${latestAdmin.address.slice(0, 10)}... added as admin`,
+        });
+      }
+    }
+  }, [realtimeAdmins.length, userAddress]);
 
   // Read treasury data
   const { data: feeBps } = useTreasuryFeeBps();
@@ -181,20 +200,37 @@ export default function TreasuryPage() {
   
   const treasuryBalanceDisplay = getTreasuryBalanceValue();
 
-  // Mock admin list (will be fetched from contract)
-  const mockAdmins = [
-    { address: userAddress || "", isActive: true },
-    { address: "", isActive: false },
-    { address: "", isActive: false },
-    { address: "", isActive: false },
-    { address: "", isActive: false },
-  ];
+  // Use real-time admins from WebSocket, or show deployer as first admin if no WebSocket data yet
+  const displayAdmins = realtimeAdmins.length > 0
+    ? realtimeAdmins
+    : [
+        { address: userAddress || "", isActive: true },
+        { address: "", isActive: false },
+        { address: "", isActive: false },
+        { address: "", isActive: false },
+        { address: "", isActive: false },
+      ];
 
   if (!userAddress) {
     return (
       <div className="flex items-center justify-center h-64">
         <AlertCircle className="h-8 w-8 text-yellow-500 mr-3" />
         <p className="text-muted-foreground">Please connect your wallet</p>
+      </div>
+    );
+  }
+
+  // Admin-only access guard
+  if (!isAdmin && !isMultiSigAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Shield className="h-16 w-16 text-red-500" />
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+          <p className="text-muted-foreground">
+            You must be an admin to access the Treasury page.
+          </p>
+        </div>
       </div>
     );
   }
@@ -210,7 +246,7 @@ export default function TreasuryPage() {
         balance={String(treasuryBalanceDisplay || "0.000000")}
         totalFees={String(getTotalFeesValue() || "0.000000")}
         adminCount={Number(getAdminCountValue() || 1)}
-        pendingProposals={Number(mockProposals.filter(p => !p.executed).length || 0)}
+        pendingProposals={Number(realtimeProposals.filter(p => !p.executed).length || 0)}
       />
 
       {/* Withdraw Fees Button - Only for admins */}
@@ -244,7 +280,7 @@ export default function TreasuryPage() {
             className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-pink data-[state=active]:bg-transparent"
           >
             <FileText className="h-4 w-4 mr-2" />
-            Proposals ({mockProposals.length})
+            Proposals ({realtimeProposals.length})
           </TabsTrigger>
           <TabsTrigger
             value="multisig"
@@ -260,8 +296,7 @@ export default function TreasuryPage() {
             <BarChart3 className="h-4 w-4 mr-2" />
             Overview
           </TabsTrigger>
-          {/* TODO: Uncomment after deployment for role-based access */}
-          {/* {isAdmin && ( */}
+          {isAdmin && (
             <TabsTrigger
               value="access-control"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-pink data-[state=active]:bg-transparent"
@@ -269,7 +304,7 @@ export default function TreasuryPage() {
               <Shield className="h-4 w-4 mr-2" />
               Access Control
             </TabsTrigger>
-          {/* )} */}
+          )}
         </TabsList>
 
         {/* Proposals Tab */}
@@ -283,8 +318,7 @@ export default function TreasuryPage() {
                     3-of-5 multi-sig • 24h timelock (144 blocks) • 100 sBTC daily limit
                   </CardDescription>
                 </div>
-                {/* TODO: Uncomment after deployment for role-based access */}
-                {/* {isMultiSigAdmin && ( */}
+                {isMultiSigAdmin && (
                   <Button
                     onClick={() => setShowProposeWithdrawalModal(true)}
                     className="bg-brand-pink hover:bg-brand-pink/90 text-white"
@@ -292,23 +326,20 @@ export default function TreasuryPage() {
                     <Plus className="h-4 w-4 mr-2" />
                     New Proposal
                   </Button>
-                {/* )} */}
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              {mockProposals.length === 0 ? (
+              {realtimeProposals.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                   <h3 className="text-lg font-semibold mb-2">No Proposals Yet</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {/* TODO: Uncomment after deployment for role-based access */}
-                    {/* {isMultiSigAdmin
+                    {isMultiSigAdmin
                       ? "Create your first withdrawal proposal to get started"
-                      : "No withdrawal proposals have been created yet"} */}
-                    Create your first withdrawal proposal to get started
+                      : "No withdrawal proposals have been created yet"}
                   </p>
-                  {/* TODO: Uncomment after deployment for role-based access */}
-                  {/* {isMultiSigAdmin && ( */}
+                  {isMultiSigAdmin && (
                     <Button
                       onClick={() => setShowProposeWithdrawalModal(true)}
                       className="bg-brand-pink hover:bg-brand-pink/90 text-white"
@@ -316,11 +347,11 @@ export default function TreasuryPage() {
                       <Plus className="h-4 w-4 mr-2" />
                       Create Proposal
                     </Button>
-                  {/* )} */}
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {mockProposals.map((proposal) => (
+                  {realtimeProposals.map((proposal) => (
                     <ProposalCard
                       key={proposal.id}
                       proposal={proposal}
@@ -341,13 +372,12 @@ export default function TreasuryPage() {
 
         {/* Multi-Sig Tab */}
         <TabsContent value="multisig" className="space-y-6">
-          {/* TODO: Uncomment after deployment for role-based access: isCurrentUserAdmin={!!isMultiSigAdmin} */}
           <MultiSigAdminList
-            admins={mockAdmins}
+            admins={displayAdmins}
             totalSlots={5}
             requiredSignatures={3}
             currentUserAddress={userAddress}
-            isCurrentUserAdmin={true}
+            isCurrentUserAdmin={!!isMultiSigAdmin}
             onProposeAdd={handleProposeAddAdmin}
             onProposeRemove={handleProposeRemoveAdmin}
           />
@@ -366,12 +396,11 @@ export default function TreasuryPage() {
         </TabsContent>
 
         {/* Access Control Tab */}
-        {/* TODO: Uncomment after deployment for role-based access */}
-        {/* {isAdmin && ( */}
+        {isAdmin && (
           <TabsContent value="access-control">
             <AccessControlPanel />
           </TabsContent>
-        {/* )} */}
+        )}
       </Tabs>
 
       {/* Modals */}

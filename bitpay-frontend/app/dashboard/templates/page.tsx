@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BLOCKS_PER_MONTH, BLOCKS_PER_WEEK } from "@/lib/contracts/config";
+import { toast } from "sonner";
 import { TemplatesHeader } from "@/components/dashboard/templates/TemplatesHeader";
 import { TemplateForm } from "@/components/dashboard/templates/form/TemplateForm";
 import { TemplateCard } from "@/components/dashboard/templates/list/TemplateCard";
@@ -94,14 +95,15 @@ export default function TemplatesPage() {
       }
 
       const data = await response.json();
-      
+
       // Add new template to list
       const newTemplate = {
         ...data.template,
         id: data.template._id || data.template.id,
       };
-      
+
       setTemplates([...templates, newTemplate]);
+      toast.success("Template created successfully!");
       resetForm();
     } catch (err) {
       console.error("Error creating template:", err);
@@ -137,6 +139,7 @@ export default function TemplatesPage() {
       setTemplates(
         templates.map((t) => (t.id === editingId ? updatedTemplate : t))
       );
+      toast.success("Template updated successfully!");
       resetForm();
     } catch (err) {
       console.error("Error updating template:", err);
@@ -158,6 +161,7 @@ export default function TemplatesPage() {
       }
 
       setTemplates(templates.filter((t) => t.id !== id));
+      toast.success("Template deleted successfully!");
     } catch (err) {
       console.error("Error deleting template:", err);
       alert("Failed to delete template");
@@ -184,11 +188,8 @@ export default function TemplatesPage() {
   };
 
   const handleUseTemplate = (template: StreamTemplate) => {
-    // Store template data in localStorage for stream creation page
-    if (typeof window !== "undefined") {
-      localStorage.setItem("bitpay-stream-template-data", JSON.stringify(template));
-    }
-    router.push("/dashboard/streams/create");
+    // Navigate to create stream page with template ID
+    router.push(`/dashboard/streams/create?templateId=${template.id}`);
   };
 
   const resetForm = () => {

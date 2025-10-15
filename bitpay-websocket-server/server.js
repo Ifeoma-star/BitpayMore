@@ -91,6 +91,12 @@ io.on('connection', (socket) => {
     console.log('🛒 Client joined marketplace room');
   });
 
+  // Join treasury room
+  socket.on('join-treasury', () => {
+    socket.join('treasury');
+    console.log('🏦 Client joined treasury room');
+  });
+
   socket.on('disconnect', () => {
     console.log('🔌 Client disconnected:', socket.id);
   });
@@ -114,6 +120,11 @@ function handleBroadcast(data) {
     case 'marketplace':
       io.to('marketplace').emit(event, payload);
       console.log(`📤 Broadcast to marketplace:`, event);
+      break;
+
+    case 'treasury':
+      io.to('treasury').emit(event, payload);
+      console.log(`📤 Broadcast to treasury:`, event);
       break;
 
     case 'global':

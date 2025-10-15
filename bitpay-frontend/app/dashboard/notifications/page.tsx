@@ -13,15 +13,39 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
 import type { Notification, NotificationStatus } from '@/types/notification';
+import { useRealtime } from '@/hooks/use-realtime';
+import { toast } from 'sonner';
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
+  const { subscribe, isConnected } = useRealtime();
 
   useEffect(() => {
     fetchNotifications();
   }, [activeTab]);
+
+  // Listen for real-time notification events
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const unsubscribe = subscribe('notification:new', (notification: Notification) => {
+      console.log('📬 New notification received:', notification);
+
+      // Add new notification to the list
+      setNotifications((prev) => [notification, ...prev]);
+
+      // Show toast for new notification
+      toast.info(notification.title, {
+        description: notification.message,
+      });
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [isConnected, subscribe]);
 
   async function fetchNotifications() {
     try {
@@ -123,6 +147,12 @@ export default function NotificationsPage() {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Bell className="h-8 w-8" />
             Notifications
+            {isConnected && (
+              <span className="ml-2 flex items-center gap-1.5 text-xs font-normal text-green-600 dark:text-green-400">
+                <span className="h-2 w-2 rounded-full bg-green-600 dark:bg-green-400 animate-pulse" />
+                Live
+              </span>
+            )}
           </h1>
           <p className="text-muted-foreground mt-1">
             Stay updated with your BitPay activity

@@ -5,7 +5,7 @@
   "version": 1,
   "networks": {
     "testnet": {
-      "start_block": 2602000,
+      "start_block": 3600000,
       "if_this": {
         "scope": "nft_event",
         "asset_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-nft-v4::bitpay-recipient-nft",

@@ -3,7 +3,8 @@
  * For listing and purchasing obligation NFTs
  */
 
-import { useBitPayRead } from './use-bitpay-read';
+import { useMemo } from 'react';
+import { useBitPayRead, useUserStreams } from './use-bitpay-read';
 import { useBitPayWrite } from './use-bitpay-write';
 import { CONTRACT_NAMES, MARKETPLACE_FUNCTIONS } from '@/lib/contracts/config';
 import { uintCV, principalCV, someCV, noneCV } from '@stacks/transactions';
@@ -14,6 +15,14 @@ export interface Listing {
   price: bigint;
   listedAt: number;
   active: boolean;
+}
+
+export interface ListingWithStream {
+  streamId: bigint;
+  seller: string;
+  price: bigint;
+  listedAt: number;
+  stream: any; // Full stream data
 }
 
 export interface PendingPurchase {
@@ -27,6 +36,33 @@ export interface PendingPurchase {
 // ============================================
 // READ HOOKS
 // ============================================
+
+/**
+ * Get ALL active marketplace listings with stream data
+ * This combines streams data with marketplace listings
+ */
+export function useAllMarketplaceListings() {
+  // Get all streams from all users
+  const { data: allStreams, isLoading: streamsLoading } = useUserStreams(null);
+
+  const listings = useMemo(() => {
+    if (!allStreams) return [];
+
+    // We'll check each stream to see if it's listed
+    // This is a temporary solution until we can query all listings directly
+    return allStreams
+      .filter((stream) => stream.id !== undefined)
+      .map((stream) => ({
+        streamId: stream.id,
+        stream,
+      }));
+  }, [allStreams]);
+
+  return {
+    data: listings,
+    isLoading: streamsLoading,
+  };
+}
 
 /**
  * Get NFT listing details

@@ -24,6 +24,8 @@ import walletService from "@/lib/wallet/wallet-service";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
 import { useBlockHeight } from "@/hooks/use-block-height";
+import { useUserEvents, useMarketplaceEvents } from "@/hooks/use-realtime";
+import { useTreasuryFeeBps, useTotalFeesCollected } from "@/hooks/use-bitpay-read";
 import { microToDisplay, StreamStatus } from "@/lib/contracts/config";
 import { StatsCard } from "@/components/dashboard/overview/StatsCard";
 import { RecentStreams } from "@/components/dashboard/overview/RecentStreams";
@@ -64,6 +66,37 @@ export default function DashboardPage() {
   } = useUserStreamsByRole(userAddress);
 
   const { write: updateStreamSender } = useUpdateStreamSender();
+
+  // WebSocket real-time updates
+  const { events, isConnected } = useUserEvents();
+  const { listings: marketplaceListings, sales: marketplaceSales } = useMarketplaceEvents();
+
+  // Treasury data from contract
+  const { data: treasuryFees } = useTotalFeesCollected();
+  const treasuryBalance = "0.000"; // TODO: Add treasury balance contract read function
+  const feesCollected = treasuryFees ? microToDisplay(treasuryFees) : "0.000";
+
+  // Refetch data when WebSocket events are received
+  useEffect(() => {
+    if (events.length > 0) {
+      const lastEvent = events[0];
+      console.log('🔔 Dashboard real-time event received:', lastEvent.type);
+
+      // Refetch streams data
+      refetch();
+
+      // Show notification
+      if (lastEvent.type === 'stream:created') {
+        toast.success('New stream created!');
+      } else if (lastEvent.type === 'stream:withdrawal') {
+        toast.success('Withdrawal completed!');
+      } else if (lastEvent.type === 'marketplace:listing') {
+        toast.info('New NFT listed on marketplace');
+      } else if (lastEvent.type === 'marketplace:sale') {
+        toast.success('NFT sold!');
+      }
+    }
+  }, [events, refetch]);
 
   const handleCompleteTransfer = async (newOwner: string) => {
     // Find the stream from outgoingStreams that matches the new owner
@@ -119,17 +152,7 @@ export default function DashboardPage() {
     loadWalletData();
   }, [userAddress]);
 
-  // Auto-refresh streams every 30 seconds to catch newly confirmed transactions
-  useEffect(() => {
-    if (!userAddress) return;
-
-    const interval = setInterval(() => {
-      console.log('🔄 Auto-refreshing overview from blockchain...');
-      refetch();
-    }, 30000); // Every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [userAddress, refetch]);
+  // No polling needed - WebSocket handles real-time updates via useUserEvents()
 
   // Calculate combined stats with proper BigInt handling
   const activeStreams = allStreams?.filter(s => s.status === StreamStatus.ACTIVE).length || 0;
@@ -330,13 +353,13 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <MarketplaceActivity
-              listings={12}
-              sales={34}
-              nfts={56}
+              listings={marketplaceListings.length}
+              sales={marketplaceSales.length}
+              nfts={totalOutgoing + totalIncoming}
             />
             <TreasuryInfo
-              balance="1.234"
-              feesCollected="0.056"
+              balance={treasuryBalance}
+              feesCollected={feesCollected}
             />
           </div>
 

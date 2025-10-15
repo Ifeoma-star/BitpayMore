@@ -6,7 +6,7 @@
 const SOCKET_SERVER_URL = process.env.SOCKET_SERVER_URL || 'http://localhost:4000';
 
 interface BroadcastPayload {
-  type: 'user' | 'stream' | 'marketplace' | 'global';
+  type: 'user' | 'stream' | 'marketplace' | 'treasury' | 'global';
   target?: string;
   event: string;
   payload: any;
@@ -57,6 +57,15 @@ export const broadcastToMarketplace = async (event: string, payload: any) => {
     payload,
   });
   console.log(`📤 Broadcast to marketplace:`, event);
+};
+
+export const broadcastToTreasury = async (event: string, payload: any) => {
+  await broadcastToSocketServer({
+    type: 'treasury',
+    event,
+    payload,
+  });
+  console.log(`📤 Broadcast to treasury:`, event);
 };
 
 export const broadcastGlobal = async (event: string, payload: any) => {

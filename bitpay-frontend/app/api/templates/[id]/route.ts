@@ -3,6 +3,59 @@ import dbConnect from '@/lib/db';
 import { StreamTemplate } from '@/models';
 import { getTokenFromRequest, verifyToken } from '@/lib/auth/auth';
 
+// GET /api/templates/[id] - Get single template
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await dbConnect();
+
+    // Verify authentication
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const payload = verifyToken(token);
+    if (!payload || !payload.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const userId = payload.userId;
+    const { id: templateId } = await params;
+
+    // Find template
+    const template = await StreamTemplate.findById(templateId);
+
+    if (!template) {
+      return NextResponse.json(
+        { error: 'Template not found' },
+        { status: 404 }
+      );
+    }
+
+    // Allow access if user owns the template OR if it's a default template
+    if (template.userId !== userId && !template.isDefault) {
+      return NextResponse.json(
+        { error: 'Unauthorized to view this template' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      template,
+    });
+  } catch (error) {
+    console.error('Error fetching template:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch template' },
+      { status: 500 }
+    );
+  }
+}
+
 // PUT /api/templates/[id] - Update template
 export async function PUT(
   request: NextRequest,

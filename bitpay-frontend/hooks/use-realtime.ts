@@ -88,12 +88,19 @@ export function useRealtime() {
     }
   }, []);
 
+  const joinTreasury = useCallback(() => {
+    if (socket) {
+      socket.emit('join-treasury');
+    }
+  }, []);
+
   return {
     isConnected,
     subscribe,
     joinStream,
     leaveStream,
     joinMarketplace,
+    joinTreasury,
     socket,
   };
 }
@@ -223,4 +230,72 @@ export function useMarketplaceEvents() {
   }, [isConnected, joinMarketplace, subscribe]);
 
   return { listings, sales, isConnected };
+}
+
+/**
+ * Hook for treasury real-time updates
+ */
+export function useTreasuryEvents() {
+  const { subscribe, joinTreasury, isConnected } = useRealtime();
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [feeCollections, setFeeCollections] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isConnected) return;
+
+    joinTreasury();
+
+    const handlers = [
+      subscribe('treasury:proposal-created', (data: any) => {
+        console.log('📋 Withdrawal proposal created:', data);
+        setProposals((prev) => [data, ...prev]);
+      }),
+
+      subscribe('treasury:proposal-approved', (data: any) => {
+        console.log('✅ Proposal approved:', data);
+        setProposals((prev) =>
+          prev.map((proposal) =>
+            proposal.id === data.proposalId
+              ? { ...proposal, approvals: [...(proposal.approvals || []), data.approver] }
+              : proposal
+          )
+        );
+      }),
+
+      subscribe('treasury:proposal-executed', (data: any) => {
+        console.log('💸 Proposal executed:', data);
+        setProposals((prev) =>
+          prev.map((proposal) =>
+            proposal.id === data.proposalId
+              ? { ...proposal, executed: true, executedAt: data.executedAt }
+              : proposal
+          )
+        );
+      }),
+
+      subscribe('treasury:admin-added', (data: any) => {
+        console.log('👤 Admin added:', data);
+        setAdmins((prev) => [...prev, { address: data.admin, isActive: true }]);
+      }),
+
+      subscribe('treasury:admin-removed', (data: any) => {
+        console.log('👋 Admin removed:', data);
+        setAdmins((prev) =>
+          prev.filter((admin) => admin.address !== data.admin)
+        );
+      }),
+
+      subscribe('treasury:fee-collected', (data: any) => {
+        console.log('💰 Fee collected:', data);
+        setFeeCollections((prev) => [data, ...prev].slice(0, 50));
+      }),
+    ];
+
+    return () => {
+      handlers.forEach((unsubscribe) => unsubscribe?.());
+    };
+  }, [isConnected, joinTreasury, subscribe]);
+
+  return { proposals, admins, feeCollections, isConnected };
 }

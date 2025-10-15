@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -47,6 +47,8 @@ type CreateStreamForm = z.infer<typeof createStreamSchema>;
 
 export default function CreateStreamPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const templateId = searchParams.get("templateId");
   const { write: createStream, isLoading: isCreating, error: createError, txId } = useCreateStream();
   const { blockHeight, isLoading: blockHeightLoading } = useBlockHeight(10000); // Poll every 10 seconds
 
@@ -63,6 +65,60 @@ export default function CreateStreamPage() {
   });
 
   const watchedValues = form.watch();
+
+  // Fetch and apply template if templateId is present
+  useEffect(() => {
+    const fetchTemplate = async () => {
+      if (!templateId) return;
+
+      try {
+        const response = await fetch(`/api/templates/${templateId}`, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          toast.error("Failed to load template");
+          return;
+        }
+
+        const data = await response.json();
+        const template = data.template;
+
+        // Convert durationBlocks back to human-readable format
+        let duration = "";
+        let durationType: "blocks" | "days" | "weeks" | "months" = "days";
+
+        if (template.durationBlocks % BLOCKS_PER_MONTH === 0) {
+          duration = (template.durationBlocks / BLOCKS_PER_MONTH).toString();
+          durationType = "months";
+        } else if (template.durationBlocks % BLOCKS_PER_WEEK === 0) {
+          duration = (template.durationBlocks / BLOCKS_PER_WEEK).toString();
+          durationType = "weeks";
+        } else if (template.durationBlocks % BLOCKS_PER_DAY === 0) {
+          duration = (template.durationBlocks / BLOCKS_PER_DAY).toString();
+          durationType = "days";
+        } else {
+          duration = template.durationBlocks.toString();
+          durationType = "blocks";
+        }
+
+        // Auto-fill form with template data
+        form.setValue("amount", template.amount);
+        form.setValue("duration", duration);
+        form.setValue("durationType", durationType);
+        form.setValue("description", template.description);
+
+        toast.success("Template Loaded!", {
+          description: `Using "${template.name}" template`,
+        });
+      } catch (error) {
+        console.error("Error fetching template:", error);
+        toast.error("Failed to load template");
+      }
+    };
+
+    fetchTemplate();
+  }, [templateId, form]);
 
   // Show toast when transaction completes
   useEffect(() => {

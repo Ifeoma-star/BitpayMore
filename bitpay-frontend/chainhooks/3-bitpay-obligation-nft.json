@@ -5,7 +5,7 @@
   "version": 1,
   "networks": {
     "testnet": {
-      "start_block": 2602000,
+      "start_block": 3600000,
       "decode_clarity_values": true,
       "if_this": {
         "scope": "print_event",

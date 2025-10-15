@@ -6,6 +6,7 @@
 import connectToDatabase from '@/lib/db';
 import { clientPromise } from '@/lib/db';
 import * as EmailService from '@/lib/email/email-service';
+import { broadcastToUser } from '@/lib/socket/client-broadcast';
 import type {
   Notification,
   NotificationType,
@@ -67,6 +68,9 @@ export async function createNotification(
   notification._id = result.insertedId.toString();
 
   console.log(`✅ Created notification for ${userId}: ${type}`);
+
+  // Broadcast notification to user via WebSocket for real-time updates
+  await broadcastToUser(userId, 'notification:new', notification);
 
   return notification as Notification;
 }

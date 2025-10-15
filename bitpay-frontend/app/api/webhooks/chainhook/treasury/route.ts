@@ -36,7 +36,7 @@ import {
   uintCV,
 } from '@stacks/transactions';
 import { getStacksNetwork, BITPAY_DEPLOYER_ADDRESS, CONTRACT_NAMES } from '@/lib/contracts/config';
-import { broadcastToUser } from '@/lib/socket/client-broadcast';
+import { broadcastToUser, broadcastToTreasury } from '@/lib/socket/client-broadcast';
 
 export async function POST(request: Request) {
   try {
@@ -432,6 +432,9 @@ async function handleTreasuryEvent(
           data: proposalData,
         });
       }
+
+      // Also broadcast to treasury room for real-time updates
+      broadcastToTreasury('treasury:proposal-created', proposalData);
       break;
 
     case 'treasury-withdrawal-approved':
@@ -518,6 +521,15 @@ async function handleTreasuryEvent(
           },
         });
       }
+
+      // Broadcast approval to treasury room
+      broadcastToTreasury('treasury:proposal-approved', {
+        proposalId: event['proposal-id'].toString(),
+        approver: event.approver,
+        approvalCount,
+        threshold: approvalThreshold,
+        txHash: context.txHash,
+      });
       break;
 
     case 'treasury-withdrawal-executed':
@@ -572,6 +584,9 @@ async function handleTreasuryEvent(
             data: executedData,
           });
         }
+
+        // Broadcast execution to treasury room
+        broadcastToTreasury('treasury:proposal-executed', executedData);
       }
       break;
 

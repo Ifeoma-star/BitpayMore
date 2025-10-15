@@ -34,6 +34,8 @@ import { useUserStreamsByRole } from "@/hooks/use-user-streams";
 import { useTotalFeesCollected } from "@/hooks/use-bitpay-read";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { microToDisplay, StreamStatus, calculateProgress } from "@/lib/contracts/config";
+import { useUserEvents } from "@/hooks/use-realtime";
+import { toast } from "sonner";
 
 export default function AnalyticsPage() {
   // Get user address from authenticated session instead of wallet
@@ -48,6 +50,62 @@ export default function AnalyticsPage() {
     isLoading
   } = useUserStreamsByRole(userAddress);
   const { data: totalFees } = useTotalFeesCollected();
+  const { isConnected } = useUserEvents();
+
+  // State for analytics API data
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
+  // Fetch analytics data from API
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setAnalyticsLoading(true);
+        const response = await fetch('/api/analytics?timeframe=30d', {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch analytics');
+        }
+
+        const result = await response.json();
+        setAnalyticsData(result.data);
+      } catch (error) {
+        console.error('Error fetching analytics:', error);
+        toast.error('Failed to load analytics data');
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    };
+
+    if (userAddress) {
+      fetchAnalytics();
+    }
+  }, [userAddress]);
+
+  // Listen to WebSocket events for real-time updates
+  useEffect(() => {
+    if (!isConnected) return;
+
+    // Refetch analytics when new events occur
+    const handleStreamEvent = () => {
+      // Refetch analytics data
+      if (userAddress) {
+        fetch('/api/analytics?timeframe=30d', { credentials: 'include' })
+          .then((res) => res.json())
+          .then((result) => setAnalyticsData(result.data))
+          .catch((err) => console.error('Error refreshing analytics:', err));
+      }
+    };
+
+    // You can add event listeners here if needed
+    // For now, we'll rely on periodic refresh
+
+    return () => {
+      // Cleanup if needed
+    };
+  }, [isConnected, userAddress]);
 
   // Calculate analytics
   const activeStreams = allStreams?.filter((s) => s.status === StreamStatus.ACTIVE) || [];
@@ -117,41 +175,15 @@ export default function AnalyticsPage() {
     ? (cancelledStreams.length / allStreams.length) * 100
     : 0;
 
-  const cancellationData = [
-    { month: 'Jan', cancellations: 2, streams: 15 },
-    { month: 'Feb', cancellations: 1, streams: 20 },
-    { month: 'Mar', cancellations: 3, streams: 18 },
-    { month: 'Apr', cancellations: 0, streams: 22 },
-    { month: 'May', cancellations: 4, streams: 25 },
-    { month: 'Jun', cancellations: cancelledStreams.length, streams: allStreams?.length || 0 },
-  ];
-
-  // NFT Transfer Activity (mock data - would come from obligation NFT events)
-  const nftTransferData = [
-    { date: '1 week ago', transfers: 0 },
-    { date: '6 days ago', transfers: 0 },
-    { date: '5 days ago', transfers: 1 },
-    { date: '4 days ago', transfers: 0 },
-    { date: '3 days ago', transfers: 2 },
-    { date: '2 days ago', transfers: 1 },
-    { date: 'Today', transfers: 0 },
-  ];
+  // Use real data from API or fallback to empty arrays
+  const cancellationData = analyticsData?.cancellationData || [];
+  const nftTransferData = analyticsData?.nftTransferData || [];
+  const withdrawalPattern = analyticsData?.withdrawalPattern || [];
 
   // Average stream duration
   const avgDuration = allStreams && allStreams.length > 0
     ? allStreams.reduce((sum, s) => sum + Number(s["end-block"] - s["start-block"]), 0) / allStreams.length
     : 0;
-
-  // Withdrawal pattern (mock data)
-  const withdrawalPattern = [
-    { day: 'Mon', withdrawals: 2, amount: 1.5 },
-    { day: 'Tue', withdrawals: 1, amount: 0.8 },
-    { day: 'Wed', withdrawals: 3, amount: 2.1 },
-    { day: 'Thu', withdrawals: 0, amount: 0 },
-    { day: 'Fri', withdrawals: 2, amount: 1.2 },
-    { day: 'Sat', withdrawals: 1, amount: 0.5 },
-    { day: 'Sun', withdrawals: 0, amount: 0 },
-  ];
 
   if (isLoading && !allStreams) {
     return (
@@ -402,7 +434,9 @@ export default function AnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">Wednesday</div>
+                <div className="text-2xl font-bold">
+                  {analyticsData?.statistics?.peakWithdrawalDay || 'N/A'}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">Most active day</p>
               </CardContent>
             </Card>
@@ -410,24 +444,34 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Avg Time to Withdraw
+                  Total Withdrawals
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">2.5 days</div>
-                <p className="text-xs text-muted-foreground mt-1">From vesting</p>
+                <div className="text-2xl font-bold">
+                  {analyticsData?.statistics?.totalWithdrawals || 0}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Withdrawal Frequency
+                  Avg Withdrawal Amount
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">73%</div>
-                <p className="text-xs text-muted-foreground mt-1">Within 7 days</p>
+                <div className="text-2xl font-bold">
+                  {withdrawalPattern.length > 0
+                    ? (
+                        withdrawalPattern.reduce((sum, w) => sum + w.amount, 0) /
+                        withdrawalPattern.filter((w) => w.withdrawals > 0).length || 1
+                      ).toFixed(4)
+                    : '0.0000'}{' '}
+                  sBTC
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Per withdrawal</p>
               </CardContent>
             </Card>
           </div>

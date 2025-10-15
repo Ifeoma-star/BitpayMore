@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Shield, Shuffle, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
+import { useUserEvents } from "@/hooks/use-realtime";
 import { microToDisplay } from "@/lib/contracts/config";
 import { TransferObligationNFTModal } from "@/components/dashboard/modals/TransferObligationNFTModal";
 import { ListObligationNFTModal } from "@/components/dashboard/modals/ListObligationNFTModal";
@@ -48,6 +49,22 @@ export default function NFTGalleryPage() {
   } = useUserStreamsByRole(userAddress);
 
   const { write: updateStreamSender, isLoading: isUpdating } = useUpdateStreamSender();
+
+  // WebSocket real-time updates for NFT transfers
+  const { events, isConnected } = useUserEvents();
+
+  // Refetch when NFT transfer events are received
+  useEffect(() => {
+    if (events.length > 0) {
+      const lastEvent = events[0];
+
+      if (lastEvent.type === 'stream:sender-updated' || lastEvent.type === 'nft:transfer') {
+        console.log('🔔 NFT transfer event received, refreshing...');
+        refetch();
+        toast.success('NFT transferred successfully!');
+      }
+    }
+  }, [events, refetch]);
 
   const handleCompleteTransfer = async (streamId: string, newOwner: string) => {
     try {
