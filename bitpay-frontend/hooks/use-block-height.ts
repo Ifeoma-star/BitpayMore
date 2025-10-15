@@ -35,21 +35,28 @@ export function useBlockHeight(pollingInterval?: number): UseBlockHeightReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`${STACKS_API_URL}/v2/info`);
+      // Use backend API route to avoid CORS and rate limiting issues
+      const response = await fetch('/api/stacks/block-height', {
+        credentials: 'include',
+      });
+
       if (!response.ok) {
         throw new Error(`Failed to fetch block height: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const result = await response.json();
 
-      const height = data.stacks_tip_height || data.burn_block_height;
-      const hash = data.stacks_tip;
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to fetch block height');
+      }
+
+      const height = result.blockHeight;
       const timestamp = Date.now();
 
       setBlockHeight(height);
       setBlockData({
         height,
-        hash,
+        hash: '', // Hash not needed from cached endpoint
         timestamp,
       });
     } catch (err) {

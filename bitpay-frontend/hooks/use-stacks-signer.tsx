@@ -242,9 +242,12 @@ export function useStacksSigner() {
     }
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_STACKS_API_URL || "https://api.testnet.hiro.so";
+      // Use backend API route to avoid CORS and rate limiting issues
       const response = await fetch(
-        `${apiUrl}/v2/accounts/${stacksAccount.address}?proof=0`
+        `/api/stacks/nonce/${stacksAccount.address}`,
+        {
+          credentials: 'include',
+        }
       );
       const data = await response.json();
       return BigInt(data.nonce || 0);
