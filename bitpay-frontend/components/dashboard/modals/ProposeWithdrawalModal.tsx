@@ -100,24 +100,24 @@ export function ProposeWithdrawalModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl max-h-[85vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-brand-pink" />
+      <DialogContent className="max-w-xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0 pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <DollarSign className="h-4 w-4 text-brand-pink" />
             Propose Multi-Sig Withdrawal
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             3-of-5 multi-sig approval • 24-hour timelock
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 overflow-y-auto flex-1 py-2">
+        <div className="space-y-2.5 overflow-y-auto flex-1 py-1">
           {/* Multi-Sig Info - Compact */}
-          <Alert className="border-brand-teal/30 bg-brand-teal/5 py-2">
-            <Shield className="h-3.5 w-3.5 text-brand-teal" />
+          <Alert className="border-brand-teal/30 bg-brand-teal/5 py-1.5">
+            <Shield className="h-3 w-3 text-brand-teal" />
             <AlertDescription>
-              <p className="font-medium text-brand-teal text-xs mb-1">Process:</p>
-              <ol className="text-xs space-y-0.5 list-decimal list-inside">
+              <p className="font-medium text-brand-teal text-[11px] mb-0.5">Process:</p>
+              <ol className="text-[10px] space-y-0 list-decimal list-inside">
                 <li>You propose (auto-approved as 1st)</li>
                 <li>2 more admins approve (3 total)</li>
                 <li>Wait 24h timelock (144 blocks)</li>
@@ -127,11 +127,11 @@ export function ProposeWithdrawalModal({
           </Alert>
 
           {/* Amount Input */}
-          <div className="space-y-1.5">
-            <Label htmlFor="amount" className="text-sm">Withdrawal Amount (sBTC)</Label>
-            <div className="flex gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="amount" className="text-xs">Withdrawal Amount (sBTC)</Label>
+            <div className="flex gap-1.5">
               <div className="relative flex-1">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
                   id="amount"
                   type="number"
@@ -139,7 +139,7 @@ export function ProposeWithdrawalModal({
                   placeholder="0.000000"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="pl-9 text-sm"
+                  className="pl-7 text-xs h-8"
                   disabled={isLoading}
                 />
               </div>
@@ -147,49 +147,49 @@ export function ProposeWithdrawalModal({
                 variant="outline"
                 onClick={handleSetMax}
                 disabled={isLoading}
-                className="text-xs px-3"
+                className="text-xs px-2.5 h-8"
               >
                 Max
               </Button>
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>Available: {treasuryBalance} sBTC</span>
               <span>Daily Limit: {dailyLimit} sBTC</span>
             </div>
           </div>
 
           {/* Recipient Input */}
-          <div className="space-y-1.5">
-            <Label htmlFor="recipient" className="text-sm">Recipient Address</Label>
+          <div className="space-y-1">
+            <Label htmlFor="recipient" className="text-xs">Recipient Address</Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <User className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <Input
                 id="recipient"
                 placeholder="SP..."
                 value={recipient}
                 onChange={(e) => setRecipient(e.target.value)}
-                className="pl-9 font-mono text-xs"
+                className="pl-7 font-mono text-[11px] h-8"
                 disabled={isLoading}
               />
             </div>
           </div>
 
           {/* Description Input */}
-          <div className="space-y-1.5">
-            <Label htmlFor="description" className="text-sm">Description</Label>
+          <div className="space-y-1">
+            <Label htmlFor="description" className="text-xs">Description</Label>
             <div className="relative">
-              <FileText className="absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground" />
+              <FileText className="absolute left-2 top-2 h-3 w-3 text-muted-foreground" />
               <Textarea
                 id="description"
                 placeholder="Reason for withdrawal..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="pl-9 min-h-[70px] text-xs"
+                className="pl-7 min-h-[60px] text-[11px]"
                 maxLength={256}
                 disabled={isLoading}
               />
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>Required for audit trail</span>
               <span>{description.length}/256</span>
             </div>
@@ -197,13 +197,13 @@ export function ProposeWithdrawalModal({
 
           {/* Summary - Compact */}
           {amount && recipient && description && (
-            <Alert className="py-2">
-              <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+            <Alert className="py-1.5">
+              <CheckCircle className="h-3 w-3 text-green-500" />
               <AlertDescription>
-                <p className="font-medium text-xs mb-1">Summary:</p>
-                <div className="text-xs space-y-0.5">
+                <p className="font-medium text-[11px] mb-0.5">Summary:</p>
+                <div className="text-[10px] space-y-0">
                   <p>• Amount: <span className="font-bold text-brand-pink">{amount} sBTC</span></p>
-                  <p>• To: <span className="font-mono text-[10px]">{recipient.slice(0, 8)}...{recipient.slice(-6)}</span></p>
+                  <p>• To: <span className="font-mono">{recipient.slice(0, 8)}...{recipient.slice(-6)}</span></p>
                   <p>• Approvals: <span className="font-bold">3</span> (incl. yours)</p>
                   <p>• Timelock: <span className="font-bold">24h</span> after 3rd</p>
                 </div>
@@ -212,11 +212,11 @@ export function ProposeWithdrawalModal({
           )}
 
           {/* Warning - Compact */}
-          <Alert className="border-yellow-500/50 bg-yellow-500/5 py-2">
-            <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
-            <AlertDescription className="text-xs">
-              <p className="font-medium text-yellow-600">Important:</p>
-              <ul className="list-disc list-inside space-y-0.5 text-muted-foreground mt-0.5">
+          <Alert className="border-yellow-500/50 bg-yellow-500/5 py-1.5">
+            <AlertCircle className="h-3 w-3 text-yellow-500" />
+            <AlertDescription className="text-[10px]">
+              <p className="font-medium text-yellow-600 mb-0.5">Important:</p>
+              <ul className="list-disc list-inside space-y-0 text-muted-foreground">
                 <li>Auto-approved by you (1/3)</li>
                 <li>Expires after 7 days</li>
                 <li>Limit: 100 sBTC/24h</li>
@@ -227,27 +227,28 @@ export function ProposeWithdrawalModal({
         </div>
 
         {/* Action Buttons */}
-        <DialogFooter className="flex-shrink-0">
+        <DialogFooter className="flex-shrink-0 pt-2">
           <Button
             variant="outline"
             onClick={onClose}
             disabled={isLoading}
+            className="h-8 text-xs"
           >
             Cancel
           </Button>
           <Button
             onClick={handlePropose}
             disabled={isLoading || !amount || !recipient || !description}
-            className="bg-brand-pink hover:bg-brand-pink/90 text-white"
+            className="bg-brand-pink hover:bg-brand-pink/90 text-white h-8 text-xs"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
                 Creating...
               </>
             ) : (
               <>
-                <Shield className="h-4 w-4 mr-2" />
+                <Shield className="h-3 w-3 mr-1.5" />
                 Create
               </>
             )}

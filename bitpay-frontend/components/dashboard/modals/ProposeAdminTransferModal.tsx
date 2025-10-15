@@ -77,42 +77,42 @@ export function ProposeAdminTransferModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserCog className="h-5 w-5 text-brand-teal" />
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <UserCog className="h-4 w-4 text-brand-teal" />
             Propose Admin Transfer
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Initiate a two-step admin transfer process for treasury security
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 py-2">
           {/* Current Admin Info */}
-          <div className="p-3 border rounded-lg bg-muted/30">
-            <Label className="text-xs text-muted-foreground">Current Admin</Label>
-            <p className="font-mono text-sm mt-1">{currentAdmin}</p>
+          <div className="p-2.5 border rounded-lg bg-muted/30">
+            <Label className="text-[10px] text-muted-foreground">Current Admin</Label>
+            <p className="font-mono text-xs mt-0.5">{currentAdmin}</p>
           </div>
 
           {/* Two-Step Process Info */}
-          <Alert>
-            <Info className="h-4 w-4 text-brand-teal" />
+          <Alert className="py-2">
+            <Info className="h-3 w-3 text-brand-teal" />
             <AlertDescription>
-              <p className="font-medium mb-1">Two-Step Transfer Process</p>
-              <ol className="text-sm space-y-1 ml-4 list-decimal">
+              <p className="font-medium mb-0.5 text-xs">Two-Step Transfer Process</p>
+              <ol className="text-[11px] space-y-0 ml-3 list-decimal">
                 <li>You propose the new admin address</li>
                 <li>New admin must accept the transfer to complete it</li>
               </ol>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-[10px] text-muted-foreground mt-1">
                 You can cancel the proposal before the new admin accepts.
               </p>
             </AlertDescription>
           </Alert>
 
           {/* New Admin Input */}
-          <div className="space-y-2">
-            <Label htmlFor="new-admin">New Admin Address</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-admin" className="text-xs">New Admin Address</Label>
             <Input
               id="new-admin"
               placeholder="SP... or ST..."
@@ -122,52 +122,53 @@ export function ProposeAdminTransferModal({
                 setError("");
               }}
               disabled={isProposing}
-              className="font-mono text-sm"
+              className="font-mono text-xs h-8"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               Enter the Stacks address of the new treasury admin
             </p>
           </div>
 
           {/* Warning */}
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-sm">
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-3 w-3" />
+            <AlertDescription className="text-xs">
               <p className="font-medium">Important:</p>
-              <p>Only propose admin transfer to addresses you control or trust. The new admin will have full control over the treasury.</p>
+              <p className="text-[11px]">Only propose admin transfer to addresses you control or trust. The new admin will have full control over the treasury.</p>
             </AlertDescription>
           </Alert>
 
           {/* Error Message */}
           {error && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="py-2">
+              <AlertTriangle className="h-3 w-3" />
+              <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="pt-2">
           <Button
             variant="outline"
             onClick={onClose}
             disabled={isProposing}
+            className="h-8 text-xs"
           >
             Cancel
           </Button>
           <Button
             onClick={handlePropose}
             disabled={isProposing || !newAdmin.trim()}
-            className="bg-brand-teal hover:bg-brand-teal/90 text-white"
+            className="bg-brand-teal hover:bg-brand-teal/90 text-white h-8 text-xs"
           >
             {isProposing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                 Proposing...
               </>
             ) : (
               <>
-                <UserCog className="mr-2 h-4 w-4" />
+                <UserCog className="mr-1.5 h-3 w-3" />
                 Propose Transfer
               </>
             )}
@@ -177,3 +178,4 @@ export function ProposeAdminTransferModal({
     </Dialog>
   );
 }
+              

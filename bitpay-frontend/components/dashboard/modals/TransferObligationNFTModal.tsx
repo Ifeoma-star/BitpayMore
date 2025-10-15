@@ -79,56 +79,56 @@ export function TransferObligationNFTModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Transfer Obligation NFT</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-lg">Transfer Obligation NFT</DialogTitle>
+          <DialogDescription className="text-xs">
             Transfer your obligation NFT to sell or assign stream payment rights
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 py-2">
           {/* Stream Info */}
-          <div className="p-4 border rounded-lg bg-muted/30">
-            <div className="space-y-2">
+          <div className="p-3 border rounded-lg bg-muted/30">
+            <div className="space-y-1.5 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Stream ID</span>
-                <Badge variant="outline">#{streamId}</Badge>
+                <span className="text-muted-foreground">Stream ID</span>
+                <Badge variant="outline" className="text-xs">#{streamId}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Obligation NFT ID</span>
-                <Badge variant="outline">#{obligationTokenId}</Badge>
+                <span className="text-muted-foreground">Obligation NFT ID</span>
+                <Badge variant="outline" className="text-xs">#{obligationTokenId}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Stream Amount</span>
-                <span className="text-sm font-medium">{currentAmount} sBTC</span>
+                <span className="text-muted-foreground">Stream Amount</span>
+                <span className="font-medium">{currentAmount} sBTC</span>
               </div>
             </div>
           </div>
 
           {/* Warning Alert */}
-          <Alert>
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <AlertDescription>
+          <Alert className="py-2">
+            <AlertTriangle className="h-3 w-3 text-yellow-600" />
+            <AlertDescription className="text-xs">
               <p className="font-medium mb-1">Two-Step Transfer Process</p>
-              <ol className="text-sm space-y-1 ml-4 list-decimal">
+              <ol className="space-y-0.5 ml-4 list-decimal text-[11px]">
                 <li>You transfer the obligation NFT to the new owner</li>
-                <li>New owner must call <code className="bg-muted px-1 rounded text-xs">update-stream-sender</code> to become the stream sender</li>
+                <li>New owner must call <code className="bg-muted px-1 rounded text-[10px]">update-stream-sender</code> to become the stream sender</li>
               </ol>
             </AlertDescription>
           </Alert>
 
           {/* Info Alert */}
-          <Alert>
-            <Info className="h-4 w-4 text-brand-teal" />
-            <AlertDescription className="text-sm">
+          <Alert className="py-2">
+            <Info className="h-3 w-3 text-brand-teal" />
+            <AlertDescription className="text-[11px]">
               The new owner will receive all future stream payments and can cancel the stream. Already vested amounts belong to the recipient.
             </AlertDescription>
           </Alert>
 
           {/* New Owner Input */}
-          <div className="space-y-2">
-            <Label htmlFor="new-owner">New Owner Address</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-owner" className="text-xs">New Owner Address</Label>
             <Input
               id="new-owner"
               placeholder="SP... or ST..."
@@ -138,44 +138,45 @@ export function TransferObligationNFTModal({
                 setError("");
               }}
               disabled={isTransferring}
-              className="font-mono text-sm"
+              className="font-mono text-xs h-8"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               Enter the Stacks address of the new obligation NFT owner
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="py-2">
+              <AlertTriangle className="h-3 w-3" />
+              <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="pt-2">
           <Button
             variant="outline"
             onClick={onClose}
             disabled={isTransferring}
+            className="h-8 text-xs"
           >
             Cancel
           </Button>
           <Button
             onClick={handleTransfer}
             disabled={isTransferring || !newOwner.trim()}
-            className="bg-brand-pink hover:bg-brand-pink/90 text-white"
+            className="bg-brand-pink hover:bg-brand-pink/90 text-white h-8 text-xs"
           >
             {isTransferring ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                 Transferring...
               </>
             ) : (
               <>
                 Transfer NFT
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-1.5 h-3 w-3" />
               </>
             )}
           </Button>

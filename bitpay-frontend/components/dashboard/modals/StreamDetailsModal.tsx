@@ -88,23 +88,23 @@ export function StreamDetailsModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Bitcoin className="h-5 w-5 text-brand-pink" />
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Bitcoin className="h-4 w-4 text-brand-pink" />
             Stream Details
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Complete information about this payment stream
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Stream Overview */}
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <div className="flex items-start justify-between mb-4">
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-start justify-between mb-2">
               <div>
-                <h3 className="text-lg font-semibold">{stream.description}</h3>
-                <p className="text-sm text-muted-foreground">Stream ID: {stream.id}</p>
+                <h3 className="text-base font-semibold">{stream.description}</h3>
+                <p className="text-xs text-muted-foreground">Stream ID: {stream.id}</p>
               </div>
               <Badge className={getStatusColor(stream.status)}>
                 {stream.status.charAt(0).toUpperCase() + stream.status.slice(1)}
@@ -112,22 +112,22 @@ export function StreamDetailsModal({
             </div>
 
             {/* Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
                 <span>Progress</span>
                 <span>{stream.progress}% complete</span>
               </div>
-              <Progress value={stream.progress} className="h-2" />
+              <Progress value={stream.progress} className="h-1.5" />
             </div>
           </div>
 
           {/* Recipient Information */}
-          <div className="space-y-3">
-            <h4 className="font-medium flex items-center gap-2">
-              <User className="h-4 w-4" />
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm flex items-center gap-1.5">
+              <User className="h-3 w-3" />
               Recipient Information
             </h4>
-            <div className="grid grid-cols-1 gap-3 text-sm">
+            <div className="grid grid-cols-1 gap-2 text-xs">
               {stream.recipientName && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Name:</span>
@@ -136,20 +136,20 @@ export function StreamDetailsModal({
               )}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Address:</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs">{formatAddress(stream.recipient)}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[10px]">{formatAddress(stream.recipient)}</span>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={copyAddress}
-                    className="h-6 w-6 p-0"
+                    className="h-5 w-5 p-0"
                   >
-                    <Copy className="h-3 w-3" />
+                    <Copy className="h-2.5 w-2.5" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0"
+                    className="h-5 w-5 p-0"
                     asChild
                   >
                     <a 
@@ -157,7 +157,7 @@ export function StreamDetailsModal({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="h-2.5 w-2.5" />
                     </a>
                   </Button>
                 </div>
@@ -165,16 +165,16 @@ export function StreamDetailsModal({
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-1.5" />
 
           {/* Financial Details */}
-          <div className="space-y-3">
-            <h4 className="font-medium flex items-center gap-2">
-              <Bitcoin className="h-4 w-4" />
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm flex items-center gap-1.5">
+              <Bitcoin className="h-3 w-3" />
               Financial Details
             </h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Amount:</span>
                   <span className="font-semibold">{stream.totalAmount} sBTC</span>
@@ -188,7 +188,7 @@ export function StreamDetailsModal({
                   <span className="font-semibold">{stream.withdrawnAmount} sBTC</span>
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Available:</span>
                   <span className="font-semibold text-brand-teal">{availableAmount.toFixed(8)} sBTC</span>
@@ -207,15 +207,15 @@ export function StreamDetailsModal({
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-1.5" />
 
           {/* Timeline */}
-          <div className="space-y-3">
-            <h4 className="font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
+          <div className="space-y-2">
+            <h4 className="font-medium text-sm flex items-center gap-1.5">
+              <Calendar className="h-3 w-3" />
               Timeline
             </h4>
-            <div className="grid grid-cols-1 gap-3 text-sm">
+            <div className="grid grid-cols-1 gap-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Start Date:</span>
                 <span className="font-medium">{formatDate(stream.startDate)}</span>
@@ -234,13 +234,14 @@ export function StreamDetailsModal({
           </div>
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t">
+          <div className="flex flex-wrap gap-2 pt-3 border-t">
             {stream.status === "active" && availableAmount > 0 && (
               <Button 
                 onClick={() => onAction?.('withdraw')}
-                className="bg-brand-teal hover:bg-brand-teal/90 text-white"
+                size="sm"
+                className="bg-brand-teal hover:bg-brand-teal/90 text-white h-8 text-xs"
               >
-                <ArrowUpRight className="h-4 w-4 mr-2" />
+                <ArrowUpRight className="h-3 w-3 mr-1.5" />
                 Withdraw ({availableAmount.toFixed(4)} sBTC)
               </Button>
             )}
@@ -248,9 +249,11 @@ export function StreamDetailsModal({
             {stream.status === "active" && (
               <Button 
                 variant="outline"
+                size="sm"
                 onClick={() => onAction?.('pause')}
+                className="h-8 text-xs"
               >
-                <Pause className="h-4 w-4 mr-2" />
+                <Pause className="h-3 w-3 mr-1.5" />
                 Pause Stream
               </Button>
             )}
@@ -258,9 +261,11 @@ export function StreamDetailsModal({
             {stream.status === "paused" && (
               <Button 
                 variant="outline"
+                size="sm"
                 onClick={() => onAction?.('resume')}
+                className="h-8 text-xs"
               >
-                <Play className="h-4 w-4 mr-2" />
+                <Play className="h-3 w-3 mr-1.5" />
                 Resume Stream
               </Button>
             )}
@@ -268,17 +273,18 @@ export function StreamDetailsModal({
             {(stream.status === "active" || stream.status === "paused") && (
               <Button 
                 variant="outline"
+                size="sm"
                 onClick={() => onAction?.('cancel')}
-                className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 h-8 text-xs"
               >
-                <X className="h-4 w-4 mr-2" />
+                <X className="h-3 w-3 mr-1.5" />
                 Cancel Stream
               </Button>
             )}
             
             <div className="flex-1" />
             
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-xs">
               Close
             </Button>
           </div>

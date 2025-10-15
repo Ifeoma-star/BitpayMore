@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify wallet signature
-    const isSignatureValid = verifyWalletSignature({
+    // Verify wallet signature and get correct network address
+    const verificationResult = verifyWalletSignature({
       address,
       signature,
       message,
@@ -52,15 +52,22 @@ export async function POST(request: NextRequest) {
       walletType,
     });
 
-    if (!isSignatureValid) {
+    if (!verificationResult.isValid) {
       return NextResponse.json(
         { success: false, error: 'Invalid wallet signature' },
         { status: 401 }
       );
     }
 
-    // Find user by wallet address
-    const user = await User.findOne({ walletAddress: address });
+    // Use the network-specific address (testnet address if on testnet)
+    const networkAddress = verificationResult.networkAddress;
+
+    // Find user by wallet address (check both original and network address)
+    let user = await User.findOne({ walletAddress: networkAddress });
+    if (!user) {
+      // Try the original address as fallback
+      user = await User.findOne({ walletAddress: address });
+    }
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Wallet not registered. Please sign up first.' },
@@ -81,17 +88,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Don't send sensitive data in response
+    // Use networkAddress so the frontend has the correct testnet/mainnet address
     const userResponse = {
       id: user._id,
       name: user.name,
       email: user.email,
-      walletAddress: user.walletAddress,
+      walletAddress: networkAddress, // Use network-specific address
       walletType: user.walletType,
       profileComplete: user.profileComplete,
       lastLoginAt: user.lastLoginAt,
     };
 
-    console.log('✅ Wallet user logged in successfully:', address);
+    console.log('✅ Wallet user logged in successfully:', networkAddress);
 
     // Create response with user data
     const response = NextResponse.json({

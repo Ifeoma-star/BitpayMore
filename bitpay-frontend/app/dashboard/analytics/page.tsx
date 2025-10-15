@@ -29,14 +29,16 @@ import {
   Shield,
   Clock
 } from "lucide-react";
-import walletService from "@/lib/wallet/wallet-service";
+import { useAuth } from "@/hooks/use-auth";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
 import { useTotalFeesCollected } from "@/hooks/use-bitpay-read";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { microToDisplay, StreamStatus, calculateProgress } from "@/lib/contracts/config";
 
 export default function AnalyticsPage() {
-  const [userAddress, setUserAddress] = useState<string | null>(null);
+  // Get user address from authenticated session instead of wallet
+  const { user } = useAuth();
+  const userAddress = user?.walletAddress || null;
 
   const { blockHeight } = useBlockHeight();
   const {
@@ -47,24 +49,24 @@ export default function AnalyticsPage() {
   } = useUserStreamsByRole(userAddress);
   const { data: totalFees } = useTotalFeesCollected();
 
-  useEffect(() => {
-    const loadWallet = async () => {
-      const address = await walletService.getCurrentAddress();
-      setUserAddress(address);
-    };
-    loadWallet();
-  }, []);
-
   // Calculate analytics
   const activeStreams = allStreams?.filter((s) => s.status === StreamStatus.ACTIVE) || [];
   const completedStreams = allStreams?.filter((s) => s.status === StreamStatus.COMPLETED) || [];
   const pendingStreams = allStreams?.filter((s) => s.status === StreamStatus.PENDING) || [];
   const cancelledStreams = allStreams?.filter((s) => s.status === StreamStatus.CANCELLED) || [];
 
-  const totalStreamed = allStreams?.reduce((sum, s) => sum + s.vestedAmount, BigInt(0)) || BigInt(0);
-  const totalVolume = allStreams?.reduce((sum, s) => sum + s.amount, BigInt(0)) || BigInt(0);
-  const totalWithdrawn = allStreams?.reduce((sum, s) => sum + s.withdrawn, BigInt(0)) || BigInt(0);
-  const totalAvailable = allStreams?.reduce((sum, s) => sum + s.withdrawableAmount, BigInt(0)) || BigInt(0);
+  // Helper to convert to BigInt safely
+  const toBigInt = (val: any): bigint => {
+    if (typeof val === 'bigint') return val;
+    if (typeof val === 'string') return BigInt(val);
+    if (typeof val === 'number') return BigInt(Math.floor(val));
+    return BigInt(0);
+  };
+
+  const totalStreamed = allStreams?.reduce((sum, s) => sum + toBigInt(s.vestedAmount), BigInt(0)) || BigInt(0);
+  const totalVolume = allStreams?.reduce((sum, s) => sum + toBigInt(s.amount), BigInt(0)) || BigInt(0);
+  const totalWithdrawn = allStreams?.reduce((sum, s) => sum + toBigInt(s.withdrawn), BigInt(0)) || BigInt(0);
+  const totalAvailable = allStreams?.reduce((sum, s) => sum + toBigInt(s.withdrawableAmount), BigInt(0)) || BigInt(0);
 
   // Status distribution for pie chart
   const statusData = [

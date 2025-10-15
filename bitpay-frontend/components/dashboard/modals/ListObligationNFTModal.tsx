@@ -134,23 +134,23 @@ export function ListObligationNFTModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Tag className="h-5 w-5 text-brand-pink" />
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Tag className="h-4 w-4 text-brand-pink" />
             List Obligation NFT for Sale
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Set your price and list your obligation NFT on the marketplace
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 py-2">
           {/* Info Alert */}
-          <Alert>
-            <Info className="h-4 w-4 text-brand-teal" />
-            <AlertDescription className="text-sm">
-              <p className="font-medium mb-1">Invoice Factoring</p>
-              <p>
+          <Alert className="py-2">
+            <Info className="h-3 w-3 text-brand-teal" />
+            <AlertDescription className="text-xs">
+              <p className="font-medium mb-0.5">Invoice Factoring</p>
+              <p className="text-[11px]">
                 Sell your future payment stream at a discount for immediate liquidity. Buyers earn
                 returns by collecting the full stream amount over time.
               </p>
@@ -158,10 +158,10 @@ export function ListObligationNFTModal({
           </Alert>
 
           {/* Select NFT */}
-          <div className="space-y-2">
-            <Label htmlFor="nft-select">Select Obligation NFT</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="nft-select" className="text-xs">Select Obligation NFT</Label>
             <Select value={selectedNFT} onValueChange={setSelectedNFT}>
-              <SelectTrigger id="nft-select">
+              <SelectTrigger id="nft-select" className="h-8 text-xs">
                 <SelectValue placeholder="Choose an NFT to list..." />
               </SelectTrigger>
               <SelectContent>
@@ -182,7 +182,7 @@ export function ListObligationNFTModal({
 
           {/* NFT Details */}
           {nft && (
-            <div className="p-4 bg-muted rounded-lg space-y-2 text-sm">
+            <div className="p-3 bg-muted rounded-lg space-y-1.5 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Amount:</span>
                 <span className="font-medium">{totalAmount.toFixed(8)} sBTC</span>
@@ -191,7 +191,7 @@ export function ListObligationNFTModal({
                 <span className="text-muted-foreground">Already Vested:</span>
                 <span className="font-medium">{vestedAmount.toFixed(8)} sBTC</span>
               </div>
-              <div className="flex justify-between border-t pt-2">
+              <div className="flex justify-between border-t pt-1.5">
                 <span className="text-muted-foreground">Remaining:</span>
                 <span className="font-medium text-brand-pink">{remainingAmount.toFixed(8)} sBTC</span>
               </div>
@@ -203,8 +203,8 @@ export function ListObligationNFTModal({
           )}
 
           {/* Listing Price */}
-          <div className="space-y-2">
-            <Label htmlFor="price">Listing Price (sBTC)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="price" className="text-xs">Listing Price (sBTC)</Label>
             <Input
               id="price"
               type="number"
@@ -218,22 +218,22 @@ export function ListObligationNFTModal({
                 setError("");
               }}
               disabled={!selectedNFT}
-              className={error ? "border-red-500" : ""}
+              className={`h-8 text-xs ${error ? "border-red-500" : ""}`}
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-[11px] text-red-500">{error}</p>}
           </div>
 
           {/* Quick Discount Buttons */}
           {nft && (
-            <div className="space-y-2">
-              <Label>Quick Discount Presets</Label>
-              <div className="grid grid-cols-4 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Quick Discount Presets</Label>
+              <div className="grid grid-cols-4 gap-1.5">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => applyDiscount(5)}
-                  className="text-xs"
+                  className="text-[10px] h-7"
                 >
                   5% Off
                 </Button>
@@ -242,7 +242,7 @@ export function ListObligationNFTModal({
                   variant="outline"
                   size="sm"
                   onClick={() => applyDiscount(10)}
-                  className="text-xs"
+                  className="text-[10px] h-7"
                 >
                   10% Off
                 </Button>
@@ -251,7 +251,7 @@ export function ListObligationNFTModal({
                   variant="outline"
                   size="sm"
                   onClick={() => applyDiscount(15)}
-                  className="text-xs"
+                  className="text-[10px] h-7"
                 >
                   15% Off
                 </Button>
@@ -260,7 +260,7 @@ export function ListObligationNFTModal({
                   variant="outline"
                   size="sm"
                   onClick={() => applyDiscount(20)}
-                  className="text-xs"
+                  className="text-[10px] h-7"
                 >
                   20% Off
                 </Button>
@@ -270,13 +270,13 @@ export function ListObligationNFTModal({
 
           {/* Calculation Preview */}
           {nft && price > 0 && (
-            <div className="p-4 bg-brand-pink/5 border border-brand-pink/20 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <Calculator className="h-4 w-4 text-brand-pink" />
-                <h4 className="font-semibold text-brand-pink">Deal Summary</h4>
+            <div className="p-3 bg-brand-pink/5 border border-brand-pink/20 rounded-lg">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Calculator className="h-3 w-3 text-brand-pink" />
+                <h4 className="font-semibold text-brand-pink text-xs">Deal Summary</h4>
               </div>
 
-              <div className="space-y-2 text-sm">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Your Listing Price:</span>
                   <span className="font-bold text-brand-pink">{price.toFixed(8)} sBTC</span>
@@ -289,7 +289,7 @@ export function ListObligationNFTModal({
                   <span className="text-muted-foreground">Immediate Proceeds:</span>
                   <span className="font-medium">{immediateProceeds.toFixed(8)} sBTC</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t">
+                <div className="flex justify-between pt-1.5 border-t">
                   <span className="text-muted-foreground">Buyer's Potential APR:</span>
                   <span className="font-medium text-green-600">{apr.toFixed(2)}%</span>
                 </div>
@@ -299,32 +299,32 @@ export function ListObligationNFTModal({
 
           {/* Warning */}
           {price > 0 && discount > 25 && (
-            <Alert className="border-yellow-500/50 bg-yellow-500/5">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-sm text-yellow-800">
+            <Alert className="border-yellow-500/50 bg-yellow-500/5 py-2">
+              <AlertTriangle className="h-3 w-3 text-yellow-600" />
+              <AlertDescription className="text-[11px] text-yellow-800">
                 High discount! Consider if this price provides enough immediate liquidity value.
               </AlertDescription>
             </Alert>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+        <DialogFooter className="pt-2">
+          <Button variant="outline" onClick={handleClose} disabled={isLoading} className="h-8 text-xs">
             Cancel
           </Button>
           <Button
             onClick={handleList}
             disabled={isLoading || !selectedNFT || !listingPrice || price <= 0}
-            className="bg-brand-pink hover:bg-brand-pink/90"
+            className="bg-brand-pink hover:bg-brand-pink/90 h-8 text-xs"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                 Listing...
               </>
             ) : (
               <>
-                <Tag className="h-4 w-4 mr-2" />
+                <Tag className="h-3 w-3 mr-1.5" />
                 List for Sale
               </>
             )}

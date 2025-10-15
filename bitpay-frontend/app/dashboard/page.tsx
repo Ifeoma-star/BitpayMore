@@ -21,6 +21,7 @@ import {
 import { motion } from "framer-motion";
 import Link from "next/link";
 import walletService from "@/lib/wallet/wallet-service";
+import { useAuth } from "@/hooks/use-auth";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { microToDisplay, StreamStatus } from "@/lib/contracts/config";
@@ -34,8 +35,11 @@ import { TreasuryInfo } from "@/components/dashboard/overview/TreasuryInfo";
 import { NFTGallery } from "@/components/dashboard/overview/NFTGallery";
 
 export default function DashboardPage() {
-  const [userAddress, setUserAddress] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<bigint>(BigInt(0));
+
+  // Get user address from authenticated session instead of wallet
+  const { user } = useAuth();
+  const userAddress = user?.walletAddress || null;
 
   // Get current block height
   const { blockHeight, isLoading: blockLoading } = useBlockHeight(30000);
@@ -56,10 +60,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadWalletData = async () => {
       try {
-        const address = await walletService.getCurrentAddress();
-        setUserAddress(address);
-
-        if (address) {
+        if (userAddress) {
           const balance = await walletService.getStxBalance();
           setWalletBalance(balance);
         }
@@ -69,7 +70,7 @@ export default function DashboardPage() {
     };
 
     loadWalletData();
-  }, []);
+  }, [userAddress]);
 
   // Auto-refresh streams every 30 seconds to catch newly confirmed transactions
   useEffect(() => {

@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify wallet signature
-    const isSignatureValid = verifyWalletSignature({
+    // Verify wallet signature and get correct network address
+    const verificationResult = verifyWalletSignature({
       address,
       signature,
       message,
@@ -55,15 +55,21 @@ export async function POST(request: NextRequest) {
       walletType,
     });
 
-    if (!isSignatureValid) {
+    if (!verificationResult.isValid) {
       return NextResponse.json(
         { success: false, error: 'Invalid wallet signature' },
         { status: 401 }
       );
     }
 
-    // Check if wallet is already registered
-    const existingUser = await User.findOne({ walletAddress: address });
+    // Use the network-specific address (testnet address if on testnet)
+    const networkAddress = verificationResult.networkAddress;
+
+    // Check if wallet is already registered (check both network and original address)
+    let existingUser = await User.findOne({ walletAddress: networkAddress });
+    if (!existingUser) {
+      existingUser = await User.findOne({ walletAddress: address });
+    }
     if (existingUser) {
       return NextResponse.json(
         { success: false, error: 'Wallet is already registered' },
@@ -82,14 +88,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate default user data if not provided
-    const defaultData = generateDefaultUserData(address);
-    
-    // Create user
+    // Generate default user data if not provided (use network address)
+    const defaultData = generateDefaultUserData(networkAddress);
+
+    // Create user with network-specific address
     const user = new User({
       name: businessName || defaultData.name,
       email: email?.toLowerCase() || defaultData.email,
-      walletAddress: address,
+      walletAddress: networkAddress, // Use testnet address if on testnet
       walletPublicKey: publicKey,
       walletType,
       isEmailVerified: false, // Wallet users don't need email verification initially
@@ -110,13 +116,13 @@ export async function POST(request: NextRequest) {
       id: user._id,
       name: user.name,
       email: user.email,
-      walletAddress: user.walletAddress,
+      walletAddress: networkAddress, // Return network address to frontend
       walletType: user.walletType,
       profileComplete: user.profileComplete,
       createdAt: user.createdAt,
     };
 
-    console.log('✅ Wallet user registered successfully:', address);
+    console.log('✅ Wallet user registered successfully:', networkAddress);
 
     // Create response with user data
     const response = NextResponse.json({

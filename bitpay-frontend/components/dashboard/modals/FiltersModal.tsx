@@ -121,35 +121,36 @@ export function FiltersModal({ isOpen, onClose, filters, onApplyFilters }: Filte
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-brand-pink" />
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Filter className="h-4 w-4 text-brand-pink" />
             Filter Streams
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Apply filters to find specific streams
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Status Filter */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Status</Label>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Status</Label>
+            <div className="grid grid-cols-2 gap-1.5">
               {statusOptions.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
+                <div key={option.value} className="flex items-center space-x-1.5">
                   <Checkbox
                     id={option.value}
                     checked={localFilters.status.includes(option.value)}
                     onCheckedChange={(checked) => 
                       handleStatusToggle(option.value, checked as boolean)
                     }
+                    className="h-3.5 w-3.5"
                   />
                   <Label 
                     htmlFor={option.value}
-                    className="text-sm flex items-center gap-2 cursor-pointer"
+                    className="text-xs flex items-center gap-1.5 cursor-pointer"
                   >
-                    <div className={`w-2 h-2 rounded-full ${option.color}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${option.color}`} />
                     {option.label}
                   </Label>
                 </div>
@@ -157,25 +158,25 @@ export function FiltersModal({ isOpen, onClose, filters, onApplyFilters }: Filte
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-1.5" />
 
           {/* Date Range Filter */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Date Range</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">From</Label>
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Date Range</Label>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground">From</Label>
                 <Popover open={datePickerOpen === 'from'} onOpenChange={(open) => setDatePickerOpen(open ? 'from' : null)}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
-                      className="w-full justify-start text-left font-normal"
+                      className="w-full justify-start text-left font-normal h-8 text-xs"
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-1 h-3 w-3" />
                       {localFilters.dateRange.from ? (
-                        format(localFilters.dateRange.from, "MMM dd, yyyy")
+                        format(localFilters.dateRange.from, "MMM dd, yy")
                       ) : (
-                        <span>Pick a date</span>
+                        <span className="text-[11px]">Pick date</span>
                       )}
                     </Button>
                   </PopoverTrigger>
@@ -190,19 +191,19 @@ export function FiltersModal({ isOpen, onClose, filters, onApplyFilters }: Filte
                 </Popover>
               </div>
               
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">To</Label>
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground">To</Label>
                 <Popover open={datePickerOpen === 'to'} onOpenChange={(open) => setDatePickerOpen(open ? 'to' : null)}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
-                      className="w-full justify-start text-left font-normal"
+                      className="w-full justify-start text-left font-normal h-8 text-xs"
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-1 h-3 w-3" />
                       {localFilters.dateRange.to ? (
-                        format(localFilters.dateRange.to, "MMM dd, yyyy")
+                        format(localFilters.dateRange.to, "MMM dd, yy")
                       ) : (
-                        <span>Pick a date</span>
+                        <span className="text-[11px]">Pick date</span>
                       )}
                     </Button>
                   </PopoverTrigger>
@@ -219,41 +220,43 @@ export function FiltersModal({ isOpen, onClose, filters, onApplyFilters }: Filte
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-1.5" />
 
           {/* Amount Range Filter */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Amount Range (sBTC)</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Min</Label>
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Amount Range (sBTC)</Label>
+            <div className="grid grid-cols-2 gap-1.5">
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground">Min</Label>
                 <Input
                   type="number"
                   step="0.00000001"
                   placeholder="0.00000000"
                   value={localFilters.amountRange.min}
                   onChange={(e) => handleAmountChange(e.target.value, 'min')}
+                  className="h-8 text-xs"
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Max</Label>
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground">Max</Label>
                 <Input
                   type="number"
                   step="0.00000001"
                   placeholder="0.00000000"
                   value={localFilters.amountRange.max}
                   onChange={(e) => handleAmountChange(e.target.value, 'max')}
+                  className="h-8 text-xs"
                 />
               </div>
             </div>
           </div>
 
-          <Separator />
+          <Separator className="my-1.5" />
 
           {/* Recipient Filter */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Recipients</Label>
-            <div className="space-y-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Recipients</Label>
+            <div className="space-y-1.5">
               <Input
                 placeholder="Enter wallet address or name"
                 onKeyDown={(e) => {
@@ -262,23 +265,24 @@ export function FiltersModal({ isOpen, onClose, filters, onApplyFilters }: Filte
                     e.currentTarget.value = '';
                   }
                 }}
+                className="h-8 text-xs"
               />
               {localFilters.recipients.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-0.5">
                   {localFilters.recipients.map((recipient, index) => (
                     <Badge 
                       key={index}
                       variant="secondary" 
-                      className="flex items-center gap-1"
+                      className="flex items-center gap-0.5 h-5 text-[10px] px-1.5"
                     >
                       {recipient.length > 20 ? `${recipient.slice(0, 8)}...${recipient.slice(-8)}` : recipient}
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeRecipientFilter(recipient)}
-                        className="h-4 w-4 p-0 hover:bg-transparent"
+                        className="h-3 w-3 p-0 hover:bg-transparent"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-2.5 w-2.5" />
                       </Button>
                     </Badge>
                   ))}
@@ -292,21 +296,21 @@ export function FiltersModal({ isOpen, onClose, filters, onApplyFilters }: Filte
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3 bg-brand-pink/10 rounded-lg border border-brand-pink/20"
+              className="p-2.5 bg-brand-pink/10 rounded-lg border border-brand-pink/20"
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-brand-pink">Active Filters</span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-brand-pink">Active Filters</span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={resetFilters}
-                  className="h-6 px-2 text-xs"
+                  className="h-5 px-1.5 text-[10px]"
                 >
-                  <RotateCcw className="h-3 w-3 mr-1" />
+                  <RotateCcw className="h-2.5 w-2.5 mr-0.5" />
                   Reset
                 </Button>
               </div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-[10px] text-muted-foreground">
                 {localFilters.status.length > 0 && `${localFilters.status.length} status(es), `}
                 {(localFilters.dateRange.from || localFilters.dateRange.to) && "date range, "}
                 {(localFilters.amountRange.min || localFilters.amountRange.max) && "amount range, "}
@@ -316,11 +320,11 @@ export function FiltersModal({ isOpen, onClose, filters, onApplyFilters }: Filte
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+          <div className="flex gap-2 pt-2 border-t">
+            <Button variant="outline" onClick={onClose} className="flex-1 h-8 text-xs">
               Cancel
             </Button>
-            <Button onClick={applyFilters} className="flex-1 bg-brand-pink hover:bg-brand-pink/90 text-white">
+            <Button onClick={applyFilters} className="flex-1 bg-brand-pink hover:bg-brand-pink/90 text-white h-8 text-xs">
               Apply Filters
             </Button>
           </div>

@@ -100,41 +100,41 @@ export function AuthorizeContractModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[85vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-brand-teal" />
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0 pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Shield className="h-4 w-4 text-brand-teal" />
             Authorize Contract
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Grant vault access permissions to a contract
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 py-2 overflow-y-auto flex-1">
+        <div className="space-y-2.5 py-2 overflow-y-auto flex-1">
           {/* Currently Authorized Contracts */}
-          <div className="bg-muted/50 border rounded-lg p-3">
-            <p className="text-sm font-medium mb-1.5">Currently Authorized</p>
-            <div className="space-y-1 max-h-24 overflow-y-auto">
+          <div className="bg-muted/50 border rounded-lg p-2.5">
+            <p className="text-xs font-medium mb-1">Currently Authorized</p>
+            <div className="space-y-0.5 max-h-20 overflow-y-auto">
               {currentAuthorizedContracts.length > 0 ? (
                 currentAuthorizedContracts.map((contract) => (
                   <div
                     key={contract}
-                    className="flex items-center gap-2 text-xs font-mono bg-background p-1.5 rounded"
+                    className="flex items-center gap-1.5 text-[10px] font-mono bg-background p-1 rounded"
                   >
-                    <Shield className="h-3 w-3 text-brand-teal" />
+                    <Shield className="h-2.5 w-2.5 text-brand-teal flex-shrink-0" />
                     <span className="text-muted-foreground truncate">{contract}</span>
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-muted-foreground">No contracts authorized yet</p>
+                <p className="text-[10px] text-muted-foreground">No contracts authorized yet</p>
               )}
             </div>
           </div>
 
           {/* Contract Address Input */}
-          <div className="space-y-1.5">
-            <Label htmlFor="contract-address" className="text-sm">Contract Address</Label>
+          <div className="space-y-1">
+            <Label htmlFor="contract-address" className="text-xs">Contract Address</Label>
             <Input
               id="contract-address"
               type="text"
@@ -144,31 +144,31 @@ export function AuthorizeContractModal({
                 setContractAddress(e.target.value);
                 setError("");
               }}
-              className={`font-mono text-xs ${error ? "border-red-500" : ""}`}
+              className={`font-mono text-xs h-8 ${error ? "border-red-500" : ""}`}
             />
-            {error && <p className="text-xs text-red-500">{error}</p>}
-            <p className="text-xs text-muted-foreground">
+            {error && <p className="text-[10px] text-red-500">{error}</p>}
+            <p className="text-[10px] text-muted-foreground">
               Format: address.contract-name
             </p>
           </div>
 
-          {/* Warning Alert - Compact */}
-          <Alert className="border-yellow-500/50 bg-yellow-500/5 py-2">
-            <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />
-            <AlertDescription className="text-xs text-yellow-800">
+          {/* Warning Alert */}
+          <Alert className="border-yellow-500/50 bg-yellow-500/5 py-1.5">
+            <AlertTriangle className="h-3 w-3 text-yellow-600" />
+            <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-200">
               <p className="font-medium">Security Warning</p>
-              <p className="mt-0.5">
-                Authorized contracts can call <code className="text-xs">transfer-from-vault</code>. Only authorize trusted contracts.
+              <p className="mt-0.5 text-[11px]">
+                Authorized contracts can call <code className="text-[10px]">transfer-from-vault</code>. Only authorize trusted contracts.
               </p>
             </AlertDescription>
           </Alert>
 
-          {/* Info Alert - Compact */}
-          <Alert className="py-2">
-            <Info className="h-3.5 w-3.5 text-brand-teal" />
+          {/* Info Alert */}
+          <Alert className="py-1.5">
+            <Info className="h-3 w-3 text-brand-teal" />
             <AlertDescription className="text-xs">
               <p className="font-medium">Process</p>
-              <ol className="text-xs space-y-0.5 ml-3 list-decimal mt-0.5">
+              <ol className="text-[11px] space-y-0 ml-3 list-decimal mt-0.5">
                 <li>Added to access control whitelist</li>
                 <li>Can immediately call vault functions</li>
                 <li>Revocable anytime from Access Control</li>
@@ -177,24 +177,24 @@ export function AuthorizeContractModal({
           </Alert>
         </div>
 
-        <DialogFooter className="flex-shrink-0">
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+        <DialogFooter className="flex-shrink-0 pt-2">
+          <Button variant="outline" onClick={handleClose} disabled={isLoading} className="h-8 text-xs">
             Cancel
           </Button>
           <Button
             onClick={handleAuthorize}
             disabled={isLoading || !contractAddress}
-            className="bg-brand-teal hover:bg-brand-teal/90"
+            className="bg-brand-teal hover:bg-brand-teal/90 h-8 text-xs"
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                 Authorizing...
               </>
             ) : (
               <>
-                <Shield className="h-4 w-4 mr-2" />
-                Authorize
+                <Shield className="h-3 w-3 mr-1.5" />
+                Authorize Contract
               </>
             )}
           </Button>

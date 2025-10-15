@@ -195,6 +195,10 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
       return;
     }
 
+    console.log('🔍 Fetching streams for user:', userAddress);
+    console.log('📤 Sender stream IDs:', senderStreamIds);
+    console.log('📥 Recipient stream IDs:', recipientStreamIds);
+
     const allStreamIds = [
       ...(senderStreamIds || []),
       ...(recipientStreamIds || []),

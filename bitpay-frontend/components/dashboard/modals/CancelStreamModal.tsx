@@ -86,46 +86,45 @@ export function CancelStreamModal({ isOpen, onClose, stream, onSuccess }: Cancel
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <X className="h-5 w-5 text-red-500" />
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <X className="h-4 w-4 text-red-500" />
             Cancel Stream
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Permanently cancel this payment stream
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Danger Warning */}
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <p className="font-medium mb-1">⚠️ This action cannot be undone</p>
-              <p className="text-sm">The stream will be permanently cancelled and cannot be resumed.</p>
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-3 w-3" />
+            <AlertDescription className="text-xs">
+              <span className="font-medium">⚠️ This action cannot be undone.</span> The stream will be permanently cancelled.
             </AlertDescription>
           </Alert>
 
           {/* Stream Info */}
-          <div className="p-4 border rounded-lg bg-muted/30 space-y-3">
+          <div className="p-3 border rounded-lg bg-muted/30 space-y-2">
             <div>
-              <p className="font-medium">{stream.description}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="font-medium text-sm">{stream.description}</p>
+              <p className="text-xs text-muted-foreground">
                 To: {stream.recipientName || `${stream.recipient.slice(0, 8)}...${stream.recipient.slice(-8)}`}
               </p>
             </div>
 
-            <div className="space-y-2 text-sm">
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Stream Amount:</span>
+                <span className="text-muted-foreground">Total Amount:</span>
                 <span className="font-medium">{totalAmount.toFixed(8)} sBTC</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Already Vested:</span>
                 <span className="font-medium text-brand-teal">{vestedAmount.toFixed(8)} sBTC</span>
               </div>
-              <div className="h-px bg-border my-2" />
+              <div className="h-px bg-border my-1" />
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Unvested Amount:</span>
                 <span className="font-medium">{unvestedAmount.toFixed(8)} sBTC</span>
@@ -134,74 +133,70 @@ export function CancelStreamModal({ isOpen, onClose, stream, onSuccess }: Cancel
                 <span>Cancellation Fee (1%):</span>
                 <span className="font-medium">-{cancellationFee.toFixed(8)} sBTC</span>
               </div>
-              <div className="h-px bg-border my-2" />
-              <div className="flex justify-between text-lg font-bold">
+              <div className="h-px bg-border my-1" />
+              <div className="flex justify-between font-bold">
                 <span>You'll Receive:</span>
                 <span className="text-brand-pink">{unvestedAfterFee.toFixed(8)} sBTC</span>
               </div>
             </div>
           </div>
 
-          {/* Fee Info Alert */}
-          <Alert>
-            <Info className="h-4 w-4 text-brand-teal" />
-            <AlertDescription className="text-sm">
-              <p className="mb-1">
-                <strong>Cancellation Fee:</strong> A 1% fee is charged on the unvested amount to discourage frivolous cancellations. This fee is sent to the treasury.
-              </p>
-              <p className="text-muted-foreground">
-                The recipient keeps the {vestedAmount.toFixed(8)} sBTC already vested.
-              </p>
+          {/* Fee Info Alert - Compact */}
+          <Alert className="py-2">
+            <Info className="h-3 w-3 text-brand-teal" />
+            <AlertDescription className="text-xs">
+              1% fee on unvested amount goes to treasury. Recipient keeps {vestedAmount.toFixed(8)} sBTC already vested.
             </AlertDescription>
           </Alert>
 
           {/* Confirmation */}
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="confirm">Type "cancel stream" to confirm:</Label>
+          <div className="space-y-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm" className="text-xs">Type "cancel stream" to confirm:</Label>
               <Input
                 id="confirm"
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
                 placeholder="cancel stream"
                 disabled={isLoading}
-                className="font-mono"
+                className="font-mono h-8 text-sm"
               />
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-start space-x-2">
               <Checkbox
                 id="understood"
                 checked={understood}
                 onCheckedChange={(checked) => setUnderstood(checked as boolean)}
                 disabled={isLoading}
+                className="mt-0.5"
               />
-              <Label htmlFor="understood" className="text-sm cursor-pointer">
+              <Label htmlFor="understood" className="text-xs cursor-pointer leading-tight">
                 I understand this action cannot be undone and accept the 1% fee
               </Label>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={handleClose} className="flex-1" disabled={isLoading}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={handleClose} className="flex-1 h-9 text-sm" disabled={isLoading}>
+              <ArrowLeft className="h-3 w-3 mr-1.5" />
               Keep Stream
             </Button>
             <Button
               onClick={handleCancel}
               disabled={!isConfirmValid || isLoading}
               variant="destructive"
-              className="flex-1"
+              className="flex-1 h-9 text-sm"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                   Cancelling...
                 </>
               ) : (
                 <>
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="h-3 w-3 mr-1.5" />
                   Cancel Stream
                 </>
               )}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import walletService from "@/lib/wallet/wallet-service";
+import { useAuth } from "@/hooks/use-auth";
 import { useUserStreams } from "@/hooks/use-bitpay-read";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { useWithdrawFromStream, useCancelStream } from "@/hooks/use-bitpay-write";
@@ -16,20 +16,15 @@ import { EmptyStreamState } from "@/components/dashboard/streams/list/EmptyStrea
 export default function StreamsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [userAddress, setUserAddress] = useState<string | null>(null);
+
+  // Get user address from authenticated session instead of wallet
+  const { user } = useAuth();
+  const userAddress = user?.walletAddress || null;
 
   const { blockHeight } = useBlockHeight(30000);
   const { data: streams, isLoading, refetch } = useUserStreams(userAddress);
   const { write: withdraw, isLoading: isWithdrawing } = useWithdrawFromStream();
   const { write: cancel, isLoading: isCancelling } = useCancelStream();
-
-  useEffect(() => {
-    const loadWallet = async () => {
-      const address = await walletService.getCurrentAddress();
-      setUserAddress(address);
-    };
-    loadWallet();
-  }, []);
 
   // Auto-refresh streams every 30 seconds to catch newly confirmed transactions
   useEffect(() => {

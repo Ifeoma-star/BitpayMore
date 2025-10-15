@@ -102,39 +102,39 @@ export function ProposeAdminModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Propose Admin Change</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-lg">Propose Admin Change</DialogTitle>
+          <DialogDescription className="text-xs">
             Create a multi-sig proposal to add or remove an admin
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "add" | "remove")}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="add" className="gap-2">
-              <UserPlus className="h-4 w-4" />
+          <TabsList className="grid w-full grid-cols-2 h-8">
+            <TabsTrigger value="add" className="gap-1.5 text-xs">
+              <UserPlus className="h-3 w-3" />
               Add Admin
             </TabsTrigger>
-            <TabsTrigger value="remove" className="gap-2">
-              <UserMinus className="h-4 w-4" />
+            <TabsTrigger value="remove" className="gap-1.5 text-xs">
+              <UserMinus className="h-3 w-3" />
               Remove Admin
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="add" className="space-y-4 mt-4">
+          <TabsContent value="add" className="space-y-3 mt-3">
             {/* Current Status */}
-            <div className="bg-brand-teal/5 border border-brand-teal/20 rounded-lg p-3">
-              <p className="text-sm text-muted-foreground">Current Admins</p>
-              <p className="text-2xl font-bold text-brand-teal">{currentAdminCount}/5</p>
-              <p className="text-xs text-muted-foreground mt-1">
+            <div className="bg-brand-teal/5 border border-brand-teal/20 rounded-lg p-2.5">
+              <p className="text-xs text-muted-foreground">Current Admins</p>
+              <p className="text-xl font-bold text-brand-teal">{currentAdminCount}/5</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
                 {5 - currentAdminCount} slot{5 - currentAdminCount !== 1 ? 's' : ''} available
               </p>
             </div>
 
             {/* Address Input */}
-            <div className="space-y-2">
-              <Label htmlFor="add-address">Admin Address</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="add-address" className="text-xs">Admin Address</Label>
               <Input
                 id="add-address"
                 placeholder="SP... or ST..."
@@ -143,48 +143,48 @@ export function ProposeAdminModal({
                   setAddress(e.target.value);
                   setError("");
                 }}
-                className={error ? "border-red-500" : ""}
+                className={`h-8 text-xs ${error ? "border-red-500" : ""}`}
               />
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && <p className="text-[11px] text-red-500">{error}</p>}
             </div>
 
             {/* Info Alert */}
-            <Alert>
-              <Info className="h-4 w-4 text-brand-teal" />
-              <AlertDescription className="text-sm">
-                <p className="font-medium mb-1">Multi-Sig Process</p>
-                <ol className="text-sm space-y-1 ml-4 list-decimal">
+            <Alert className="py-2">
+              <Info className="h-3 w-3 text-brand-teal" />
+              <AlertDescription className="text-xs">
+                <p className="font-medium mb-0.5">Multi-Sig Process</p>
+                <ol className="text-[11px] space-y-0 ml-3 list-decimal">
                   <li>Create proposal to add admin</li>
-                  <li>Requires {3} admin approvals</li>
+                  <li>Requires 3 admin approvals</li>
                   <li>Execute after approval threshold met</li>
                 </ol>
               </AlertDescription>
             </Alert>
           </TabsContent>
 
-          <TabsContent value="remove" className="space-y-4 mt-4">
+          <TabsContent value="remove" className="space-y-3 mt-3">
             {/* Warning for low admin count */}
             {currentAdminCount <= 1 && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
+              <Alert variant="destructive" className="py-2">
+                <AlertTriangle className="h-3 w-3" />
+                <AlertDescription className="text-xs">
                   Cannot remove admin. At least one admin must remain in the system.
                 </AlertDescription>
               </Alert>
             )}
 
             {/* Current Status */}
-            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-              <p className="text-sm text-muted-foreground">Current Admins</p>
-              <p className="text-2xl font-bold text-red-600">{currentAdminCount}/5</p>
-              <p className="text-xs text-muted-foreground mt-1">
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-2.5">
+              <p className="text-xs text-muted-foreground">Current Admins</p>
+              <p className="text-xl font-bold text-red-600">{currentAdminCount}/5</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
                 {currentAdminCount > 1 ? 'Can remove admins' : 'Must keep at least 1 admin'}
               </p>
             </div>
 
             {/* Address Input */}
-            <div className="space-y-2">
-              <Label htmlFor="remove-address">Admin Address to Remove</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="remove-address" className="text-xs">Admin Address to Remove</Label>
               <Input
                 id="remove-address"
                 placeholder="SP... or ST..."
@@ -194,49 +194,48 @@ export function ProposeAdminModal({
                   setError("");
                 }}
                 disabled={currentAdminCount <= 1}
-                className={error ? "border-red-500" : ""}
+                className={`h-8 text-xs ${error ? "border-red-500" : ""}`}
               />
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && <p className="text-[11px] text-red-500">{error}</p>}
             </div>
 
             {/* Warning Alert */}
-            <Alert className="border-yellow-500/50 bg-yellow-500/5">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-sm text-yellow-800 dark:text-yellow-200">
-                <p className="font-medium mb-1">⚠️ Important</p>
-                <p>
-                  Removing an admin revokes their treasury access. This action requires {3}{" "}
-                  admin approvals and cannot be reversed easily.
+            <Alert className="border-yellow-500/50 bg-yellow-500/5 py-2">
+              <AlertTriangle className="h-3 w-3 text-yellow-600" />
+              <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-200">
+                <p className="font-medium mb-0.5">⚠️ Important</p>
+                <p className="text-[11px]">
+                  Removing an admin revokes their treasury access. This action requires 3 admin approvals and cannot be reversed easily.
                 </p>
               </AlertDescription>
             </Alert>
           </TabsContent>
         </Tabs>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+        <DialogFooter className="pt-2">
+          <Button variant="outline" onClick={handleClose} disabled={isLoading} className="h-8 text-xs">
             Cancel
           </Button>
           <Button
             onClick={handlePropose}
             disabled={isLoading || !address || (activeTab === "remove" && currentAdminCount <= 1)}
-            className={
+            className={`h-8 text-xs ${
               activeTab === "add"
                 ? "bg-brand-teal hover:bg-brand-teal/90"
                 : "bg-red-600 hover:bg-red-700"
-            }
+            }`}
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating Proposal...
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                Creating...
               </>
             ) : (
               <>
                 {activeTab === "add" ? (
-                  <UserPlus className="h-4 w-4 mr-2" />
+                  <UserPlus className="h-3 w-3 mr-1.5" />
                 ) : (
-                  <UserMinus className="h-4 w-4 mr-2" />
+                  <UserMinus className="h-3 w-3 mr-1.5" />
                 )}
                 Create Proposal
               </>

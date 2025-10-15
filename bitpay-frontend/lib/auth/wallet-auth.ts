@@ -61,8 +61,9 @@ function convertSignatureFormat(signature: string): string[] {
 
 /**
  * Verify wallet signature - production approach with address verification
+ * Returns both verification result and the correct network address
  */
-export function verifyWalletSignature(data: WalletAuthData): boolean {
+export function verifyWalletSignature(data: WalletAuthData): { isValid: boolean; networkAddress: string } {
   try {
     console.log('🔍 Verifying wallet signature...');
     console.log('📝 Message:', data.message);
@@ -75,29 +76,35 @@ export function verifyWalletSignature(data: WalletAuthData): boolean {
       // Try both mainnet and testnet address versions
       const mainnetAddress = publicKeyToAddress(AddressVersion.MainnetSingleSig, data.publicKey);
       const testnetAddress = publicKeyToAddress(AddressVersion.TestnetSingleSig, data.publicKey);
-      
+
       console.log('🔗 Derived mainnet address:', mainnetAddress);
       console.log('🔗 Derived testnet address:', testnetAddress);
-      
+
       if (data.address !== mainnetAddress && data.address !== testnetAddress) {
         console.log('❌ Address does not match derived addresses');
-        return false;
+        return { isValid: false, networkAddress: data.address };
       }
-      
+
       console.log('✅ Address verification passed');
+
+      // Determine which network we're on based on env variable
+      const network = process.env.NEXT_PUBLIC_STACKS_NETWORK || 'testnet';
+      const networkAddress = network === 'mainnet' ? mainnetAddress : testnetAddress;
+
+      console.log(`🌐 Using ${network} address:`, networkAddress);
+
+      // Address verification passed - this is sufficient for production
+      // The wallet has already verified the signature before signing
+      console.log('✅ Signature verification passed (address-based verification)');
+      return { isValid: true, networkAddress };
     } catch (addressError) {
       console.log('❌ Address verification failed:', addressError);
-      return false;
+      return { isValid: false, networkAddress: data.address };
     }
-
-    // Address verification passed - this is sufficient for production
-    // The wallet has already verified the signature before signing
-    console.log('✅ Signature verification passed (address-based verification)');
-    return true;
 
   } catch (error) {
     console.error('❌ Signature verification failed:', error);
-    return false;
+    return { isValid: false, networkAddress: data.address };
   }
 }
 

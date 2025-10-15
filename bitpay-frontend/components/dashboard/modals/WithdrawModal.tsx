@@ -77,26 +77,26 @@ export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawMo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-brand-teal" />
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Wallet className="h-4 w-4 text-brand-teal" />
             Withdraw from Stream
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Withdraw vested Bitcoin from your payment stream
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Stream Info */}
-          <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+          <div className="p-3 bg-muted/50 rounded-lg space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium">{stream.description}</h4>
-              <Badge className="bg-brand-teal text-white">Active</Badge>
+              <h4 className="font-medium text-sm">{stream.description}</h4>
+              <Badge className="bg-brand-teal text-white text-xs">Active</Badge>
             </div>
             
-            <div className="text-sm text-muted-foreground space-y-1">
+            <div className="text-xs text-muted-foreground space-y-1">
               <div className="flex justify-between">
                 <span>Recipient:</span>
                 <span className="font-mono">{formatAddress(stream.recipient)}</span>
@@ -115,21 +115,21 @@ export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawMo
               </div>
             </div>
             
-            <Separator />
+            <Separator className="my-1.5" />
             
             <div className="flex justify-between items-center">
-              <span className="font-medium">Available to Withdraw:</span>
+              <span className="font-medium text-xs">Available to Withdraw:</span>
               <div className="flex items-center gap-1">
-                <Bitcoin className="h-4 w-4 text-brand-teal" />
-                <span className="font-bold text-brand-teal">{maxWithdraw} sBTC</span>
+                <Bitcoin className="h-3 w-3 text-brand-teal" />
+                <span className="font-bold text-brand-teal text-sm">{maxWithdraw} sBTC</span>
               </div>
             </div>
           </div>
 
           {/* Withdrawal Form */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Withdrawal Amount</Label>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="amount" className="text-xs">Withdrawal Amount</Label>
               <div className="relative">
                 <Input
                   id="amount"
@@ -139,10 +139,10 @@ export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawMo
                   placeholder="0.00000000"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  className="pr-20"
+                  className="pr-20 h-9 text-sm"
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">sBTC</span>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">sBTC</span>
                   <Button
                     type="button"
                     variant="ghost"
@@ -157,33 +157,33 @@ export function WithdrawModal({ isOpen, onClose, stream, onSuccess }: WithdrawMo
             </div>
 
             {/* Warning */}
-            <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                <p className="font-medium mb-1">Transaction Fee Notice</p>
-                <p>A small network fee will be deducted from your withdrawal amount.</p>
+            <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <AlertCircle className="h-3 w-3 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-yellow-800 dark:text-yellow-200">
+                <p className="font-medium">Transaction Fee Notice</p>
+                <p className="text-[11px] mt-0.5">A small network fee will be deducted from your withdrawal.</p>
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={onClose} className="flex-1 h-9 text-sm">
               Cancel
             </Button>
             <Button 
               onClick={handleWithdraw} 
               disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || isLoading}
-              className="flex-1 bg-brand-teal hover:bg-brand-teal/90 text-white"
+              className="flex-1 h-9 text-sm bg-brand-teal hover:bg-brand-teal/90 text-white"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                   Processing...
                 </>
               ) : (
                 <>
-                  <Wallet className="h-4 w-4 mr-2" />
+                  <Wallet className="h-3 w-3 mr-1.5" />
                   Withdraw
                 </>
               )}

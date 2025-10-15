@@ -66,30 +66,30 @@ export function AcceptAdminTransferModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-brand-teal" />
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <CheckCircle className="h-4 w-4 text-brand-teal" />
             Accept Admin Transfer
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs">
             Complete the admin transfer and take control of the treasury
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-3 py-2">
           {/* Current Admin Info */}
-          <div className="p-3 border rounded-lg bg-muted/30">
-            <Label className="text-xs text-muted-foreground">Transferring From</Label>
-            <p className="font-mono text-sm mt-1">{currentAdmin}</p>
+          <div className="p-2.5 border rounded-lg bg-muted/30">
+            <Label className="text-[10px] text-muted-foreground">Transferring From</Label>
+            <p className="font-mono text-xs mt-0.5">{currentAdmin}</p>
           </div>
 
           {/* Responsibilities Alert */}
-          <Alert>
-            <Shield className="h-4 w-4 text-brand-teal" />
+          <Alert className="py-2">
+            <Shield className="h-3 w-3 text-brand-teal" />
             <AlertDescription>
-              <p className="font-medium mb-2">Admin Responsibilities</p>
-              <ul className="text-sm space-y-1 ml-4 list-disc">
+              <p className="font-medium mb-1 text-xs">Admin Responsibilities</p>
+              <ul className="text-[11px] space-y-0 ml-3 list-disc">
                 <li>Manage treasury funds and collected fees</li>
                 <li>Authorize and revoke contract access to vault</li>
                 <li>Withdraw collected cancellation fees</li>
@@ -99,16 +99,16 @@ export function AcceptAdminTransferModal({
           </Alert>
 
           {/* Warning */}
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-sm">
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-3 w-3" />
+            <AlertDescription className="text-xs">
               <p className="font-medium">Important:</p>
-              <p>By accepting, you will immediately become the treasury admin. Make sure you understand the responsibilities and have secure key management.</p>
+              <p className="text-[11px]">By accepting, you will immediately become the treasury admin. Make sure you understand the responsibilities and have secure key management.</p>
             </AlertDescription>
           </Alert>
 
           {/* Confirmation Checkbox */}
-          <div className="flex items-start space-x-2 p-3 border rounded-lg">
+          <div className="flex items-start space-x-2 p-2.5 border rounded-lg">
             <Checkbox
               id="understand"
               checked={understood}
@@ -117,15 +117,16 @@ export function AcceptAdminTransferModal({
                 setError("");
               }}
               disabled={isAccepting}
+              className="mt-0.5"
             />
-            <div className="grid gap-1.5 leading-none">
+            <div className="grid gap-0.5 leading-none">
               <Label
                 htmlFor="understand"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                className="text-xs font-medium leading-snug peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
               >
                 I understand the admin responsibilities
               </Label>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground">
                 I have read and understand my duties as treasury admin
               </p>
             </div>
@@ -133,34 +134,35 @@ export function AcceptAdminTransferModal({
 
           {/* Error Message */}
           {error && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="py-2">
+              <AlertTriangle className="h-3 w-3" />
+              <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="pt-2">
           <Button
             variant="outline"
             onClick={onClose}
             disabled={isAccepting}
+            className="h-8 text-xs"
           >
             Decline
           </Button>
           <Button
             onClick={handleAccept}
             disabled={isAccepting || !understood}
-            className="bg-brand-teal hover:bg-brand-teal/90 text-white"
+            className="bg-brand-teal hover:bg-brand-teal/90 text-white h-8 text-xs"
           >
             {isAccepting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                 Accepting...
               </>
             ) : (
               <>
-                <CheckCircle className="mr-2 h-4 w-4" />
+                <CheckCircle className="mr-1.5 h-3 w-3" />
                 Accept Transfer
               </>
             )}
