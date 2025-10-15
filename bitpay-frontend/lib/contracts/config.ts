@@ -54,6 +54,7 @@ export const CORE_FUNCTIONS = {
   WITHDRAW_FROM_STREAM: 'withdraw-from-stream',
   WITHDRAW_PARTIAL: 'withdraw-partial',
   CANCEL_STREAM: 'cancel-stream',
+  UPDATE_STREAM_SENDER: 'update-stream-sender',
 
   // Read functions
   GET_STREAM: 'get-stream',

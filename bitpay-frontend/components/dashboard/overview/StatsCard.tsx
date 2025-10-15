@@ -17,18 +17,19 @@ export function StatsCard({ title, value, subtitle, icon: Icon, color, bgColor, 
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, delay: index * 0.05 }}
+      transition={{ duration: 0.3, delay: index * 0.08 }}
+      className="h-full"
     >
-      <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <p className="text-xs text-muted-foreground mb-1">{title}</p>
-              <p className="text-xl font-bold mb-1">{value}</p>
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
+      <Card className="h-full border-border/60 bg-card hover:border-border transition-all duration-300 hover:shadow-lg hover:shadow-black/20">
+        <CardContent className="px-3.5 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{title}</p>
+              <p className="text-xl font-bold text-foreground mb-0.5 truncate leading-none">{value}</p>
+              <p className="text-xs text-muted-foreground/70">{subtitle}</p>
             </div>
-            <div className={`p-2 rounded-lg ${bgColor}`}>
-              <Icon className={`h-5 w-5 ${color}`} />
+            <div className={`p-2.5 rounded-lg ${bgColor} border border-white/5 shrink-0`}>
+              <Icon className={`h-5 w-5 ${color}`} strokeWidth={2.5} />
             </div>
           </div>
         </CardContent>

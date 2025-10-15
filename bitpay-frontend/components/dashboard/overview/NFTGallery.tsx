@@ -1,23 +1,42 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { Image as ImageIcon } from "lucide-react";
+import { Shield } from "lucide-react";
 import Link from "next/link";
+import { RecipientNFTCard } from "@/components/dashboard/nfts/recipient/RecipientNFTCard";
+import { ObligationNFTCard } from "@/components/dashboard/nfts/obligation/ObligationNFTCard";
 
-interface NFT {
-  id: string;
-  type: 'Obligation' | 'Recipient';
-  streamId: string;
+interface Stream {
+  id: bigint;
+  sender: string;
+  recipient: string;
+  amount: bigint;
+  vestedAmount: bigint;
+  status: any;
 }
 
 interface NFTGalleryProps {
-  nfts: NFT[];
+  recipientStreams: Stream[];
+  obligationStreams: Stream[];
+  displayAmount: (amount: bigint) => string;
+  userAddress: string | null;
+  onTransfer?: (stream: Stream) => void;
+  onListMarketplace?: (stream: Stream) => void;
+  onCompleteTransfer?: (newOwner: string) => void;
 }
 
-export function NFTGallery({ nfts }: NFTGalleryProps) {
-  const displayNfts = nfts.slice(0, 4);
+export function NFTGallery({
+  recipientStreams,
+  obligationStreams,
+  displayAmount,
+  userAddress,
+  onTransfer,
+  onListMarketplace,
+  onCompleteTransfer
+}: NFTGalleryProps) {
+  // Show 3 obligation NFTs
+  const totalCount = recipientStreams.length + obligationStreams.length;
 
   return (
     <motion.div
@@ -25,42 +44,54 @@ export function NFTGallery({ nfts }: NFTGalleryProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.7 }}
     >
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+      <Card className="border-border/60 bg-card">
+        <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
           <CardTitle className="text-base">Your NFTs</CardTitle>
-          {nfts.length > 4 && (
-            <Link href="/dashboard/nfts" className="text-xs text-muted-foreground hover:underline">
-              View All ({nfts.length})
+          {totalCount > 0 && (
+            <Link href="/dashboard/nfts" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              View All ({totalCount})
             </Link>
           )}
         </CardHeader>
-        <CardContent>
-          {displayNfts.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {displayNfts.map((nft, index) => (
+        <CardContent className="px-4 pb-4">
+          {(recipientStreams.length > 0 || obligationStreams.length > 0) ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recipientStreams.slice(0, 3).map((stream, index) => (
                 <motion.div
-                  key={nft.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  key={`recipient-${stream.id.toString()}`}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 * index }}
-                  className="border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
                 >
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="p-3 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100">
-                      <ImageIcon className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <Badge variant={nft.type === 'Obligation' ? 'default' : 'secondary'} className="text-xs">
-                      {nft.type}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground">#{nft.streamId}</p>
-                  </div>
+                  <RecipientNFTCard
+                    stream={stream}
+                    displayAmount={displayAmount}
+                  />
+                </motion.div>
+              ))}
+              {obligationStreams.slice(0, 3).map((stream, index) => (
+                <motion.div
+                  key={`obligation-${stream.id.toString()}`}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 * (index + recipientStreams.slice(0, 2).length) }}
+                >
+                  <ObligationNFTCard
+                    stream={stream}
+                    displayAmount={displayAmount}
+                    onTransfer={() => onTransfer?.(stream)}
+                    onListMarketplace={() => onListMarketplace?.(stream)}
+                    userAddress={userAddress}
+                    onCompleteTransfer={onCompleteTransfer}
+                  />
                 </motion.div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-6 text-sm text-muted-foreground">
-              <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              No NFTs yet
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              <Shield className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No NFTs yet</p>
+              <p className="text-xs mt-1">Create a stream to mint your first NFT</p>
             </div>
           )}
         </CardContent>

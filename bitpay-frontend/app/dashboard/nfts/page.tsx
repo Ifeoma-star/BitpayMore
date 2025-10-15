@@ -8,6 +8,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
 import { microToDisplay } from "@/lib/contracts/config";
 import { TransferObligationNFTModal } from "@/components/dashboard/modals/TransferObligationNFTModal";
+import { ListObligationNFTModal } from "@/components/dashboard/modals/ListObligationNFTModal";
+import { useUpdateStreamSender } from "@/hooks/use-bitpay-write";
+import { toast } from "sonner";
 import { NFTGalleryHeader } from "@/components/dashboard/nfts/shared/NFTGalleryHeader";
 import { NFTSearch } from "@/components/dashboard/nfts/shared/NFTSearch";
 import { DualNFTExplanation } from "@/components/dashboard/nfts/shared/DualNFTExplanation";
@@ -20,10 +23,22 @@ import { EmptyObligationNFTs } from "@/components/dashboard/nfts/obligation/Empt
 export default function NFTGalleryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStreamForTransfer, setSelectedStreamForTransfer] = useState<any>(null);
+  const [selectedStreamForListing, setSelectedStreamForListing] = useState<any>(null);
 
   // Get user address from authenticated session instead of wallet
   const { user } = useAuth();
   const userAddress = user?.walletAddress || null;
+
+  // Helper to ensure BigInt
+  const toBigInt = (val: any): bigint => {
+    if (typeof val === 'bigint') return val;
+    if (typeof val === 'string') return BigInt(val);
+    if (typeof val === 'number') return BigInt(Math.floor(val));
+    if (typeof val === 'object' && val !== null && 'value' in val) {
+      return toBigInt(val.value);
+    }
+    return BigInt(0);
+  };
 
   const {
     outgoingStreams,
@@ -31,6 +46,43 @@ export default function NFTGalleryPage() {
     isLoading,
     refetch
   } = useUserStreamsByRole(userAddress);
+
+  const { write: updateStreamSender, isLoading: isUpdating } = useUpdateStreamSender();
+
+  const handleCompleteTransfer = async (streamId: string, newOwner: string) => {
+    try {
+      const txId = await updateStreamSender(Number(streamId), newOwner);
+
+      if (txId) {
+        const explorerUrl = `https://explorer.hiro.so/txid/${txId}?chain=testnet`;
+
+        toast.success("Transfer Completed!", {
+          description: (
+            <div className="space-y-2 mt-1">
+              <p className="text-sm">Stream sender updated successfully!</p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono block hover:underline"
+              >
+                {txId.substring(0, 20)}...
+              </a>
+            </div>
+          ),
+          duration: 15000,
+        });
+
+        // Refetch to update UI
+        refetch();
+      }
+    } catch (error: any) {
+      console.error("Error completing transfer:", error);
+      toast.error("Failed to complete transfer", {
+        description: error.message || "Please try again",
+      });
+    }
+  };
 
   // Filter by search
   const filteredRecipientNFTs = incomingStreams.filter((stream) =>
@@ -134,6 +186,9 @@ export default function NFTGalleryPage() {
                   stream={stream}
                   displayAmount={microToDisplay}
                   onTransfer={() => setSelectedStreamForTransfer(stream)}
+                  onListMarketplace={() => setSelectedStreamForListing(stream)}
+                  userAddress={userAddress}
+                  onCompleteTransfer={(newOwner) => handleCompleteTransfer(stream.id.toString(), newOwner)}
                 />
               ))}
             </div>
@@ -145,10 +200,10 @@ export default function NFTGalleryPage() {
         recipientCount={incomingStreams.length}
         obligationCount={outgoingStreams.length}
         totalReceived={microToDisplay(
-          incomingStreams.reduce((sum, s) => sum + s.vestedAmount, BigInt(0))
+          incomingStreams.reduce((sum, s) => sum + toBigInt(s.vestedAmount), BigInt(0))
         )}
         totalObligations={microToDisplay(
-          outgoingStreams.reduce((sum, s) => sum + s.amount, BigInt(0))
+          outgoingStreams.reduce((sum, s) => sum + toBigInt(s.amount), BigInt(0))
         )}
       />
 
@@ -158,8 +213,23 @@ export default function NFTGalleryPage() {
           isOpen={!!selectedStreamForTransfer}
           onClose={() => setSelectedStreamForTransfer(null)}
           streamId={selectedStreamForTransfer.id.toString()}
-          obligationTokenId={selectedStreamForTransfer.id.toString()} // TODO: Get actual obligation token ID
+          obligationTokenId={selectedStreamForTransfer.id.toString()}
           currentAmount={microToDisplay(selectedStreamForTransfer.amount)}
+          onSuccess={() => {
+            // Refetch streams after successful transfer
+            refetch();
+          }}
+        />
+      )}
+
+      {/* List Obligation NFT Modal */}
+      {selectedStreamForListing && (
+        <ListObligationNFTModal
+          isOpen={!!selectedStreamForListing}
+          onClose={() => setSelectedStreamForListing(null)}
+          streamId={selectedStreamForListing.id.toString()}
+          obligationTokenId={selectedStreamForListing.id.toString()}
+          currentAmount={microToDisplay(selectedStreamForListing.amount)}
         />
       )}
     </div>

@@ -137,7 +137,7 @@ export function StreamCard({
 
         {/* Actions */}
         <div className="flex gap-2 pt-2">
-          {isRecipient && stream.withdrawableAmount > BigInt(0) && !stream.cancelled && onWithdraw && (
+          {isRecipient && stream.withdrawableAmount > BigInt(0) && stream.status !== StreamStatus.CANCELLED && onWithdraw && (
             <Button
               onClick={() => onWithdraw(stream.id)}
               disabled={isWithdrawing}

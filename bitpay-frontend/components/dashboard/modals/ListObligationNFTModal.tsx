@@ -22,49 +22,39 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Tag, Info, Calculator, TrendingUp, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { microToDisplay } from "@/lib/contracts/config";
+import { microToDisplay, displayToMicro } from "@/lib/contracts/config";
+import { useListNFT } from "@/hooks/use-marketplace";
 
 interface ListObligationNFTModalProps {
   isOpen: boolean;
   onClose: () => void;
-  availableNFTs: any[];
+  streamId: string;
+  obligationTokenId: string;
+  currentAmount: string;
   onSuccess?: () => void;
 }
 
 export function ListObligationNFTModal({
   isOpen,
   onClose,
-  availableNFTs,
+  streamId,
+  obligationTokenId,
+  currentAmount,
   onSuccess,
 }: ListObligationNFTModalProps) {
-  const [selectedNFT, setSelectedNFT] = useState("");
   const [listingPrice, setListingPrice] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const { listNFT, isLoading, error: listError } = useListNFT();
 
-  // Get selected NFT details
-  const nft = availableNFTs.find((n) => n.id.toString() === selectedNFT);
-  const totalAmount = nft ? parseFloat(microToDisplay(nft.amount)) : 0;
-  const vestedAmount = nft ? parseFloat(microToDisplay(nft.vestedAmount)) : 0;
-  const remainingAmount = totalAmount - vestedAmount;
+  // Use the passed amount directly
+  const totalAmount = parseFloat(currentAmount) || 0;
   const price = parseFloat(listingPrice) || 0;
   const discount = totalAmount > 0 ? ((totalAmount - price) / totalAmount) * 100 : 0;
-  const immediateProceeds = price;
-
-  // Calculate approximate APR for buyer
-  const daysRemaining = nft ? Math.floor((Number(nft["end-block"]) - Number(nft["start-block"])) / 144) : 0;
-  const profit = totalAmount - price;
-  const apr = price > 0 && daysRemaining > 0 ? (profit / price) * (365 / daysRemaining) * 100 : 0;
 
   const handleList = async () => {
     setError("");
 
     // Validation
-    if (!selectedNFT) {
-      setError("Please select an obligation NFT");
-      return;
-    }
-
     if (!listingPrice || price <= 0) {
       setError("Please enter a valid listing price");
       return;
@@ -75,49 +65,62 @@ export function ListObligationNFTModal({
       return;
     }
 
-    if (price > remainingAmount) {
-      setError("Listing price cannot exceed the remaining unvested amount");
-      return;
-    }
-
     if (discount < 1) {
       setError("Minimum discount of 1% required to attract buyers");
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      // TODO: Call marketplace smart contract to list NFT
-      // marketplace.list-nft(stream-id, price)
       console.log("Listing NFT:", {
-        streamId: selectedNFT,
-        price: price * 1_000_000, // Convert to micro units
+        streamId: streamId,
+        obligationTokenId: obligationTokenId,
+        priceInsBTC: price,
         discount: discount.toFixed(2),
       });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Call marketplace contract to list NFT
+      // The price is in sBTC, convert to sats (micro units)
+      const priceInSats = BigInt(displayToMicro(price));
 
-      toast.success("NFT listed successfully!", {
-        description: `Your obligation NFT is now live on the marketplace`,
-      });
+      const txId = await listNFT(Number(streamId), priceInSats);
 
-      if (onSuccess) {
-        onSuccess();
+      if (txId) {
+        const explorerUrl = `https://explorer.hiro.so/txid/${txId}?chain=testnet`;
+
+        toast.success("NFT Listed Successfully!", {
+          description: (
+            <div className="space-y-2 mt-1">
+              <p className="text-sm">Your Obligation NFT is now live on the marketplace at {discount.toFixed(1)}% discount!</p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono block hover:underline"
+              >
+                {txId.substring(0, 20)}...
+              </a>
+            </div>
+          ),
+          duration: 15000,
+        });
+
+        console.log('✅ NFT listed on marketplace!');
+        console.log('📋 Transaction ID:', txId);
+        console.log('🔗 Explorer:', explorerUrl);
+
+        if (onSuccess) {
+          onSuccess();
+        }
+
+        handleClose();
       }
-
-      handleClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error listing NFT:", err);
-      setError("Failed to list NFT. Please try again.");
-    } finally {
-      setIsLoading(false);
+      setError(err.message || "Failed to list NFT. Please try again.");
     }
   };
 
   const handleClose = () => {
-    setSelectedNFT("");
     setListingPrice("");
     setError("");
     onClose();
@@ -125,10 +128,8 @@ export function ListObligationNFTModal({
 
   // Preset discount options
   const applyDiscount = (discountPercent: number) => {
-    if (nft) {
-      const discountedPrice = totalAmount * (1 - discountPercent / 100);
-      setListingPrice(discountedPrice.toFixed(8));
-    }
+    const discountedPrice = totalAmount * (1 - discountPercent / 100);
+    setListingPrice(discountedPrice.toFixed(8));
   };
 
   return (
@@ -157,50 +158,16 @@ export function ListObligationNFTModal({
             </AlertDescription>
           </Alert>
 
-          {/* Select NFT */}
-          <div className="space-y-1.5">
-            <Label htmlFor="nft-select" className="text-xs">Select Obligation NFT</Label>
-            <Select value={selectedNFT} onValueChange={setSelectedNFT}>
-              <SelectTrigger id="nft-select" className="h-8 text-xs">
-                <SelectValue placeholder="Choose an NFT to list..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableNFTs.length === 0 ? (
-                  <SelectItem value="none" disabled>
-                    No listable NFTs available
-                  </SelectItem>
-                ) : (
-                  availableNFTs.map((nft) => (
-                    <SelectItem key={nft.id.toString()} value={nft.id.toString()}>
-                      Stream #{nft.id.toString()} - {microToDisplay(nft.amount)} sBTC
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* NFT Details */}
-          {nft && (
-            <div className="p-3 bg-muted rounded-lg space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Amount:</span>
-                <span className="font-medium">{totalAmount.toFixed(8)} sBTC</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Already Vested:</span>
-                <span className="font-medium">{vestedAmount.toFixed(8)} sBTC</span>
-              </div>
-              <div className="flex justify-between border-t pt-1.5">
-                <span className="text-muted-foreground">Remaining:</span>
-                <span className="font-medium text-brand-pink">{remainingAmount.toFixed(8)} sBTC</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Duration:</span>
-                <span className="font-medium">~{daysRemaining} days</span>
-              </div>
+          <div className="p-3 bg-muted rounded-lg space-y-1.5 text-xs">
+            <div className="flex justify-between mb-2">
+              <span className="font-semibold">Obligation NFT #{streamId}</span>
             </div>
-          )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Amount:</span>
+              <span className="font-medium">{totalAmount.toFixed(8)} sBTC</span>
+            </div>
+          </div>
 
           {/* Listing Price */}
           <div className="space-y-1.5">
@@ -210,66 +177,63 @@ export function ListObligationNFTModal({
               type="number"
               step="0.00000001"
               min="0"
-              max={remainingAmount}
+              max={totalAmount}
               placeholder="0.00000000"
               value={listingPrice}
               onChange={(e) => {
                 setListingPrice(e.target.value);
                 setError("");
               }}
-              disabled={!selectedNFT}
               className={`h-8 text-xs ${error ? "border-red-500" : ""}`}
             />
             {error && <p className="text-[11px] text-red-500">{error}</p>}
           </div>
 
           {/* Quick Discount Buttons */}
-          {nft && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Quick Discount Presets</Label>
-              <div className="grid grid-cols-4 gap-1.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyDiscount(5)}
-                  className="text-[10px] h-7"
-                >
-                  5% Off
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyDiscount(10)}
-                  className="text-[10px] h-7"
-                >
-                  10% Off
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyDiscount(15)}
-                  className="text-[10px] h-7"
-                >
-                  15% Off
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyDiscount(20)}
-                  className="text-[10px] h-7"
-                >
-                  20% Off
-                </Button>
-              </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Quick Discount Presets</Label>
+            <div className="grid grid-cols-4 gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyDiscount(5)}
+                className="text-[10px] h-7"
+              >
+                5% Off
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyDiscount(10)}
+                className="text-[10px] h-7"
+              >
+                10% Off
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyDiscount(15)}
+                className="text-[10px] h-7"
+              >
+                15% Off
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyDiscount(20)}
+                className="text-[10px] h-7"
+              >
+                20% Off
+              </Button>
             </div>
-          )}
+          </div>
 
           {/* Calculation Preview */}
-          {nft && price > 0 && (
+          {price > 0 && (
             <div className="p-3 bg-brand-pink/5 border border-brand-pink/20 rounded-lg">
               <div className="flex items-center gap-1.5 mb-2">
                 <Calculator className="h-3 w-3 text-brand-pink" />
@@ -286,12 +250,12 @@ export function ListObligationNFTModal({
                   <span className="font-medium text-green-600">{discount.toFixed(2)}%</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Immediate Proceeds:</span>
-                  <span className="font-medium">{immediateProceeds.toFixed(8)} sBTC</span>
+                  <span className="text-muted-foreground">Total Stream Value:</span>
+                  <span className="font-medium">{totalAmount.toFixed(8)} sBTC</span>
                 </div>
-                <div className="flex justify-between pt-1.5 border-t">
-                  <span className="text-muted-foreground">Buyer's Potential APR:</span>
-                  <span className="font-medium text-green-600">{apr.toFixed(2)}%</span>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">You Receive:</span>
+                  <span className="font-medium">{price.toFixed(8)} sBTC</span>
                 </div>
               </div>
             </div>
@@ -314,7 +278,7 @@ export function ListObligationNFTModal({
           </Button>
           <Button
             onClick={handleList}
-            disabled={isLoading || !selectedNFT || !listingPrice || price <= 0}
+            disabled={isLoading || !listingPrice || price <= 0}
             className="bg-brand-pink hover:bg-brand-pink/90 h-8 text-xs"
           >
             {isLoading ? (

@@ -23,6 +23,20 @@ export function useUserStreamsByRole(userAddress: string | null) {
 
     const normalizedAddress = userAddress.toLowerCase();
 
+    console.log('🔍 Filtering streams for user:', userAddress);
+    console.log('📊 Total streams fetched:', allStreams.length);
+
+    // Debug: log all streams
+    allStreams.forEach((stream, index) => {
+      console.log(`Stream ${index + 1}:`, {
+        id: stream.id?.toString(),
+        sender: stream.sender,
+        recipient: stream.recipient,
+        isSender: stream.sender?.toLowerCase() === normalizedAddress,
+        isRecipient: stream.recipient?.toLowerCase() === normalizedAddress,
+      });
+    });
+
     // Streams where user is the sender
     const outgoingStreams = allStreams.filter(stream =>
       stream.sender && stream.sender.toLowerCase() === normalizedAddress
@@ -32,6 +46,9 @@ export function useUserStreamsByRole(userAddress: string | null) {
     const incomingStreams = allStreams.filter(stream =>
       stream.recipient && stream.recipient.toLowerCase() === normalizedAddress
     );
+
+    console.log('📤 Outgoing (Obligation NFTs):', outgoingStreams.length);
+    console.log('📥 Incoming (Recipient NFTs):', incomingStreams.length);
 
     return {
       outgoingStreams,

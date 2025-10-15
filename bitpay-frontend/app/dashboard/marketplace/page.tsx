@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import walletService from "@/lib/wallet/wallet-service";
 import { useUserStreamsByRole } from "@/hooks/use-user-streams";
-import { StreamStatus } from "@/lib/contracts/config";
+import { StreamStatus, microToDisplay } from "@/lib/contracts/config";
 import { ListObligationNFTModal } from "@/components/dashboard/modals/ListObligationNFTModal";
 import { BuyObligationNFTModal } from "@/components/dashboard/modals/BuyObligationNFTModal";
 import { NFTGridSkeleton } from "@/components/dashboard/NFTCardSkeleton";
@@ -43,6 +43,7 @@ export default function MarketplacePage() {
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
+  const [selectedNFTToList, setSelectedNFTToList] = useState<any | null>(null);
   const [showListModal, setShowListModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [buyMethod, setBuyMethod] = useState<"direct" | "gateway">("direct");
@@ -266,15 +267,23 @@ export default function MarketplacePage() {
       </Tabs>
 
       {/* Modals */}
-      <ListObligationNFTModal
-        isOpen={showListModal}
-        onClose={() => setShowListModal(false)}
-        availableNFTs={listableNFTs}
-        onSuccess={() => {
-          setShowListModal(false);
-          // Refresh listings
-        }}
-      />
+      {selectedNFTToList && (
+        <ListObligationNFTModal
+          isOpen={showListModal}
+          onClose={() => {
+            setShowListModal(false);
+            setSelectedNFTToList(null);
+          }}
+          streamId={selectedNFTToList.id?.toString() || ""}
+          obligationTokenId={selectedNFTToList.id?.toString() || ""}
+          currentAmount={microToDisplay(selectedNFTToList.totalAmount || BigInt(0)).toString()}
+          onSuccess={() => {
+            setShowListModal(false);
+            setSelectedNFTToList(null);
+            // Refresh listings
+          }}
+        />
+      )}
 
       {selectedListing && (
         <BuyObligationNFTModal

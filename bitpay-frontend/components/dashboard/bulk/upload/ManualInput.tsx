@@ -7,7 +7,7 @@ import { FileText } from "lucide-react";
 
 interface ManualInputProps {
   csvData: string;
-  blockHeight: bigint | null;
+  blockHeight: number | null;
   onCsvChange: (value: string) => void;
   onParse: () => void;
   disabled: boolean;

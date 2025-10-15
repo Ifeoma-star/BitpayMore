@@ -206,10 +206,10 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
 
     // Remove duplicates and convert to BigInt
     // cvToJSON might return objects like {type: 'uint', value: '123'} or primitive values
-    const uniqueStreamIds = Array.from(new Set(allStreamIds.map(id => {
+    const uniqueStreamIds = Array.from(new Set(allStreamIds.map((id: any) => {
       // Handle if id is an object with a value property
       if (typeof id === 'object' && id !== null && 'value' in id) {
-        return String(id.value);
+        return String((id as any).value);
       }
       // Handle if id is already a primitive
       return String(id);

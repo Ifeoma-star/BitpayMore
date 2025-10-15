@@ -6,7 +6,7 @@ import { getTokenFromRequest, verifyToken } from '@/lib/auth/auth';
 // PUT /api/templates/[id] - Update template
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -23,7 +23,7 @@ export async function PUT(
     }
 
     const userId = payload.userId;
-    const templateId = params.id;
+    const { id: templateId } = await params;
     const body = await request.json();
 
     // Find template and verify ownership
@@ -92,7 +92,7 @@ export async function PUT(
 // DELETE /api/templates/[id] - Delete template
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -109,7 +109,7 @@ export async function DELETE(
     }
 
     const userId = payload.userId;
-    const templateId = params.id;
+    const { id: templateId } = await params;
 
     // Find template and verify ownership
     const existingTemplate = await StreamTemplate.findById(templateId);

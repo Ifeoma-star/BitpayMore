@@ -9,7 +9,7 @@ import { markAsRead } from '@/lib/notifications/notification-service';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from request
@@ -25,7 +25,7 @@ export async function POST(
     }
 
     const userId = payload.userId;
-    const notificationId = params.id;
+    const { id: notificationId } = await params;
 
     // Mark notification as read
     const success = await markAsRead(notificationId, userId);

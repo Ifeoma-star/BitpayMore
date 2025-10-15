@@ -15,6 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowRight, AlertTriangle, Info } from "lucide-react";
+import { toast } from "sonner";
+import { useTransferObligationNFT } from "@/hooks/use-nft";
+import { useUpdateStreamSender } from "@/hooks/use-bitpay-write";
+import { useAuth } from "@/hooks/use-auth";
 
 interface TransferObligationNFTModalProps {
   isOpen: boolean;
@@ -22,6 +26,7 @@ interface TransferObligationNFTModalProps {
   streamId: string;
   obligationTokenId: string;
   currentAmount: string;
+  onSuccess?: () => void;
 }
 
 export function TransferObligationNFTModal({
@@ -30,10 +35,17 @@ export function TransferObligationNFTModal({
   streamId,
   obligationTokenId,
   currentAmount,
+  onSuccess,
 }: TransferObligationNFTModalProps) {
   const [newOwner, setNewOwner] = useState("");
-  const [isTransferring, setIsTransferring] = useState(false);
   const [error, setError] = useState("");
+  const [step, setStep] = useState<'transfer' | 'update-sender'>('transfer');
+  const { user } = useAuth();
+  const { transferObligationNFT, isLoading: isTransferring, error: transferError } = useTransferObligationNFT();
+  const { write: updateStreamSender, isLoading: isUpdating, error: updateError } = useUpdateStreamSender();
+
+  const userAddress = user?.walletAddress || null;
+  const isLoading = isTransferring || isUpdating;
 
   const handleTransfer = async () => {
     if (!newOwner.trim()) {
@@ -47,33 +59,105 @@ export function TransferObligationNFTModal({
       return;
     }
 
-    setIsTransferring(true);
+    if (!userAddress) {
+      setError("No wallet connected");
+      return;
+    }
+
     setError("");
 
     try {
-      // TODO: Implement actual contract call
-      // Step 1: Transfer obligation NFT
-      // Step 2: New owner must call update-stream-sender
-
-      console.log("Transferring obligation NFT:", {
+      console.log("Step 1: Transferring obligation NFT:", {
         tokenId: obligationTokenId,
         streamId,
-        newOwner,
+        from: userAddress,
+        to: newOwner,
       });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Step 1: Transfer the NFT
+      setStep('transfer');
+      const transferTxId = await transferObligationNFT(
+        Number(obligationTokenId),
+        userAddress,
+        newOwner
+      );
 
-      // Success
-      onClose();
+      if (!transferTxId) {
+        setError("Failed to transfer NFT");
+        return;
+      }
 
-      // TODO: Show success toast
-      alert("Obligation NFT transferred! The new owner must call update-stream-sender to complete the transfer.");
+      const transferExplorerUrl = `https://explorer.hiro.so/txid/${transferTxId}?chain=testnet`;
+      console.log('✅ Step 1 complete - NFT transferred!');
+      console.log('📋 Transfer TX:', transferTxId);
+      console.log('🔗 Explorer:', transferExplorerUrl);
 
+      toast.success("NFT Transferred!", {
+        description: "Now updating stream sender...",
+        duration: 5000,
+      });
+
+      // Step 2: Update stream sender
+      console.log("Step 2: Updating stream sender:", {
+        streamId,
+        newSender: newOwner,
+      });
+
+      setStep('update-sender');
+      const updateTxId = await updateStreamSender(
+        Number(streamId),
+        newOwner
+      );
+
+      if (updateTxId) {
+        const updateExplorerUrl = `https://explorer.hiro.so/txid/${updateTxId}?chain=testnet`;
+
+        toast.success("Transfer Complete!", {
+          description: (
+            <div className="space-y-2 mt-1">
+              <p className="text-sm">NFT transferred and stream sender updated successfully!</p>
+              <div className="text-xs space-y-1">
+                <a
+                  href={transferExplorerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono block hover:underline"
+                >
+                  Transfer: {transferTxId.substring(0, 16)}...
+                </a>
+                <a
+                  href={updateExplorerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono block hover:underline"
+                >
+                  Update: {updateTxId.substring(0, 16)}...
+                </a>
+              </div>
+            </div>
+          ),
+          duration: 15000,
+        });
+
+        console.log('✅ Step 2 complete - Stream sender updated!');
+        console.log('📋 Update TX:', updateTxId);
+        console.log('🔗 Explorer:', updateExplorerUrl);
+
+        // Trigger refetch of NFT data
+        if (onSuccess) {
+          onSuccess();
+        }
+
+        // Close modal after a short delay to allow state updates
+        setTimeout(() => {
+          onClose();
+          setNewOwner("");
+          setStep('transfer');
+        }, 2000);
+      }
     } catch (err: any) {
-      setError(err.message || "Failed to transfer obligation NFT");
-    } finally {
-      setIsTransferring(false);
+      console.error("Transfer error:", err);
+      setError(err.message || `Failed to ${step === 'transfer' ? 'transfer NFT' : 'update stream sender'}`);
     }
   };
 
@@ -158,20 +242,20 @@ export function TransferObligationNFTModal({
           <Button
             variant="outline"
             onClick={onClose}
-            disabled={isTransferring}
+            disabled={isLoading}
             className="h-8 text-xs"
           >
             Cancel
           </Button>
           <Button
             onClick={handleTransfer}
-            disabled={isTransferring || !newOwner.trim()}
+            disabled={isLoading || !newOwner.trim()}
             className="bg-brand-pink hover:bg-brand-pink/90 text-white h-8 text-xs"
           >
-            {isTransferring ? (
+            {isLoading ? (
               <>
                 <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                Transferring...
+                {step === 'transfer' ? 'Transferring NFT...' : 'Updating Sender...'}
               </>
             ) : (
               <>

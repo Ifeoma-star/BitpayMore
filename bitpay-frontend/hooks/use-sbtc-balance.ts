@@ -44,7 +44,6 @@ export function useSBTCBalance(address: string | null): UseSBTCBalanceReturn {
         address,
         contractAddress: BITPAY_DEPLOYER_ADDRESS,
         contractName: CONTRACT_NAMES.SBTC_HELPER,
-        networkUrl: network.coreApiUrl,
       });
 
       // Call get-user-balance function on OUR bitpay-sbtc-helper contract

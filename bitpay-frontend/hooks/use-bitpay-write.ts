@@ -221,6 +221,63 @@ export function useWithdrawPartial(): UseWriteReturn {
 }
 
 /**
+ * Hook for updating stream sender after NFT transfer
+ */
+export function useUpdateStreamSender(): UseWriteReturn {
+  const [txId, setTxId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const write = useCallback(async (streamId: number | bigint, newSender: string): Promise<string | null> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setTxId(null);
+
+      const network = getStacksNetwork();
+      const streamIdUint = typeof streamId === 'bigint' ? streamId : BigInt(streamId);
+
+      const options: ContractCallOptions = {
+        network,
+        anchorMode: AnchorMode.Any,
+        contractAddress: BITPAY_DEPLOYER_ADDRESS,
+        contractName: CONTRACT_NAMES.CORE,
+        functionName: CORE_FUNCTIONS.UPDATE_STREAM_SENDER,
+        functionArgs: [uintCV(streamIdUint), principalCV(newSender)],
+        postConditionMode: PostConditionMode.Allow,
+        onFinish: (data) => {
+          console.log('Stream sender updated successfully:', data.txId);
+          setTxId(data.txId);
+          setIsLoading(false);
+        },
+        onCancel: () => {
+          console.log('Transaction cancelled by user');
+          setError('Transaction cancelled');
+          setIsLoading(false);
+        },
+      };
+
+      await openContractCall(options);
+      return txId;
+    } catch (err) {
+      console.error('Error updating stream sender:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update stream sender';
+      setError(errorMessage);
+      setIsLoading(false);
+      return null;
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    setTxId(null);
+    setError(null);
+    setIsLoading(false);
+  }, []);
+
+  return { write, txId, isLoading, error, reset };
+}
+
+/**
  * Hook for cancelling a stream
  */
 export function useCancelStream(): UseWriteReturn {

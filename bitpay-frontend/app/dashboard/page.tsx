@@ -33,9 +33,15 @@ import { MarketplaceActivity } from "@/components/dashboard/overview/Marketplace
 import { StreamStatusDistribution } from "@/components/dashboard/overview/StreamStatusDistribution";
 import { TreasuryInfo } from "@/components/dashboard/overview/TreasuryInfo";
 import { NFTGallery } from "@/components/dashboard/overview/NFTGallery";
+import { TransferObligationNFTModal } from "@/components/dashboard/modals/TransferObligationNFTModal";
+import { ListObligationNFTModal } from "@/components/dashboard/modals/ListObligationNFTModal";
+import { useUpdateStreamSender } from "@/hooks/use-bitpay-write";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const [walletBalance, setWalletBalance] = useState<bigint>(BigInt(0));
+  const [selectedStreamForTransfer, setSelectedStreamForTransfer] = useState<any>(null);
+  const [selectedStreamForListing, setSelectedStreamForListing] = useState<any>(null);
 
   // Get user address from authenticated session instead of wallet
   const { user } = useAuth();
@@ -56,6 +62,47 @@ export default function DashboardPage() {
     isLoading: streamsLoading,
     refetch
   } = useUserStreamsByRole(userAddress);
+
+  const { write: updateStreamSender } = useUpdateStreamSender();
+
+  const handleCompleteTransfer = async (newOwner: string) => {
+    // Find the stream from outgoingStreams that matches the new owner
+    const stream = outgoingStreams.find(s => s.sender.toLowerCase() === newOwner.toLowerCase());
+    if (!stream) return;
+
+    try {
+      const txId = await updateStreamSender(Number(stream.id), newOwner);
+
+      if (txId) {
+        const explorerUrl = `https://explorer.hiro.so/txid/${txId}?chain=testnet`;
+
+        toast.success("Transfer Completed!", {
+          description: (
+            <div className="space-y-2 mt-1">
+              <p className="text-sm">Stream sender updated successfully!</p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono block hover:underline"
+              >
+                {txId.substring(0, 20)}...
+              </a>
+            </div>
+          ),
+          duration: 15000,
+        });
+
+        // Refetch to update UI
+        refetch();
+      }
+    } catch (error: any) {
+      console.error("Error completing transfer:", error);
+      toast.error("Failed to complete transfer", {
+        description: error.message || "Please try again",
+      });
+    }
+  };
 
   useEffect(() => {
     const loadWalletData = async () => {
@@ -124,32 +171,32 @@ export default function DashboardPage() {
       value: `${microToDisplay(totalStreamed)} sBTC`,
       subtitle: `${completedStreams} completed`,
       icon: Bitcoin,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100",
+      color: "text-orange-500 dark:text-orange-400",
+      bgColor: "bg-orange-100 dark:bg-orange-950/40",
     },
     {
       title: "Active Streams",
       value: activeStreams.toString(),
       subtitle: `${allStreams?.length || 0} Total`,
       icon: Activity,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
+      color: "text-pink-500 dark:text-pink-400",
+      bgColor: "bg-pink-100 dark:bg-pink-950/40",
     },
     {
       title: "Total Volume",
       value: `${microToDisplay(totalVolume)} sBTC`,
       subtitle: "All streams combined",
       icon: TrendingUp,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100",
+      color: "text-blue-500 dark:text-blue-400",
+      bgColor: "bg-blue-100 dark:bg-blue-950/40",
     },
     {
       title: "Available to Withdraw",
       value: `${microToDisplay(availableToWithdraw)} sBTC`,
       subtitle: "Ready for withdrawal",
       icon: Wallet,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
+      color: "text-emerald-500 dark:text-emerald-400",
+      bgColor: "bg-emerald-100 dark:bg-emerald-950/40",
     },
   ];
 
@@ -168,24 +215,13 @@ export default function DashboardPage() {
   const statusData = [
     { name: 'Active', value: activeStreams },
     { name: 'Completed', value: completedStreams },
-    { name: 'Paused', value: allStreams?.filter(s => s.status === StreamStatus.PAUSED).length || 0 },
     { name: 'Cancelled', value: allStreams?.filter(s => s.status === StreamStatus.CANCELLED).length || 0 },
   ].filter(item => item.value > 0);
 
-  // Mock NFT data (replace with real data from contracts)
-  const mockNFTs = allStreams ? allStreams.slice(0, 4).map(stream => ({
-    id: `nft-${stream.id}`,
-    type: stream.sender === userAddress ? 'Obligation' as const : 'Recipient' as const,
-    streamId: stream.id.toString(),
-  })) : [];
+  // No mock data needed - we'll pass real streams directly
 
   // Recent streams for component
-  const recentStreams = allStreams ? allStreams.slice(0, 3).map(stream => ({
-    id: stream.id.toString(),
-    amount: microToDisplay(stream.vestedAmount),
-    recipient: stream.recipient,
-    status: stream.status,
-  })) : [];
+  const recentStreams = allStreams ? allStreams.slice(0, 3) : [];
 
   const loading = blockLoading || streamsLoading;
 
@@ -284,10 +320,7 @@ export default function DashboardPage() {
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <RecentStreams streams={recentStreams} />
-            <QuickActions
-              userAddress={userAddress}
-              blockHeight={blockHeight}
-            />
+            <QuickActions />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -307,7 +340,15 @@ export default function DashboardPage() {
             />
           </div>
 
-          <NFTGallery nfts={mockNFTs} />
+          <NFTGallery
+            recipientStreams={incomingStreams}
+            obligationStreams={outgoingStreams}
+            displayAmount={microToDisplay}
+            userAddress={userAddress}
+            onTransfer={(stream) => setSelectedStreamForTransfer(stream)}
+            onListMarketplace={(stream) => setSelectedStreamForListing(stream)}
+            onCompleteTransfer={handleCompleteTransfer}
+          />
         </TabsContent>
 
         {/* Sending Tab */}
@@ -469,6 +510,32 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Transfer Obligation NFT Modal */}
+      {selectedStreamForTransfer && (
+        <TransferObligationNFTModal
+          isOpen={!!selectedStreamForTransfer}
+          onClose={() => setSelectedStreamForTransfer(null)}
+          streamId={selectedStreamForTransfer.id.toString()}
+          obligationTokenId={selectedStreamForTransfer.id.toString()}
+          currentAmount={microToDisplay(selectedStreamForTransfer.amount)}
+          onSuccess={() => {
+            // Refetch streams after successful transfer
+            refetch();
+          }}
+        />
+      )}
+
+      {/* List Obligation NFT Modal */}
+      {selectedStreamForListing && (
+        <ListObligationNFTModal
+          isOpen={!!selectedStreamForListing}
+          onClose={() => setSelectedStreamForListing(null)}
+          streamId={selectedStreamForListing.id.toString()}
+          obligationTokenId={selectedStreamForListing.id.toString()}
+          currentAmount={microToDisplay(selectedStreamForListing.amount)}
+        />
       )}
     </div>
   );
