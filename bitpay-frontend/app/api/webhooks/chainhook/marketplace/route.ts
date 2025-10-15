@@ -590,6 +590,32 @@ async function handlePurchaseInitiated(
       actionText: 'View Details',
     }
   );
+
+  // Broadcast real-time updates
+  const purchaseInitiatedData = {
+    streamId: event['stream-id'].toString(),
+    seller: event.seller,
+    buyer: event.buyer,
+    paymentId: event['payment-id'],
+    initiatedAt: event['initiated-at'].toString(),
+    expiresAt: event['expires-at'].toString(),
+    paymentUrl,
+    txHash: context.txHash,
+  };
+
+  // Notify buyer
+  broadcastToUser(event.buyer, 'marketplace:purchase-initiated', {
+    type: 'purchase-initiated',
+    role: 'buyer',
+    data: purchaseInitiatedData,
+  });
+
+  // Notify seller
+  broadcastToUser(event.seller, 'marketplace:purchase-initiated', {
+    type: 'purchase-initiated',
+    role: 'seller',
+    data: purchaseInitiatedData,
+  });
 }
 
 /**
@@ -750,6 +776,31 @@ async function handlePurchaseExpired(
           actionText: 'View Listing',
         }
       );
+    }
+
+    // Broadcast real-time updates
+    const expiredData = {
+      streamId: event['stream-id'].toString(),
+      buyer: event.buyer,
+      seller: seller,
+      paymentId: event['payment-id'],
+      txHash: context.txHash,
+    };
+
+    // Notify buyer
+    broadcastToUser(event.buyer, 'marketplace:purchase-expired', {
+      type: 'purchase-expired',
+      role: 'buyer',
+      data: expiredData,
+    });
+
+    // Notify seller (if known)
+    if (seller !== 'unknown') {
+      broadcastToUser(seller, 'marketplace:purchase-expired', {
+        type: 'purchase-expired',
+        role: 'seller',
+        data: expiredData,
+      });
     }
   }
 }

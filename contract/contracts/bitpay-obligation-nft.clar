@@ -106,7 +106,7 @@
     )
     (let ((token-id (+ (var-get last-token-id) u1)))
         ;; Only bitpay-core contract can mint obligation NFTs
-        (asserts! (is-eq contract-caller .bitpay-core-v3) ERR_UNAUTHORIZED)
+        (asserts! (is-eq contract-caller .bitpay-core-v4) ERR_UNAUTHORIZED)
 
         (try! (nft-mint? obligation-nft token-id sender))
         (var-set last-token-id token-id)

@@ -85,7 +85,7 @@
     )
     (let ((token-id (+ (var-get last-token-id) u1)))
         ;; Only bitpay-core contract can mint stream NFTs
-        (asserts! (is-eq contract-caller .bitpay-core-v3) ERR_UNAUTHORIZED)
+        (asserts! (is-eq contract-caller .bitpay-core-v4) ERR_UNAUTHORIZED)
 
         (try! (nft-mint? stream-nft token-id recipient))
         (var-set last-token-id token-id)

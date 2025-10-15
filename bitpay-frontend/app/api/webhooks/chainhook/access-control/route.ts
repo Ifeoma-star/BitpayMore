@@ -516,6 +516,27 @@ async function handleAccessControlEvent(
           actionText: 'Accept Transfer',
         }
       );
+
+      // Broadcast real-time updates
+      const transferInitiatedData = {
+        currentAdmin: event['current-admin'],
+        newAdmin: event['new-admin'],
+        txHash: context.txHash,
+      };
+
+      // Notify current admin
+      broadcastToUser(event['current-admin'], 'access-control:admin-transfer', {
+        type: 'admin-transfer-initiated',
+        role: 'current-admin',
+        data: transferInitiatedData,
+      });
+
+      // Notify new admin
+      broadcastToUser(event['new-admin'], 'access-control:admin-transfer', {
+        type: 'admin-transfer-initiated',
+        role: 'new-admin',
+        data: transferInitiatedData,
+      });
       break;
 
     case 'access-admin-transfer-completed':
@@ -564,6 +585,27 @@ async function handleAccessControlEvent(
           actionText: 'Manage System',
         }
       );
+
+      // Broadcast real-time updates
+      const transferCompletedData = {
+        oldAdmin: event['old-admin'],
+        newAdmin: event['new-admin'],
+        txHash: context.txHash,
+      };
+
+      // Notify old admin
+      broadcastToUser(event['old-admin'], 'access-control:admin-transfer', {
+        type: 'admin-transfer-completed',
+        role: 'old-admin',
+        data: transferCompletedData,
+      });
+
+      // Notify new admin
+      broadcastToUser(event['new-admin'], 'access-control:admin-transfer', {
+        type: 'admin-transfer-completed',
+        role: 'new-admin',
+        data: transferCompletedData,
+      });
       break;
 
     default:

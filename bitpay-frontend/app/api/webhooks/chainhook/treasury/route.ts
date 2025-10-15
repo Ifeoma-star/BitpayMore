@@ -167,6 +167,23 @@ async function handleTreasuryEvent(
           timestamp: new Date(context.timestamp * 1000),
           processedAt: new Date(),
         });
+
+        // Broadcast fee collection to treasury admins
+        const feeData = {
+          type: 'general',
+          amount: event.amount.toString(),
+          caller: event.caller,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+        };
+
+        const adminsF = await getTreasuryAdmins();
+        for (const admin of adminsF) {
+          broadcastToUser(admin, 'treasury:fee-collected', {
+            type: 'fee-collected',
+            data: feeData,
+          });
+        }
       }
       break;
 
@@ -185,6 +202,23 @@ async function handleTreasuryEvent(
           timestamp: new Date(context.timestamp * 1000),
           processedAt: new Date(),
         });
+
+        // Broadcast cancellation fee to treasury admins
+        const cancelFeeData = {
+          type: 'cancellation',
+          amount: event.amount.toString(),
+          caller: event.caller,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+        };
+
+        const adminsC = await getTreasuryAdmins();
+        for (const admin of adminsC) {
+          broadcastToUser(admin, 'treasury:fee-collected', {
+            type: 'cancellation-fee-collected',
+            data: cancelFeeData,
+          });
+        }
       }
       break;
 
@@ -203,6 +237,23 @@ async function handleTreasuryEvent(
           timestamp: new Date(context.timestamp * 1000),
           processedAt: new Date(),
         });
+
+        // Broadcast marketplace fee to treasury admins
+        const marketFeeData = {
+          type: 'marketplace',
+          amount: event.amount.toString(),
+          caller: event.caller,
+          newBalance: event['new-balance'].toString(),
+          txHash: context.txHash,
+        };
+
+        const adminsM = await getTreasuryAdmins();
+        for (const admin of adminsM) {
+          broadcastToUser(admin, 'treasury:fee-collected', {
+            type: 'marketplace-fee-collected',
+            data: marketFeeData,
+          });
+        }
       }
       break;
 
@@ -315,6 +366,22 @@ async function handleTreasuryEvent(
           timestamp: new Date(context.timestamp * 1000),
           processedAt: new Date(),
         });
+
+        // Broadcast fee update to treasury admins
+        const feeUpdateData = {
+          oldFeeBps: event['old-fee-bps'].toString(),
+          newFeeBps: event['new-fee-bps'].toString(),
+          admin: event.admin,
+          txHash: context.txHash,
+        };
+
+        const admins3 = await getTreasuryAdmins();
+        for (const admin of admins3) {
+          broadcastToUser(admin, 'treasury:config-updated', {
+            type: 'fee-updated',
+            data: feeUpdateData,
+          });
+        }
       }
       break;
 
@@ -513,6 +580,11 @@ async function handleTreasuryEvent(
       console.log(`👥 Admin proposal: ${event.event}`);
 
       const adminsList = await getTreasuryAdmins();
+      const adminProposalData = {
+        event: event.event,
+        txHash: context.txHash,
+      };
+
       for (const admin of adminsList) {
         await NotificationService.createNotification(
           admin,
@@ -529,17 +601,42 @@ async function handleTreasuryEvent(
             actionText: 'Review Proposal',
           }
         );
+
+        // Broadcast admin proposal to all admins
+        broadcastToUser(admin, 'treasury:admin-proposal', {
+          type: event.event,
+          data: adminProposalData,
+        });
       }
       break;
 
     case 'treasury-admin-proposal-approved':
       console.log(`👥 Admin proposal approved: ${event.event}`);
+
+      // Broadcast approval to all admins
+      const adminsApproved = await getTreasuryAdmins();
+      const approvalData = {
+        event: event.event,
+        txHash: context.txHash,
+      };
+
+      for (const admin of adminsApproved) {
+        broadcastToUser(admin, 'treasury:admin-proposal', {
+          type: 'admin-proposal-approved',
+          data: approvalData,
+        });
+      }
       break;
 
     case 'treasury-admin-proposal-executed':
       console.log(`👥 Admin proposal executed: ${event.event}`);
 
       const allAdmins = await getTreasuryAdmins();
+      const executedProposalData = {
+        event: event.event,
+        txHash: context.txHash,
+      };
+
       for (const admin of allAdmins) {
         await NotificationService.createNotification(
           admin,
@@ -556,6 +653,12 @@ async function handleTreasuryEvent(
             actionText: 'View Treasury',
           }
         );
+
+        // Broadcast execution to all admins
+        broadcastToUser(admin, 'treasury:admin-proposal', {
+          type: 'admin-proposal-executed',
+          data: executedProposalData,
+        });
       }
       break;
 
@@ -565,6 +668,11 @@ async function handleTreasuryEvent(
       console.log(`🔑 Admin transfer event: ${event.event}`);
 
       const treasuryAdmins = await getTreasuryAdmins();
+      const transferData = {
+        event: event.event,
+        txHash: context.txHash,
+      };
+
       for (const admin of treasuryAdmins) {
         await NotificationService.createNotification(
           admin,
@@ -581,6 +689,12 @@ async function handleTreasuryEvent(
             actionText: 'View Details',
           }
         );
+
+        // Broadcast admin transfer to all admins
+        broadcastToUser(admin, 'treasury:admin-transfer', {
+          type: event.event,
+          data: transferData,
+        });
       }
       break;
 
