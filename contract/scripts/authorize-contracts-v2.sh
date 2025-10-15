@@ -6,7 +6,7 @@
 set -e
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║   BitPay V2 Contract Authorization - Testnet              ║"
+echo "║   BitPay V3 Contract Authorization - Testnet              ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -19,9 +19,9 @@ NC='\033[0m'
 DEPLOYER="ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7"
 
 echo "This script will authorize 3 contracts:"
-echo "  1. bitpay-core-v2"
-echo "  2. bitpay-marketplace-v2"
-echo "  3. bitpay-treasury-v2"
+echo "  1. bitpay-core-v3"
+echo "  2. bitpay-marketplace-v3"
+echo "  3. bitpay-treasury-v3"
 echo ""
 
 # Check if stx CLI is installed
@@ -53,39 +53,39 @@ if [ "$USE_STX" = true ]; then
     echo ""
 
     # Authorize core
-    echo "1. Authorizing bitpay-core-v2..."
+    echo "1. Authorizing bitpay-core-v3..."
     stx call_contract_func \
         ${DEPLOYER} \
-        bitpay-access-control-v2 \
+        bitpay-access-control-v3 \
         authorize-contract \
         --testnet \
-        -p ".bitpay-core-v2" \
+        -p ".bitpay-core-v3" \
         --fee 10000 || echo -e "${RED}✗ Failed${NC}"
 
     echo ""
     sleep 2
 
     # Authorize marketplace
-    echo "2. Authorizing bitpay-marketplace-v2..."
+    echo "2. Authorizing bitpay-marketplace-v3..."
     stx call_contract_func \
         ${DEPLOYER} \
-        bitpay-access-control-v2 \
+        bitpay-access-control-v3 \
         authorize-contract \
         --testnet \
-        -p ".bitpay-marketplace-v2" \
+        -p ".bitpay-marketplace-v3" \
         --fee 10000 || echo -e "${RED}✗ Failed${NC}"
 
     echo ""
     sleep 2
 
     # Authorize treasury
-    echo "3. Authorizing bitpay-treasury-v2..."
+    echo "3. Authorizing bitpay-treasury-v3..."
     stx call_contract_func \
         ${DEPLOYER} \
-        bitpay-access-control-v2 \
+        bitpay-access-control-v3 \
         authorize-contract \
         --testnet \
-        -p ".bitpay-treasury-v2" \
+        -p ".bitpay-treasury-v3" \
         --fee 10000 || echo -e "${RED}✗ Failed${NC}"
 
     echo ""
@@ -107,17 +107,17 @@ else
     echo "2. Fill in these details for EACH authorization:"
     echo ""
     echo "   Contract Address: ${DEPLOYER}"
-    echo "   Contract Name: bitpay-access-control-v2"
+    echo "   Contract Name: bitpay-access-control-v3"
     echo "   Function: authorize-contract"
     echo ""
-    echo "3. For bitpay-core-v2:"
-    echo "   contract-to-auth: ${DEPLOYER}.bitpay-core-v2"
+    echo "3. For bitpay-core-v3:"
+    echo "   contract-to-auth: ${DEPLOYER}.bitpay-core-v3"
     echo ""
-    echo "4. For bitpay-marketplace-v2:"
-    echo "   contract-to-auth: ${DEPLOYER}.bitpay-marketplace-v2"
+    echo "4. For bitpay-marketplace-v3:"
+    echo "   contract-to-auth: ${DEPLOYER}.bitpay-marketplace-v3"
     echo ""
-    echo "5. For bitpay-treasury-v2:"
-    echo "   contract-to-auth: ${DEPLOYER}.bitpay-treasury-v2"
+    echo "5. For bitpay-treasury-v3:"
+    echo "   contract-to-auth: ${DEPLOYER}.bitpay-treasury-v3"
     echo ""
     echo "─────────────────────────────────────────────────────────"
     echo "METHOD 2: Using clarinet and manual deployment"

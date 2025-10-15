@@ -24,15 +24,15 @@ export const BITPAY_DEPLOYER_ADDRESS = process.env.NEXT_PUBLIC_BITPAY_DEPLOYER_A
 export const SBTC_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SBTC_TOKEN_ADDRESS || 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT';
 export const SBTC_TOKEN_CONTRACT = 'sbtc-token';
 
-// BitPay Contract Names (V2 - Deployed on Testnet)
+// BitPay Contract Names (V3 - Deployed on Testnet)
 export const CONTRACT_NAMES = {
-  CORE: 'bitpay-core-v2',
-  ACCESS_CONTROL: 'bitpay-access-control-v2',
-  SBTC_HELPER: 'bitpay-sbtc-helper-v2',
-  NFT: 'bitpay-nft-v2',
-  OBLIGATION_NFT: 'bitpay-obligation-nft-v2',
-  TREASURY: 'bitpay-treasury-v2',
-  MARKETPLACE: 'bitpay-marketplace-v2',
+  CORE: 'bitpay-core-v3',
+  ACCESS_CONTROL: 'bitpay-access-control-v3',
+  SBTC_HELPER: 'bitpay-sbtc-helper-v3',
+  NFT: 'bitpay-nft-v3',
+  OBLIGATION_NFT: 'bitpay-obligation-nft-v3',
+  TREASURY: 'bitpay-treasury-v3',
+  MARKETPLACE: 'bitpay-marketplace-v3',
 } as const;
 
 // Full contract identifiers
@@ -173,10 +173,48 @@ export interface StreamWithId extends StreamData {
 
 // Utility: Convert micro-sBTC (satoshis) to display format
 // sBTC uses 8 decimals (1 sBTC = 100,000,000 satoshis)
-export const microToDisplay = (micro: bigint | string): string => {
-  const value = typeof micro === 'string' ? BigInt(micro) : micro;
-  const btc = Number(value) / 100_000_000;
-  return btc.toFixed(8);
+export const microToDisplay = (micro: any): string => {
+  // Debug what we're receiving
+  if (typeof micro !== 'bigint' && typeof micro !== 'string' && typeof micro !== 'number') {
+    console.log('microToDisplay received unexpected type:', typeof micro, micro);
+  }
+
+  // Handle if already a decimal number (shouldn't happen but defensive)
+  if (typeof micro === 'number') {
+    return micro.toFixed(8);
+  }
+
+  // Handle null/undefined
+  if (micro === null || micro === undefined) {
+    return '0.00000000';
+  }
+
+  // Handle if it's an object with a value property (from cvToJSON)
+  if (typeof micro === 'object' && 'value' in micro) {
+    return microToDisplay(micro.value);
+  }
+
+  // Convert string to BigInt, or use bigint directly
+  try {
+    if (typeof micro === 'string') {
+      // Check if it's a decimal string (contains a dot)
+      if (micro.includes('.')) {
+        // Already in display format, just parse and format
+        return parseFloat(micro).toFixed(8);
+      }
+      // Integer string - convert to BigInt
+      const value = BigInt(micro);
+      const btc = Number(value) / 100_000_000;
+      return btc.toFixed(8);
+    }
+
+    // It's a bigint
+    const btc = Number(micro) / 100_000_000;
+    return btc.toFixed(8);
+  } catch (error) {
+    console.error('Error in microToDisplay:', micro, typeof micro, error);
+    return '0.00000000';
+  }
 };
 
 // Utility: Convert display format to micro-sBTC (satoshis)
@@ -212,16 +250,30 @@ export const calculateVestedAmount = (
 ): bigint => {
   const { amount, 'start-block': startBlock, 'end-block': endBlock, cancelled } = stream;
 
+  // Helper function to safely convert to BigInt
+  const toBigInt = (value: any): bigint => {
+    if (value === null || value === undefined) return BigInt(0);
+    if (typeof value === 'object' && 'value' in value) {
+      return BigInt(value.value);
+    }
+    return BigInt(value);
+  };
+
+  // Convert to BigInt (handles both primitive and object with value property)
+  const amountBigInt = toBigInt(amount);
+  const startBlockBigInt = toBigInt(startBlock);
+  const endBlockBigInt = toBigInt(endBlock);
+
   // Before start: nothing vested
-  if (currentBlock < startBlock) return BigInt(0);
+  if (currentBlock < startBlockBigInt) return BigInt(0);
 
   // After end or cancelled: everything vested
-  if (currentBlock >= endBlock || cancelled) return amount;
+  if (currentBlock >= endBlockBigInt || cancelled) return amountBigInt;
 
   // During stream: linear vesting
-  const elapsed = currentBlock - startBlock;
-  const duration = endBlock - startBlock;
-  return (amount * elapsed) / duration;
+  const elapsed = currentBlock - startBlockBigInt;
+  const duration = endBlockBigInt - startBlockBigInt;
+  return (amountBigInt * elapsed) / duration;
 };
 
 // Calculate withdrawable amount
@@ -230,19 +282,46 @@ export const calculateWithdrawableAmount = (
   currentBlock: bigint
 ): bigint => {
   const vested = calculateVestedAmount(stream, currentBlock);
-  return vested - stream.withdrawn;
+  const withdrawn = stream.withdrawn;
+
+  // Helper function to safely convert to BigInt
+  const toBigInt = (value: any): bigint => {
+    if (value === null || value === undefined) return BigInt(0);
+    if (typeof value === 'object' && 'value' in value) {
+      return BigInt(value.value);
+    }
+    return BigInt(value);
+  };
+
+  const withdrawnBigInt = toBigInt(withdrawn);
+
+  return vested - withdrawnBigInt;
 };
 
 // Calculate stream progress percentage
 export const calculateProgress = (
-  startBlock: bigint,
-  endBlock: bigint,
-  currentBlock: bigint
+  startBlock: any,
+  endBlock: any,
+  currentBlock: any
 ): number => {
-  if (currentBlock < startBlock) return 0;
-  if (currentBlock >= endBlock) return 100;
+  // Helper to convert to BigInt
+  const toBigInt = (value: any): bigint => {
+    if (value === null || value === undefined) return BigInt(0);
+    if (typeof value === 'object' && 'value' in value) {
+      return BigInt(value.value);
+    }
+    if (typeof value === 'bigint') return value;
+    return BigInt(value);
+  };
 
-  const elapsed = Number(currentBlock - startBlock);
-  const duration = Number(endBlock - startBlock);
+  const startBigInt = toBigInt(startBlock);
+  const endBigInt = toBigInt(endBlock);
+  const currentBigInt = toBigInt(currentBlock);
+
+  if (currentBigInt < startBigInt) return 0;
+  if (currentBigInt >= endBigInt) return 100;
+
+  const elapsed = Number(currentBigInt - startBigInt);
+  const duration = Number(endBigInt - startBigInt);
   return (elapsed / duration) * 100;
 };

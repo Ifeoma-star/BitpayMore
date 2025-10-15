@@ -1,0 +1,43 @@
+---
+id: 0
+name: Deploy Foundation Contracts (Access Control, NFTs)
+network: testnet
+stacks-node: "https://api.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - requirement-publish:
+            contract-id: SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait
+            remap-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
+            remap-principals:
+              SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
+            cost: 4680
+            path: "./.cache/requirements/SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.clar"
+            clarity-version: 1
+      epoch: "2.0"
+    - id: 1
+      transactions:
+        - contract-publish:
+            contract-name: bitpay-access-control-v3
+            expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
+            cost: 2706527
+            path: contracts/bitpay-access-control.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: bitpay-nft-v3
+            expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
+            cost: 2706527
+            path: contracts/bitpay-nft.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: bitpay-obligation-nft-v3
+            expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
+            cost: 2708478
+            path: contracts/bitpay-obligation-nft.clar
+            anchor-block-only: true
+            clarity-version: 3
+      epoch: "3.1"

@@ -190,7 +190,7 @@
   )
   (let (
       (listing-check (get-listing stream-id))
-      (nft-owner-response (unwrap! (contract-call? .bitpay-obligation-nft-v2 get-owner stream-id)
+      (nft-owner-response (unwrap! (contract-call? .bitpay-obligation-nft-v3 get-owner stream-id)
         err-invalid-stream
       ))
       (nft-owner (unwrap! nft-owner-response err-not-nft-owner))
@@ -297,7 +297,7 @@
     (unwrap!
       (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
         transfer marketplace-fee tx-sender
-        (unwrap! (contract-call? .bitpay-treasury-v2 get-contract-address)
+        (unwrap! (contract-call? .bitpay-treasury-v3 get-contract-address)
           err-payment-failed
         )
         none
@@ -307,13 +307,13 @@
 
     ;; Notify treasury to update its accounting
     (unwrap!
-      (as-contract (contract-call? .bitpay-treasury-v2 collect-marketplace-fee marketplace-fee))
+      (as-contract (contract-call? .bitpay-treasury-v3 collect-marketplace-fee marketplace-fee))
       err-payment-failed
     )
 
     ;; Transfer obligation NFT: seller to buyer
     (unwrap!
-      (contract-call? .bitpay-obligation-nft-v2 transfer stream-id seller
+      (contract-call? .bitpay-obligation-nft-v3 transfer stream-id seller
         tx-sender
       )
       err-transfer-failed
@@ -321,7 +321,7 @@
 
     ;; Update stream sender: seller to buyer
     (unwrap!
-      (as-contract (contract-call? .bitpay-core-v2 update-stream-sender stream-id tx-sender))
+      (as-contract (contract-call? .bitpay-core-v3 update-stream-sender stream-id tx-sender))
       err-transfer-failed
     )
 
@@ -429,13 +429,13 @@
 
     ;; Transfer obligation NFT: seller to buyer
     (unwrap!
-      (contract-call? .bitpay-obligation-nft-v2 transfer stream-id seller buyer)
+      (contract-call? .bitpay-obligation-nft-v3 transfer stream-id seller buyer)
       err-transfer-failed
     )
 
     ;; Update stream sender: seller to buyer
     (unwrap!
-      (as-contract (contract-call? .bitpay-core-v2 update-stream-sender stream-id buyer))
+      (as-contract (contract-call? .bitpay-core-v3 update-stream-sender stream-id buyer))
       err-transfer-failed
     )
 

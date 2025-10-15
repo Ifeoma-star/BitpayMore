@@ -55,49 +55,49 @@ plan:
             path: "./.cache/requirements/ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control.clar"
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-access-control-v2
+            contract-name: bitpay-access-control-v3
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2706527
             path: contracts/bitpay-access-control.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-nft-v2
+            contract-name: bitpay-nft-v3
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2706527
             path: contracts/bitpay-nft.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-obligation-nft-v2
+            contract-name: bitpay-obligation-nft-v3
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2708478
             path: contracts/bitpay-obligation-nft.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-sbtc-helper-v2
+            contract-name: bitpay-sbtc-helper-v3
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2709941
             path: contracts/bitpay-sbtc-helper.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-treasury-v2
+            contract-name: bitpay-treasury-v3
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2750417
             path: contracts/bitpay-treasury.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-core-v2
+            contract-name: bitpay-core-v3
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2729935
             path: contracts/bitpay-core.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-marketplace-v2
+            contract-name: bitpay-marketplace-v3
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2729935
             path: contracts/bitpay-marketplace.clar

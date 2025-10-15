@@ -239,8 +239,9 @@ export default function CreateStreamPage() {
       }
 
       // Calculate start and end blocks
-      // Add buffer of 3 blocks (~1-1.5 minutes) to account for wallet confirmation delay
-      const startBlock = blockHeight + 3; // Start in 3 blocks (~90 seconds)
+      // Add buffer of 20 blocks for testnet (blocks can be 30-60 seconds each)
+      // This ensures the start block hasn't passed by the time the transaction is mined
+      const startBlock = blockHeight + 20;
       const endBlock = startBlock + durationInBlocks;
 
       // Convert amount to satoshis for display

@@ -25,12 +25,12 @@ export function useUserStreamsByRole(userAddress: string | null) {
 
     // Streams where user is the sender
     const outgoingStreams = allStreams.filter(stream =>
-      stream.sender.toLowerCase() === normalizedAddress
+      stream.sender && stream.sender.toLowerCase() === normalizedAddress
     );
 
     // Streams where user is the recipient
     const incomingStreams = allStreams.filter(stream =>
-      stream.recipient.toLowerCase() === normalizedAddress
+      stream.recipient && stream.recipient.toLowerCase() === normalizedAddress
     );
 
     return {

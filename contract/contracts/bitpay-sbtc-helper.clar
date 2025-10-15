@@ -62,7 +62,7 @@
     (begin
         ;; SECURITY CHECK: Only authorized protocol contracts can withdraw from vault
         ;; This prevents malicious contracts from draining the vault
-        (try! (contract-call? .bitpay-access-control-v2 assert-authorized-contract
+        (try! (contract-call? .bitpay-access-control-v3 assert-authorized-contract
             contract-caller
         ))
 

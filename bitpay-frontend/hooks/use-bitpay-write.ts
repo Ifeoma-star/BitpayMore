@@ -13,15 +13,12 @@ import {
   PostConditionMode,
   uintCV,
   principalCV,
-  Pc,
 } from '@stacks/transactions';
 import {
   getStacksNetwork,
   BITPAY_DEPLOYER_ADDRESS,
   CONTRACT_NAMES,
   CORE_FUNCTIONS,
-  SBTC_TOKEN_ADDRESS,
-  SBTC_TOKEN_CONTRACT,
   displayToMicro,
 } from '@/lib/contracts/config';
 
@@ -61,16 +58,8 @@ export function useCreateStream(): UseWriteReturn {
       const amountInSats = displayToMicro(amount);
       const network = getStacksNetwork();
 
-      // Create post-condition: contract must send sBTC to vault
-      const contractId = `${BITPAY_DEPLOYER_ADDRESS}.${CONTRACT_NAMES.SBTC_HELPER}` as `${string}.${string}`;
-      const sbtcContractId = `${SBTC_TOKEN_ADDRESS}.${SBTC_TOKEN_CONTRACT}` as `${string}.${string}`;
-
-      const postConditions = [
-        Pc.principal(contractId)
-          .willSendEq(amountInSats)
-          .ft(sbtcContractId, 'sbtc')
-      ];
-
+      // Using Allow mode temporarily to test if contract call works
+      // The wallet cannot auto-generate post-conditions for nested contract calls
       const options: ContractCallOptions = {
         network,
         anchorMode: AnchorMode.Any,
@@ -83,8 +72,7 @@ export function useCreateStream(): UseWriteReturn {
           uintCV(startBlock),
           uintCV(endBlock),
         ],
-        postConditions,
-        postConditionMode: PostConditionMode.Deny,
+        postConditionMode: PostConditionMode.Allow,
         onFinish: (data) => {
           console.log('Stream created successfully:', data.txId);
           setTxId(data.txId);

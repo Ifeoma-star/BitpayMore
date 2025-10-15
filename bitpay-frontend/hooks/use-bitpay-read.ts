@@ -62,7 +62,37 @@ export function useBitPayRead<T = any>(
       });
 
       const jsonResult = cvToJSON(result);
-      setData(jsonResult.value as T);
+
+      // Handle optional response and extract nested tuple data
+      let rawData = jsonResult.value;
+
+      // If it's a tuple, get its value property
+      if (rawData && typeof rawData === 'object' && 'value' in rawData) {
+        rawData = rawData.value;
+      }
+
+      // If this is stream data, extract all the values properly
+      if (rawData && typeof rawData === 'object' && 'sender' in rawData) {
+        const extractValue = (val: any) => {
+          if (val === null || val === undefined) return val;
+          if (typeof val === 'object' && 'value' in val) return val.value;
+          return val;
+        };
+
+        const extractedData = {
+          sender: extractValue(rawData.sender),
+          recipient: extractValue(rawData.recipient),
+          amount: extractValue(rawData.amount),
+          'start-block': extractValue(rawData['start-block']),
+          'end-block': extractValue(rawData['end-block']),
+          withdrawn: extractValue(rawData.withdrawn),
+          cancelled: extractValue(rawData.cancelled),
+          'cancelled-at-block': extractValue(rawData['cancelled-at-block']),
+        };
+        setData(extractedData as T);
+      } else {
+        setData(rawData as T);
+      }
     } catch (err) {
       console.error(`Error reading ${contractName}.${functionName}:`, err);
       setError(err instanceof Error ? err.message : 'Failed to read contract');
@@ -170,9 +200,16 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
       ...(recipientStreamIds || []),
     ];
 
-    // Remove duplicates
-    const uniqueStreamIds = Array.from(new Set(allStreamIds.map(id => id.toString())))
-      .map(id => BigInt(id));
+    // Remove duplicates and convert to BigInt
+    // cvToJSON might return objects like {type: 'uint', value: '123'} or primitive values
+    const uniqueStreamIds = Array.from(new Set(allStreamIds.map(id => {
+      // Handle if id is an object with a value property
+      if (typeof id === 'object' && id !== null && 'value' in id) {
+        return String(id.value);
+      }
+      // Handle if id is already a primitive
+      return String(id);
+    }))).map(id => BigInt(id));
 
     if (uniqueStreamIds.length === 0) {
       setStreams([]);
@@ -198,9 +235,36 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
           });
 
           const jsonResult = cvToJSON(result);
-          const streamData = jsonResult.value as StreamData;
 
-          if (!streamData) return null;
+          // Handle optional response - get-stream returns (optional stream-data)
+          let rawData = jsonResult.value;
+
+          if (!rawData) return null;
+
+          // cvToJSON returns nested structure: the tuple has a 'value' property with all fields
+          const tupleData = rawData.value || rawData;
+
+          console.log('Raw stream data from contract:', streamId, tupleData);
+
+          // Extract values from cvToJSON response (handles nested objects)
+          const extractValue = (val: any) => {
+            if (val === null || val === undefined) return val;
+            if (typeof val === 'object' && 'value' in val) return val.value;
+            return val;
+          };
+
+          const streamData: StreamData = {
+            sender: extractValue(tupleData.sender),
+            recipient: extractValue(tupleData.recipient),
+            amount: extractValue(tupleData.amount),
+            'start-block': extractValue(tupleData['start-block']),
+            'end-block': extractValue(tupleData['end-block']),
+            withdrawn: extractValue(tupleData.withdrawn),
+            cancelled: extractValue(tupleData.cancelled),
+            'cancelled-at-block': extractValue(tupleData['cancelled-at-block']),
+          };
+
+          console.log('Processed stream data:', streamData);
 
           const vestedAmount = calculateVestedAmount(streamData, currentBlock);
           const withdrawableAmount = calculateWithdrawableAmount(streamData, currentBlock);
