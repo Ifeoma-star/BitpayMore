@@ -1,0 +1,19 @@
+{
+  "name": "bitpay-websocket-server",
+  "version": "1.0.0",
+  "description": "Standalone WebSocket server for BitPay real-time events",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["websocket", "socket.io", "bitpay"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -36,7 +36,7 @@ import {
   uintCV,
 } from '@stacks/transactions';
 import { getStacksNetwork, BITPAY_DEPLOYER_ADDRESS, CONTRACT_NAMES } from '@/lib/contracts/config';
-import { broadcastToUser } from '@/lib/socket/server';
+import { broadcastToUser } from '@/lib/socket/client-broadcast';
 
 export async function POST(request: Request) {
   try {

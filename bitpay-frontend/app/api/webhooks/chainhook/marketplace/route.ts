@@ -37,7 +37,7 @@ import {
 import { notifyPurchaseCompleted } from '@/lib/notifications/notification-service';
 import connectToDatabase from '@/lib/db';
 import * as NotificationService from '@/lib/notifications/notification-service';
-import { broadcastToUser, broadcastToMarketplace } from '@/lib/socket/server';
+import { broadcastToUser, broadcastToMarketplace } from '@/lib/socket/client-broadcast';
 
 export async function POST(request: Request) {
   try {

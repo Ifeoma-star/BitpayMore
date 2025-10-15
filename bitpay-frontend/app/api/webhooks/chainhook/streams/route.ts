@@ -38,7 +38,7 @@ import {
 } from '@/lib/notifications/notification-service';
 import connectToDatabase from '@/lib/db';
 import * as NotificationService from '@/lib/notifications/notification-service';
-import { broadcastToUser, broadcastToStream } from '@/lib/socket/server';
+import { broadcastToUser, broadcastToStream } from '@/lib/socket/client-broadcast';
 
 export async function POST(request: Request) {
   try {

@@ -24,7 +24,7 @@ import {
 } from '@/lib/webhooks/chainhook-utils';
 import connectToDatabase from '@/lib/db';
 import * as NotificationService from '@/lib/notifications/notification-service';
-import { broadcastToUser } from '@/lib/socket/server';
+import { broadcastToUser } from '@/lib/socket/client-broadcast';
 
 export async function POST(request: Request) {
   try {

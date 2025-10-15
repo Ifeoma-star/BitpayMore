@@ -25,8 +25,10 @@ export function useRealtime() {
   useEffect(() => {
     // Initialize socket connection
     if (!socket) {
-      socket = io({
-        path: '/api/socket',
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
+
+      socket = io(socketUrl, {
+        path: '/socket.io',
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionDelay: 1000,

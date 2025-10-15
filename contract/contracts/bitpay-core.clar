@@ -305,9 +305,10 @@
 )
 
 ;; Update stream sender when obligation NFT is transferred
+;; IMPORTANT: This function updates both the stream data AND the sender-streams/recipient-streams lookup maps
 ;; SECURITY: Only current stream sender can call this (must own obligation NFT before transferring it)
 ;; The caller should be the OLD sender who is transferring the obligation
-;; @param stream-id: ID of the stream
+;; @param stream-id: ID of the stream to transfer
 ;; @param new-sender: New sender (obligation holder)
 ;; @returns: (ok true) on success
 ;; #[allow(unchecked_data)]
@@ -315,14 +316,19 @@
         (stream-id uint)
         (new-sender principal)
     )
-    (let ((stream (unwrap! (map-get? streams stream-id) ERR_STREAM_NOT_FOUND)))
+    (let (
+            (stream (unwrap! (map-get? streams stream-id) ERR_STREAM_NOT_FOUND))
+            (old-sender (get sender stream))
+            (old-sender-list (get-sender-streams old-sender))
+            (new-sender-list (get-sender-streams new-sender))
+        )
         (begin
             ;; Verify caller is EITHER:
             ;; 1. Current stream sender (for direct transfers), OR
             ;; 2. Authorized contract (for marketplace/protocol transfers)
             (asserts!
                 (or
-                    (is-eq tx-sender (get sender stream))
+                    (is-eq tx-sender old-sender)
                     (is-ok (contract-call? .bitpay-access-control-v4
                         assert-authorized-contract contract-caller
                     ))
@@ -333,15 +339,30 @@
             ;; Cannot update sender of cancelled stream
             (asserts! (not (get cancelled stream)) ERR_STREAM_CANCELLED)
 
-            ;; Update the sender (obligation holder)
+            ;; Update the sender (obligation holder) in streams map
             (map-set streams stream-id (merge stream { sender: new-sender }))
+
+            ;; Update sender-streams maps:
+            ;; Remove stream-id from old sender's list
+            (map-set sender-streams old-sender
+                (get result
+                    (fold filter-stream-id old-sender-list {
+                        id-to-remove: stream-id,
+                        result: (list),
+                    })
+                ))
+
+            ;; Add stream-id to new sender's list
+            (map-set sender-streams new-sender
+                (unwrap-panic (as-max-len? (append new-sender-list stream-id) u200))
+            )
 
             (print {
                 event: "stream-sender-updated",
                 stream-id: stream-id,
-                old-sender: (get sender stream),
+                old-sender: old-sender,
                 new-sender: new-sender,
-                transfer-type: (if (is-eq tx-sender (get sender stream))
+                transfer-type: (if (is-eq tx-sender old-sender)
                     "direct"
                     "authorized-contract"
                 ),
@@ -349,6 +370,24 @@
 
             (ok true)
         )
+    )
+)
+
+;; Helper function for filter-stream-id fold operation
+;; Accumulator: (list stream-id-to-remove result-list)
+(define-private (filter-stream-id
+        (current-id uint)
+        (acc {
+            id-to-remove: uint,
+            result: (list 200 uint),
+        })
+    )
+    (if (is-eq current-id (get id-to-remove acc))
+        acc ;; Skip this ID (it's the one we're removing)
+        {
+            id-to-remove: (get id-to-remove acc),
+            result: (unwrap-panic (as-max-len? (append (get result acc) current-id) u200)),
+        }
     )
 )
 
