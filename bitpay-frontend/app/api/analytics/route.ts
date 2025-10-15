@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
-import { Transaction, Stream } from '@/models';
+import { Transaction, Stream, User } from '@/models';
 import { getTokenFromRequest, verifyToken } from '@/lib/auth/auth';
 
 // GET /api/analytics - Get analytics data for authenticated user
@@ -19,10 +19,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const userAddress = payload.walletAddress;
-    if (!userAddress) {
+    // Get user from database to fetch wallet address
+    const user = await User.findById(payload.userId);
+    if (!user || !user.walletAddress) {
       return NextResponse.json({ error: 'No wallet address found' }, { status: 400 });
     }
+
+    const userAddress = user.walletAddress;
 
     // Get query parameters for filtering
     const { searchParams } = new URL(request.url);

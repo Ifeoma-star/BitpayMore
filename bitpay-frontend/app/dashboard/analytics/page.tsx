@@ -465,8 +465,8 @@ export default function AnalyticsPage() {
                 <div className="text-2xl font-bold">
                   {withdrawalPattern.length > 0
                     ? (
-                        withdrawalPattern.reduce((sum, w) => sum + w.amount, 0) /
-                        withdrawalPattern.filter((w) => w.withdrawals > 0).length || 1
+                        withdrawalPattern.reduce((sum: number, w: any) => sum + w.amount, 0) /
+                        (withdrawalPattern.filter((w: any) => w.withdrawals > 0).length || 1)
                       ).toFixed(4)
                     : '0.0000'}{' '}
                   sBTC
