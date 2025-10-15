@@ -24,15 +24,15 @@ export const BITPAY_DEPLOYER_ADDRESS = process.env.NEXT_PUBLIC_BITPAY_DEPLOYER_A
 export const SBTC_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_SBTC_TOKEN_ADDRESS || 'ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT';
 export const SBTC_TOKEN_CONTRACT = 'sbtc-token';
 
-// BitPay Contract Names (V3 - Deployed on Testnet)
+// BitPay Contract Names (V4 - Deployed on Testnet)
 export const CONTRACT_NAMES = {
-  CORE: 'bitpay-core-v3',
-  ACCESS_CONTROL: 'bitpay-access-control-v3',
-  SBTC_HELPER: 'bitpay-sbtc-helper-v3',
-  NFT: 'bitpay-nft-v3',
-  OBLIGATION_NFT: 'bitpay-obligation-nft-v3',
-  TREASURY: 'bitpay-treasury-v3',
-  MARKETPLACE: 'bitpay-marketplace-v3',
+  CORE: 'bitpay-core-v4',
+  ACCESS_CONTROL: 'bitpay-access-control-v4',
+  SBTC_HELPER: 'bitpay-sbtc-helper-v4',
+  NFT: 'bitpay-nft-v4',
+  OBLIGATION_NFT: 'bitpay-obligation-nft-v4',
+  TREASURY: 'bitpay-treasury-v4',
+  MARKETPLACE: 'bitpay-marketplace-v4',
 } as const;
 
 // Full contract identifiers
