@@ -232,6 +232,10 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
               status,
               vestedAmount,
               withdrawableAmount,
+              // Include cancellation data from database
+              vestedPaid: stream.vestedPaid || '0',
+              unvestedReturned: stream.unvestedReturned || '0',
+              cancelledAt: stream.cancelledAt,
             } as StreamWithId;
           } catch (err) {
             console.error('Error processing stream:', stream.streamId, err);
@@ -256,6 +260,10 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
           status: stream.status || 'active',
           vestedAmount: BigInt(0),
           withdrawableAmount: BigInt(0),
+          // Include cancellation data from database
+          vestedPaid: stream.vestedPaid || '0',
+          unvestedReturned: stream.unvestedReturned || '0',
+          cancelledAt: stream.cancelledAt,
         } as StreamWithId));
 
         setStreams(basicStreams);
