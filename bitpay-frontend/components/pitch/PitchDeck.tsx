@@ -30,25 +30,9 @@ import {
   slide06Notes
 } from "./slides/Slide06Proposition";
 import {
-  Slide07ValueProps,
+  Slide07Closing,
   slide07Notes
-} from "./slides/Slide07ValueProps";
-import {
-  Slide08Demo,
-  slide08Notes
-} from "./slides/Slide08Demo";
-import {
-  Slide09TechStack,
-  slide09Notes
-} from "./slides/Slide09TechStack";
-import {
-  Slide10Traction,
-  slide10Notes
-} from "./slides/Slide10Traction";
-import {
-  Slide11Closing,
-  slide11Notes
-} from "./slides/Slide11Closing";
+} from "./slides/Slide07Closing";
 
 const slides = [
   { component: Slide01Title, notes: slide01Notes },
@@ -57,11 +41,7 @@ const slides = [
   { component: Slide04Solution, notes: slide04Notes },
   { component: Slide05HowItWorks, notes: slide05Notes },
   { component: Slide06Proposition, notes: slide06Notes },
-  { component: Slide07ValueProps, notes: slide07Notes },
-  { component: Slide08Demo, notes: slide08Notes },
-  { component: Slide09TechStack, notes: slide09Notes },
-  { component: Slide10Traction, notes: slide10Notes },
-  { component: Slide11Closing, notes: slide11Notes },
+  { component: Slide07Closing, notes: slide07Notes },
 ];
 
 export function PitchDeck() {

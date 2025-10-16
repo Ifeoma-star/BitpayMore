@@ -6,7 +6,7 @@ import { GradientText } from "../shared/GradientText";
 import { ExternalLink, Mail, Globe, Github, Twitter } from "lucide-react";
 import Link from "next/link";
 
-export function Slide11Closing() {
+export function Slide07Closing() {
   return (
     <SlideContainer background="gradient">
       <div className="text-center space-y-6">
@@ -124,7 +124,7 @@ export function Slide11Closing() {
   );
 }
 
-export const slide11Notes = {
+export const slide07Notes = {
   timing: "30 seconds",
   notes: [
     "We didn't just build a hackathon project - we built the future of Bitcoin payments",
