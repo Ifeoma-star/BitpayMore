@@ -41,10 +41,39 @@ export default function StreamDetailPage() {
   const { user } = useAuth();
   const userAddress = user?.walletAddress || null;
 
+  const [stream, setStream] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const { blockHeight } = useBlockHeight(30000);
-  const { data: stream, isLoading, refetch } = useStream(streamId);
   const { write: withdraw, isLoading: isWithdrawing, txId: withdrawTxId } = useWithdrawFromStream();
   const { write: cancel, isLoading: isCancelling, txId: cancelTxId } = useCancelStream();
+
+  // Fetch stream from database
+  const fetchStream = async () => {
+    if (!streamId) return;
+
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/streams/${streamId}`, {
+        cache: 'no-store',
+      });
+      const data = await response.json();
+
+      if (data.success && data.stream) {
+        setStream(data.stream);
+      }
+    } catch (error) {
+      console.error('Error fetching stream:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refetch = fetchStream;
+
+  useEffect(() => {
+    fetchStream();
+  }, [streamId]);
 
   // WebSocket real-time updates for this specific stream
   const { streamData, lastEvent, isConnected } = useStreamEvents(streamId?.toString() || null);
@@ -105,15 +134,48 @@ export default function StreamDetailPage() {
   }
 
   const progress = blockHeight
-    ? calculateProgress(stream["start-block"], stream["end-block"], BigInt(blockHeight))
+    ? calculateProgress(BigInt(stream.startBlock || stream["start-block"]), BigInt(stream.endBlock || stream["end-block"]), BigInt(blockHeight))
     : 0;
   const isRecipient = userAddress?.toLowerCase() === stream.recipient.toLowerCase();
   const isSender = userAddress?.toLowerCase() === stream.sender.toLowerCase();
 
-  // Calculate cancellation fee (1% of unvested amount)
-  const totalAmount = Number(microToDisplay(stream.amount));
-  const vestedAmount = Number(microToDisplay(stream.vestedAmount));
-  const unvestedAmount = totalAmount - vestedAmount;
+  // Calculate amounts based on stream status
+  let vestedAmount: string;
+  let withdrawableAmount: string;
+  let totalAmount: string;
+  let withdrawn: string;
+
+  if (stream.status === 'cancelled') {
+    // For cancelled streams, show actual distributed amounts
+    totalAmount = microToDisplay(BigInt(stream.amount));
+    vestedAmount = stream.vestedPaid ? microToDisplay(BigInt(stream.vestedPaid)) : '0.00000000';
+    withdrawn = microToDisplay(BigInt(stream.withdrawn || '0'));
+    withdrawableAmount = '0.00000000'; // Nothing to withdraw, already distributed
+  } else {
+    // For active streams, calculate vested/withdrawable amounts
+    const { calculateVestedAmount, calculateWithdrawableAmount } = require('@/lib/contracts/config');
+    const currentBlock = BigInt(blockHeight || 0);
+    const streamData = {
+      amount: BigInt(stream.amount),
+      'start-block': BigInt(stream.startBlock || stream["start-block"]),
+      'end-block': BigInt(stream.endBlock || stream["end-block"]),
+      withdrawn: BigInt(stream.withdrawn || '0'),
+      cancelled: false,
+    };
+
+    const vested = calculateVestedAmount(streamData, currentBlock);
+    const withdrawable = calculateWithdrawableAmount(streamData, currentBlock);
+
+    totalAmount = microToDisplay(BigInt(stream.amount));
+    vestedAmount = microToDisplay(vested);
+    withdrawn = microToDisplay(BigInt(stream.withdrawn || '0'));
+    withdrawableAmount = microToDisplay(withdrawable);
+  }
+
+  // Calculate cancellation fee for preview (only for active streams)
+  const totalAmountNum = Number(totalAmount);
+  const vestedAmountNum = Number(vestedAmount);
+  const unvestedAmount = totalAmountNum - vestedAmountNum;
   const cancellationFee = unvestedAmount * 0.01;
   const amountAfterFee = unvestedAmount - cancellationFee;
 
@@ -133,10 +195,13 @@ export default function StreamDetailPage() {
           <Separator />
 
           <StreamAmounts
-            totalAmount={microToDisplay(stream.amount)}
-            vestedAmount={microToDisplay(stream.vestedAmount)}
-            withdrawn={microToDisplay(stream.withdrawn)}
-            available={microToDisplay(stream.withdrawableAmount)}
+            totalAmount={totalAmount}
+            vestedAmount={vestedAmount}
+            withdrawn={withdrawn}
+            available={withdrawableAmount}
+            status={stream.status}
+            vestedPaid={stream.vestedPaid ? microToDisplay(BigInt(stream.vestedPaid)) : undefined}
+            unvestedReturned={stream.unvestedReturned ? microToDisplay(BigInt(stream.unvestedReturned)) : undefined}
           />
 
           <Separator />
