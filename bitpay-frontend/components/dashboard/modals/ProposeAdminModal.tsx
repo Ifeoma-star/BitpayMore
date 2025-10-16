@@ -43,6 +43,15 @@ export function ProposeAdminModal({
   const handlePropose = async () => {
     setError("");
 
+    // Check if wallet is available
+    if (typeof window === 'undefined' || !(window as any).btc) {
+      setError("Stacks wallet not detected. Please install Leather or Hiro wallet extension.");
+      toast.error("Wallet not detected", {
+        description: "Please install Leather or Hiro wallet extension and refresh the page."
+      });
+      return;
+    }
+
     // Validate address
     if (!address.trim()) {
       setError("Please enter a valid Stacks address");
@@ -68,14 +77,21 @@ export function ProposeAdminModal({
     try {
       let txId: string | null = null;
 
+      console.log("🚀 Starting admin proposal...");
+      console.log("Wallet available:", !!(window as any).btc);
+      console.log("Active tab:", activeTab);
+      console.log("Target address:", address);
+
       if (activeTab === "add") {
         console.log("Proposing to add admin:", address);
         toast.info("Opening wallet to propose admin addition...");
         txId = await proposeAdd(address);
+        console.log("proposeAdd returned txId:", txId);
       } else {
         console.log("Proposing to remove admin:", address);
         toast.info("Opening wallet to propose admin removal...");
         txId = await proposeRemove(address);
+        console.log("proposeRemove returned txId:", txId);
       }
 
       if (txId) {

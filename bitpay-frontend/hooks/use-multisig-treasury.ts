@@ -185,7 +185,19 @@ export function useProposeAddAdmin() {
   );
 
   const proposeAdd = async (newAdmin: string): Promise<string | null> => {
-    return write(principalCV(newAdmin));
+    console.log('🔵 useProposeAddAdmin called with:', newAdmin);
+    console.log('🔵 Contract name:', CONTRACT_NAMES.TREASURY);
+    console.log('🔵 Function name: propose-add-admin');
+    console.log('🔵 Principal CV:', principalCV(newAdmin));
+
+    try {
+      const result = await write(principalCV(newAdmin));
+      console.log('🔵 write() returned:', result);
+      return result;
+    } catch (err) {
+      console.error('❌ Error in proposeAdd:', err);
+      throw err;
+    }
   };
 
   return { proposeAdd, isLoading, error };

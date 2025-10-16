@@ -28,9 +28,10 @@ import type {
 
 /**
  * Create a notification in the database
+ * @param userIdentifier - Can be either wallet address (ST...) or MongoDB _id
  */
 export async function createNotification(
-  userId: string,
+  userIdentifier: string,
   type: NotificationType,
   title: string,
   message: string,
@@ -47,6 +48,39 @@ export async function createNotification(
 
   if (!db) {
     throw new Error('Database connection failed');
+  }
+
+  // Determine if userIdentifier is a wallet address or MongoDB _id
+  let userId: string;
+  let walletAddress: string | undefined;
+
+  if (userIdentifier.startsWith('ST') || userIdentifier.startsWith('SP')) {
+    // It's a wallet address - look up the user's _id
+    walletAddress = userIdentifier;
+    const user = await db.collection('users').findOne({ walletAddress: userIdentifier });
+
+    if (!user) {
+      console.warn(`⚠️ User not found for wallet address: ${userIdentifier}. Notification not created.`);
+      // Return a dummy notification to prevent errors
+      return {
+        _id: '',
+        userId: userIdentifier,
+        type,
+        priority: options.priority || 'normal',
+        status: 'unread',
+        title,
+        message,
+        data,
+        emailSent: false,
+        createdAt: new Date(),
+      } as Notification;
+    }
+
+    userId = user._id.toString();
+    console.log(`📧 Resolved wallet ${userIdentifier} to user ID: ${userId}`);
+  } else {
+    // It's already a MongoDB _id
+    userId = userIdentifier;
   }
 
   const notification: any = {
@@ -67,10 +101,10 @@ export async function createNotification(
   const result = await db.collection('notifications').insertOne(notification);
   notification._id = result.insertedId.toString();
 
-  console.log(`✅ Created notification for ${userId}: ${type}`);
+  console.log(`✅ Created notification for user ${userId}: ${type}`);
 
-  // Broadcast notification to user via WebSocket for real-time updates
-  await broadcastToUser(userId, 'notification:new', notification);
+  // Broadcast notification to user via WebSocket (use wallet address if available)
+  await broadcastToUser(walletAddress || userId, 'notification:new', notification);
 
   return notification as Notification;
 }

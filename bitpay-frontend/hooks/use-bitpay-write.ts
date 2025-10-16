@@ -409,6 +409,11 @@ export function useBitPayWrite(
   const [error, setError] = useState<string | null>(null);
 
   const write = useCallback(async (...args: any[]): Promise<string | null> => {
+    console.log(`🟢 useBitPayWrite.write() called for ${contractName}.${functionName}`);
+    console.log('🟢 Args:', args);
+    console.log('🟢 Network:', getStacksNetwork());
+    console.log('🟢 Deployer:', BITPAY_DEPLOYER_ADDRESS);
+
     try {
       setIsLoading(true);
       setError(null);
@@ -425,21 +430,23 @@ export function useBitPayWrite(
         functionArgs: args,
         postConditionMode: PostConditionMode.Allow,
         onFinish: (data) => {
-          console.log(`${contractName}.${functionName} successful:`, data.txId);
+          console.log(`✅ ${contractName}.${functionName} successful:`, data.txId);
           setTxId(data.txId);
           setIsLoading(false);
         },
         onCancel: () => {
-          console.log('Transaction cancelled by user');
+          console.log('⚠️ Transaction cancelled by user');
           setError('Transaction cancelled');
           setIsLoading(false);
         },
       };
 
+      console.log('🟢 Calling openContractCall with options:', options);
       await openContractCall(options);
+      console.log('🟢 openContractCall completed, returning txId:', txId);
       return txId;
     } catch (err) {
-      console.error(`Error calling ${contractName}.${functionName}:`, err);
+      console.error(`❌ Error calling ${contractName}.${functionName}:`, err);
       const errorMessage = err instanceof Error ? err.message : 'Transaction failed';
       setError(errorMessage);
       setIsLoading(false);
