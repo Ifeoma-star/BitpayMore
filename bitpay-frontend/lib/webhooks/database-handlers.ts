@@ -125,14 +125,64 @@ export async function saveStreamWithdrawal(data: {
       );
     }
 
-    // Update stream's withdrawn amount
+    // Refetch stream to get current withdrawn amount
+    const currentStream = await db.collection('streams').findOne({ streamId: data.streamId });
+    if (!currentStream) {
+      console.error(`❌ Stream not found: ${data.streamId}`);
+      return;
+    }
+
+    const currentWithdrawn = typeof currentStream.withdrawn === 'number' ? currentStream.withdrawn : parseFloat(currentStream.withdrawn || '0');
+    const newWithdrawn = currentWithdrawn + parseFloat(data.amount);
+    const totalAmount = parseFloat(currentStream.amount);
+
+    // Check if stream is now fully withdrawn
+    const isFullyWithdrawn = newWithdrawn >= totalAmount;
+
+    // Update stream's withdrawn amount and status if completed
+    const updateData: any = {
+      $inc: { withdrawn: parseFloat(data.amount) },
+      $set: { updatedAt: new Date() },
+    };
+
+    if (isFullyWithdrawn && currentStream.status !== 'completed') {
+      updateData.$set.status = 'completed';
+      updateData.$set.completedAt = new Date(data.context.timestamp * 1000);
+      console.log(`🏁 Stream ${data.streamId} is now fully withdrawn - marking as completed`);
+    }
+
     await db.collection('streams').updateOne(
       { streamId: data.streamId },
-      {
-        $inc: { withdrawn: parseFloat(data.amount) },
-        $set: { updatedAt: new Date() },
-      }
+      updateData
     );
+
+    // If stream is completed, auto-cancel any active marketplace listing
+    if (isFullyWithdrawn) {
+      const listingUpdateResult = await db.collection('marketplace_listings').updateOne(
+        { streamId: data.streamId, status: 'active' },
+        {
+          $set: {
+            status: 'cancelled',
+            cancelledReason: 'stream_completed',
+            cancelledAt: new Date(data.context.timestamp * 1000),
+            cancelledTxHash: data.context.txHash,
+            updatedAt: new Date(),
+          },
+        }
+      );
+
+      if (listingUpdateResult.modifiedCount > 0) {
+        console.log(`🗑️ Auto-cancelled marketplace listing for completed stream: ${data.streamId}`);
+
+        // Broadcast listing cancellation via WebSocket
+        const { broadcastToMarketplace } = await import('@/lib/socket/client-broadcast');
+        broadcastToMarketplace('marketplace:listing-cancelled', {
+          streamId: data.streamId,
+          reason: 'stream_completed',
+          txHash: data.context.txHash,
+        });
+      }
+    }
 
     // Log withdrawal event
     await db.collection('blockchain_events').insertOne({
@@ -143,12 +193,13 @@ export async function saveStreamWithdrawal(data: {
         recipient: data.recipient,
         amount: data.amount,
         withdrawnAt: new Date(data.context.timestamp * 1000),
+        isFullyWithdrawn,
       },
       context: data.context,
       processedAt: new Date(),
     });
 
-    console.log(`✅ Saved stream-withdrawal event: ${data.streamId}`);
+    console.log(`✅ Saved stream-withdrawal event: ${data.streamId} (fully withdrawn: ${isFullyWithdrawn})`);
   });
 }
 
