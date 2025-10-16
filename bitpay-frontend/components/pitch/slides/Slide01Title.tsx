@@ -2,78 +2,124 @@
 
 import { motion } from "framer-motion";
 import { SlideContainer } from "../SlideContainer";
-import { GradientText } from "../shared/GradientText";
-import { Bitcoin, Zap } from "lucide-react";
+import { Bitcoin, Zap, ArrowRight, Users, Wallet } from "lucide-react";
+import Image from "next/image";
 
 export function Slide01Title() {
   return (
-    <SlideContainer background="gradient">
-      <div className="text-center space-y-4">
-        {/* Logo */}
+    <SlideContainer background="white">
+      <div className="grid md:grid-cols-2 gap-12 items-center h-full px-8">
+        {/* Left side - Content */}
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.6, ease: "backOut" }}
-          className="flex justify-center mb-4"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          className="space-y-6"
         >
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-pink-600 rounded-full blur-3xl opacity-30 animate-pulse" />
-            <div className="relative flex items-center gap-2 px-6 py-3 bg-white rounded-2xl shadow-xl">
-              <Bitcoin className="w-10 h-10 text-orange-500" />
-              <Zap className="w-7 h-7 text-pink-600" />
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-xl">
+              <Bitcoin className="w-8 h-8 text-orange-500" />
+              <Zap className="w-6 h-6 text-orange-500" />
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <h1 className="text-6xl md:text-7xl font-black mb-4 text-gray-900">
+              BitPay
+            </h1>
+
+            <p className="text-2xl md:text-3xl text-gray-600 font-medium mb-4">
+              Bitcoin Streaming & Vesting Vaults
+            </p>
+
+            <p className="text-xl md:text-2xl font-bold text-orange-600 italic">
+              "Netflix for Money, Secured by Bitcoin"
+            </p>
+          </div>
+
+          {/* Badges */}
+          <div className="flex flex-wrap gap-3">
+            <div className="px-4 py-2 bg-gray-100 rounded-lg border-2 border-gray-200">
+              <span className="text-sm font-semibold text-gray-700">
+                Built on Stacks
+              </span>
+            </div>
+
+            <div className="px-4 py-2 bg-gray-100 rounded-lg border-2 border-gray-200">
+              <span className="text-sm font-semibold text-gray-700">
+                Powered by sBTC
+              </span>
+            </div>
+
+            <div className="px-4 py-2 bg-gray-100 rounded-lg border-2 border-gray-200">
+              <span className="text-sm font-semibold text-gray-700">
+                Production Ready
+              </span>
             </div>
           </div>
         </motion.div>
 
-        {/* Title */}
+        {/* Right side - Illustration */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
+          className="relative"
         >
-          <h1 className="text-7xl md:text-8xl font-black mb-3">
-            <GradientText>BitPay</GradientText>
-          </h1>
+          {/* Simple illustration showing payment flow */}
+          <div className="relative bg-gray-50 rounded-2xl p-8 border-2 border-gray-200">
+            {/* Sender */}
+            <div className="flex items-center justify-between mb-12">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-2">
+                  <Wallet className="w-8 h-8 text-orange-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Sender</span>
+              </div>
 
-          <p className="text-2xl md:text-3xl text-gray-700 font-medium mb-3">
-            Bitcoin Streaming & Vesting Vaults
-          </p>
+              {/* Flow arrow */}
+              <div className="flex-1 mx-4 relative">
+                <div className="h-1 bg-orange-300 rounded-full" />
+                <motion.div
+                  initial={{ x: -20 }}
+                  animate={{ x: 20 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="absolute top-1/2 left-1/2 transform -translate-y-1/2"
+                >
+                  <div className="flex items-center gap-1">
+                    <Bitcoin className="w-4 h-4 text-orange-600" />
+                    <ArrowRight className="w-4 h-4 text-orange-600" />
+                  </div>
+                </motion.div>
+              </div>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-xl md:text-2xl font-bold"
-          >
-            <GradientText gradient="accent">
-              "Netflix for Money, Secured by Bitcoin"
-            </GradientText>
-          </motion.p>
-        </motion.div>
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+                  <Users className="w-8 h-8 text-blue-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-700">Recipient</span>
+              </div>
+            </div>
 
-        {/* Subtitle badges */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.9 }}
-          className="flex flex-wrap items-center justify-center gap-3 mt-6"
-        >
-          <div className="px-5 py-2 bg-white rounded-full border-2 border-orange-200 shadow-sm">
-            <span className="text-base font-semibold text-gray-700">
-              Built on Stacks
-            </span>
-          </div>
-
-          <div className="px-5 py-2 bg-white rounded-full border-2 border-pink-200 shadow-sm">
-            <span className="text-base font-semibold text-gray-700">
-              Powered by sBTC
-            </span>
-          </div>
-
-          <div className="px-5 py-2 bg-white rounded-full border-2 border-purple-200 shadow-sm">
-            <span className="text-base font-semibold text-gray-700">
-              Production Ready
-            </span>
+            {/* Stream visualization */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: "0%" }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="h-full bg-orange-500 rounded-full"
+                  />
+                </div>
+                <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Per-second</span>
+              </div>
+              <div className="text-center text-xs text-gray-500 font-medium">
+                Continuous Bitcoin Streaming
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>
