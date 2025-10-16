@@ -33,7 +33,11 @@ export function Slide07Proposition() {
               <Sparkles className="w-8 h-8 text-orange-600 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="text-2xl font-black text-gray-900 mb-3">Value Prop</h3>
-                <p className="text-base text-gray-700 italic mb-2">Why this matters. What makes it unique?</p>
+                <p className="text-sm text-gray-600 italic mb-3">Why this matters. What makes it unique?</p>
+                <p className="text-base text-gray-900">
+                  <span className="font-bold">First streaming protocol on Bitcoin.</span> Real sBTC utility beyond speculation.
+                  Guaranteed payments in code, tradeable as NFTs.
+                </p>
               </div>
             </div>
           </motion.div>
@@ -49,7 +53,11 @@ export function Slide07Proposition() {
               <TrendingUp className="w-8 h-8 text-blue-600 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="text-2xl font-black text-gray-900 mb-3">Impact Potential</h3>
-                <p className="text-base text-gray-700 italic mb-2">Potential adoption. How can it scale?</p>
+                <p className="text-sm text-gray-600 italic mb-3">Potential adoption. How can it scale?</p>
+                <p className="text-base text-gray-900">
+                  <span className="font-bold">$1.5T freelance + $800B payroll markets.</span> Composable primitive—
+                  payroll apps, DAOs, subscriptions build on us. Network effects.
+                </p>
               </div>
             </div>
           </motion.div>
@@ -65,10 +73,12 @@ export function Slide07Proposition() {
               <Layers className="w-8 h-8 text-purple-600 flex-shrink-0 mt-1" />
               <div>
                 <h3 className="text-2xl font-black text-gray-900 mb-3">Bitcoin & Stacks Alignment</h3>
-                <ul className="space-y-1.5 text-base text-gray-700 italic">
-                  <li>• How does this increase Bitcoin utility?</li>
-                  <li>• How does this increase Stacks adoption?</li>
-                </ul>
+                <p className="text-sm text-gray-600 italic mb-3">How does this increase Bitcoin utility? How does this increase Stacks adoption?</p>
+                <p className="text-base text-gray-900">
+                  <span className="font-bold">Bitcoin:</span> Programmable sBTC for continuous payments, not just holding.
+                  <br />
+                  <span className="font-bold">Stacks:</span> Showcases Clarity safety for financial contracts. Real adoption driven by utility.
+                </p>
               </div>
             </div>
           </motion.div>
