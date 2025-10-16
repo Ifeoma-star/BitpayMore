@@ -4,6 +4,14 @@
  */
 
 import connectToDatabase from '@/lib/db';
+
+/**
+ * Format satoshis to BTC (8 decimals, remove trailing zeros)
+ */
+function formatSatsToBTC(sats: string): string {
+  const btc = parseFloat(sats) / 100000000;
+  return btc.toFixed(8).replace(/\.?0+$/, '');
+}
 import { clientPromise } from '@/lib/db';
 import * as EmailService from '@/lib/email/email-service';
 import { broadcastToUser } from '@/lib/socket/client-broadcast';
@@ -242,7 +250,7 @@ export async function notifyStreamCreated(data: {
     data.recipient,
     'stream_received',
     '💰 New Payment Stream Received',
-    `You've received a new payment stream of ${data.amount} sBTC from ${data.sender.substring(0, 8)}...`,
+    `You've received a new payment stream of ${formatSatsToBTC(data.amount)} sBTC from ${data.sender.substring(0, 8)}...`,
     {
       streamId: data.streamId,
       sender: data.sender,
@@ -278,7 +286,7 @@ export async function notifyStreamCreated(data: {
     data.sender,
     'stream_created',
     '✅ Stream Created Successfully',
-    `Your payment stream of ${data.amount} sBTC to ${data.recipient.substring(0, 8)}... is now active.`,
+    `Your payment stream of ${formatSatsToBTC(data.amount)} sBTC to ${data.recipient.substring(0, 8)}... is now active.`,
     {
       streamId: data.streamId,
       recipient: data.recipient,
@@ -305,7 +313,7 @@ export async function notifyStreamWithdrawal(data: {
     data.recipient,
     'stream_withdrawal',
     '💸 Withdrawal Successful',
-    `You withdrew ${data.amount} sBTC from stream #${data.streamId}.`,
+    `You withdrew ${formatSatsToBTC(data.amount)} sBTC from stream #${data.streamId}.`,
     {
       streamId: data.streamId,
       amount: data.amount,
@@ -364,7 +372,7 @@ export async function notifyStreamCancelled(data: {
     data.recipient,
     'stream_cancelled',
     '⚠️ Stream Cancelled',
-    `Stream #${data.streamId} was cancelled. You received ${data.vestedPaid} sBTC (vested amount).`,
+    `Stream #${data.streamId} was cancelled. You received ${formatSatsToBTC(data.vestedPaid)} sBTC (vested amount).`,
     {
       streamId: data.streamId,
       sender: data.sender,
@@ -399,7 +407,7 @@ export async function notifyStreamCancelled(data: {
     data.sender,
     'stream_cancelled',
     '✅ Stream Cancelled',
-    `Stream #${data.streamId} cancelled successfully. ${data.unvestedReturned} sBTC returned.`,
+    `Stream #${data.streamId} cancelled successfully. ${formatSatsToBTC(data.unvestedReturned)} sBTC returned.`,
     {
       streamId: data.streamId,
       recipient: data.recipient,
