@@ -383,6 +383,25 @@ async function handleStreamCancelled(
     unvestedReturned: event['unvested-returned'].toString(),
     txHash: context.txHash,
   });
+
+  // Broadcast cancellation to sender and recipient via WebSocket for real-time UI update
+  const cancellationData = {
+    streamId: event['stream-id'].toString(),
+    sender: event.sender,
+    recipient,
+    vestedPaid: event['vested-paid'].toString(),
+    unvestedReturned: event['unvested-returned'].toString(),
+    cancelledAtBlock: event['cancelled-at-block'].toString(),
+    txHash: context.txHash,
+  };
+
+  broadcastToUser(event.sender, 'stream:cancelled', cancellationData);
+  if (recipient) {
+    broadcastToUser(recipient, 'stream:cancelled', cancellationData);
+  }
+  broadcastToStream(event['stream-id'].toString(), 'stream:cancelled', cancellationData);
+
+  console.log(`📢 Broadcasted stream cancellation to sender and recipient: ${event['stream-id']}`);
 }
 
 /**
