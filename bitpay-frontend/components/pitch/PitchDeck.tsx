@@ -26,13 +26,17 @@ import {
   slide05Notes
 } from "./slides/Slide05HowItWorks";
 import {
-  Slide06Proposition,
+  Slide06LiveDemo,
   slide06Notes
-} from "./slides/Slide06Proposition";
+} from "./slides/Slide06LiveDemo";
 import {
-  Slide07Closing,
+  Slide07Proposition,
   slide07Notes
-} from "./slides/Slide07Closing";
+} from "./slides/Slide07Proposition";
+import {
+  Slide08TeamAndThanks,
+  slide08Notes
+} from "./slides/Slide08TeamAndThanks";
 
 const slides = [
   { component: Slide01Title, notes: slide01Notes },
@@ -40,8 +44,9 @@ const slides = [
   { component: Slide03Problem, notes: slide03Notes },
   { component: Slide04Solution, notes: slide04Notes },
   { component: Slide05HowItWorks, notes: slide05Notes },
-  { component: Slide06Proposition, notes: slide06Notes },
-  { component: Slide07Closing, notes: slide07Notes },
+  { component: Slide06LiveDemo, notes: slide06Notes },
+  { component: Slide07Proposition, notes: slide07Notes },
+  { component: Slide08TeamAndThanks, notes: slide08Notes },
 ];
 
 export function PitchDeck() {
