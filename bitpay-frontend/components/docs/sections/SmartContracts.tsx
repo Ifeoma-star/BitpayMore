@@ -13,7 +13,7 @@ export function SmartContracts() {
     >
       <SubSection title="Contract Overview">
         <p className="text-foreground leading-relaxed mb-6">
-          BitPay consists of four main Clarity smart contracts that work together
+          BitPay consists of seven Clarity smart contracts that work together
           to enable secure, decentralized streaming payments on Bitcoin:
         </p>
         <div className="grid md:grid-cols-2 gap-4">
@@ -49,7 +49,7 @@ export function SmartContracts() {
               <div>• create-proposal</div>
               <div>• vote-on-proposal</div>
               <div>• execute-proposal</div>
-              <div>• withdraw-fees</div>
+              <div>• deposit-fees</div>
             </div>
           </InfoCard>
 
@@ -58,16 +58,16 @@ export function SmartContracts() {
               <FileCode className="h-5 w-5 text-blue-500 flex-shrink-0 mt-1" />
               <div>
                 <p className="text-sm text-foreground leading-relaxed">
-                  NFT marketplace for trading stream obligations and claim NFTs,
+                  NFT marketplace for trading stream obligation NFTs,
                   creating secondary markets for future cash flows.
                 </p>
               </div>
             </div>
             <div className="text-xs text-muted-foreground space-y-1 mt-3 pt-3 border-t">
-              <div>• list-nft</div>
-              <div>• buy-nft</div>
+              <div>• list-obligation-nft</div>
+              <div>• buy-obligation-nft</div>
               <div>• cancel-listing</div>
-              <div>• update-price</div>
+              <div>• update-listing-price</div>
             </div>
           </InfoCard>
 
@@ -76,8 +76,26 @@ export function SmartContracts() {
               <Zap className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" />
               <div>
                 <p className="text-sm text-foreground leading-relaxed">
-                  SIP-009 compliant NFT contracts representing stream claims
-                  (recipient) and obligations (sender).
+                  SIP-009 compliant NFT for recipient claim rights. Soul-bound
+                  (non-transferable) to protect recipients.
+                </p>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground space-y-1 mt-3 pt-3 border-t">
+              <div>• mint (internal only)</div>
+              <div>• get-owner</div>
+              <div>• get-token-uri</div>
+              <div>• get-last-token-id</div>
+            </div>
+          </InfoCard>
+
+          <InfoCard title="bitpay-obligation-nft" variant="warning">
+            <div className="flex items-start gap-3 mb-3">
+              <FileCode className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-1" />
+              <div>
+                <p className="text-sm text-foreground leading-relaxed">
+                  SIP-009 compliant NFT for sender payment obligations.
+                  Transferable and tradeable on the marketplace.
                 </p>
               </div>
             </div>
@@ -86,6 +104,42 @@ export function SmartContracts() {
               <div>• transfer</div>
               <div>• get-owner</div>
               <div>• get-last-token-id</div>
+            </div>
+          </InfoCard>
+
+          <InfoCard title="bitpay-sbtc-helper" variant="pink">
+            <div className="flex items-start gap-3 mb-3">
+              <Code2 className="h-5 w-5 text-brand-pink flex-shrink-0 mt-1" />
+              <div>
+                <p className="text-sm text-foreground leading-relaxed">
+                  Helper contract for sBTC operations. Handles transfers to/from
+                  vault and treasury.
+                </p>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground space-y-1 mt-3 pt-3 border-t">
+              <div>• transfer-to-vault</div>
+              <div>• transfer-from-vault</div>
+              <div>• transfer-to-treasury</div>
+              <div>• get-vault-balance</div>
+            </div>
+          </InfoCard>
+
+          <InfoCard title="bitpay-access-control" variant="teal">
+            <div className="flex items-start gap-3 mb-3">
+              <Shield className="h-5 w-5 text-brand-teal flex-shrink-0 mt-1" />
+              <div>
+                <p className="text-sm text-foreground leading-relaxed">
+                  Admin and permission management. Controls protocol pause state
+                  and admin list for governance.
+                </p>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground space-y-1 mt-3 pt-3 border-t">
+              <div>• add-admin</div>
+              <div>• remove-admin</div>
+              <div>• set-paused</div>
+              <div>• is-admin</div>
             </div>
           </InfoCard>
         </div>

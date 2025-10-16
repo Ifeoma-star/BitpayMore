@@ -189,7 +189,7 @@ export function Architecture() {
       <SubSection title="Smart Contract Architecture">
         <InfoCard title="Contract Structure" variant="pink">
           <p className="text-foreground leading-relaxed mb-4">
-            BitPay's smart contract system is composed of four main contracts that
+            BitPay's smart contract system is composed of seven contracts that
             work together to enable streaming payments, marketplace functionality,
             and decentralized governance:
           </p>
@@ -213,16 +213,36 @@ export function Architecture() {
             <div className="border-l-4 border-yellow-500 pl-4">
               <h4 className="font-semibold mb-1">3. bitpay-marketplace</h4>
               <p className="text-sm text-muted-foreground">
-                NFT marketplace for trading stream obligation and claim NFTs.
+                NFT marketplace for trading stream obligation NFTs.
                 Enables secondary markets for future cash flows.
               </p>
             </div>
             <div className="border-l-4 border-blue-500 pl-4">
-              <h4 className="font-semibold mb-1">4. bitpay-stream-nft</h4>
+              <h4 className="font-semibold mb-1">4. bitpay-nft</h4>
               <p className="text-sm text-muted-foreground">
-                SIP-009 compliant NFT contract representing stream obligations
-                (sender) and claims (recipient). Allows streams to be traded and
-                transferred.
+                SIP-009 compliant NFT contract for recipient claim rights. Soul-bound
+                (non-transferable) to protect recipients.
+              </p>
+            </div>
+            <div className="border-l-4 border-green-500 pl-4">
+              <h4 className="font-semibold mb-1">5. bitpay-obligation-nft</h4>
+              <p className="text-sm text-muted-foreground">
+                SIP-009 compliant NFT contract for sender payment obligations.
+                Transferable and tradeable on the marketplace.
+              </p>
+            </div>
+            <div className="border-l-4 border-purple-500 pl-4">
+              <h4 className="font-semibold mb-1">6. bitpay-sbtc-helper</h4>
+              <p className="text-sm text-muted-foreground">
+                Helper contract for sBTC operations. Handles transfers to/from
+                vault and treasury with proper authorization checks.
+              </p>
+            </div>
+            <div className="border-l-4 border-orange-500 pl-4">
+              <h4 className="font-semibold mb-1">7. bitpay-access-control</h4>
+              <p className="text-sm text-muted-foreground">
+                Admin and permission management contract. Controls protocol pause
+                state and manages admin list for governance operations.
               </p>
             </div>
           </div>
