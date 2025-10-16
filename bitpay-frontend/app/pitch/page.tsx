@@ -6,5 +6,9 @@ export const metadata = {
 };
 
 export default function PitchPage() {
-  return <PitchDeck />;
+  return (
+    <div className="min-h-screen bg-white">
+      <PitchDeck />
+    </div>
+  );
 }

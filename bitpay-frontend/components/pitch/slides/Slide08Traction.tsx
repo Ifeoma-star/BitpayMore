@@ -20,7 +20,7 @@ export function Slide08Traction() {
 
   return (
     <SlideContainer background="white">
-      <div className="space-y-12">
+      <div className="space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -28,38 +28,38 @@ export function Slide08Traction() {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h2 className="text-6xl md:text-7xl font-black mb-6">
+          <h2 className="text-5xl md:text-6xl font-black mb-3 leading-tight">
             <GradientText>Not Just a Demo</GradientText>
             <br />
             <span className="text-gray-900">A Real Product</span>
           </h2>
 
-          <p className="text-2xl text-gray-600">
+          <p className="text-xl text-gray-600">
             Production-ready from day one
           </p>
         </motion.div>
 
         {/* Key Metrics */}
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <div className="grid md:grid-cols-3 gap-4 mb-6">
           <StatCard value="7" label="Smart Contracts" delay={0.3} />
           <StatCard value="4,500" label="Lines of Documentation" suffix="+" delay={0.5} />
           <StatCard value="30" label="Architecture Diagrams" suffix="+" delay={0.7} />
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-3 max-w-4xl mx-auto">
           {features.map((feature, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.4, delay: 0.9 + index * 0.1 }}
-              className="flex items-center gap-3 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl p-4 border-2 border-orange-100"
+              className="flex items-center gap-2 bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg p-3 border-2 border-orange-100"
             >
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-green-500 to-teal-600 flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-white" />
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-r from-green-500 to-teal-600 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 text-white" />
               </div>
-              <p className="text-lg font-medium text-gray-900">
+              <p className="text-sm font-medium text-gray-900">
                 {feature}
               </p>
             </motion.div>
@@ -71,10 +71,10 @@ export function Slide08Traction() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 1.8 }}
-          className="text-center pt-8"
+          className="text-center pt-4"
         >
-          <div className="inline-block px-8 py-6 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-2xl shadow-xl">
-            <p className="text-3xl font-black text-white">
+          <div className="inline-block px-6 py-4 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-2xl shadow-xl">
+            <p className="text-2xl font-black text-white">
               Ready for Mainnet 🚀
             </p>
           </div>

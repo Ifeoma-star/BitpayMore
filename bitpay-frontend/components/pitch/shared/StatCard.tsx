@@ -34,20 +34,20 @@ export function StatCard({
     >
       <div className="inline-flex items-baseline gap-1">
         {prefix && (
-          <span className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-pink-600 bg-clip-text text-transparent">
+          <span className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-pink-600 bg-clip-text text-transparent">
             {prefix}
           </span>
         )}
-        <span className="text-6xl md:text-7xl font-black bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+        <span className="text-5xl md:text-6xl font-black bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">
           {value}
         </span>
         {suffix && (
-          <span className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+          <span className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
             {suffix}
           </span>
         )}
       </div>
-      <p className="text-2xl text-gray-600 font-medium mt-4">
+      <p className="text-xl text-gray-600 font-medium mt-3">
         {label}
       </p>
     </motion.div>

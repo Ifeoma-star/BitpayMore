@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Home } from "lucide-react";
 import { SlideNavigation } from "./SlideNavigation";
 import { SpeakerNotes } from "./SpeakerNotes";
 import {
@@ -20,24 +22,28 @@ import {
   slide04Notes
 } from "./slides/Slide04Solution";
 import {
-  Slide05Demo,
-  slide05Notes
-} from "./slides/Slide05Demo";
+  Slide05Proposition,
+  slide05Notes as slide05PropNotes
+} from "./slides/Slide05Proposition";
 import {
-  Slide06ValueProps,
-  slide06Notes
+  Slide05Demo as Slide06Demo,
+  slide05Notes as slide06DemoNotes
+} from "./slides/Slide06Demo";
+import {
+  Slide06ValueProps as Slide07ValueProps,
+  slide06Notes as slide07ValueNotes
 } from "./slides/Slide06ValueProps";
 import {
-  Slide07TechStack,
-  slide07Notes
+  Slide07TechStack as Slide08TechStack,
+  slide07Notes as slide08TechNotes
 } from "./slides/Slide07TechStack";
 import {
-  Slide08Traction,
-  slide08Notes
+  Slide08Traction as Slide09Traction,
+  slide08Notes as slide09TractionNotes
 } from "./slides/Slide08Traction";
 import {
-  Slide09Closing,
-  slide09Notes
+  Slide09Closing as Slide10Closing,
+  slide09Notes as slide10ClosingNotes
 } from "./slides/Slide09Closing";
 
 const slides = [
@@ -45,11 +51,12 @@ const slides = [
   { component: Slide02TwitterPitch, notes: slide02Notes },
   { component: Slide03Problem, notes: slide03Notes },
   { component: Slide04Solution, notes: slide04Notes },
-  { component: Slide05Demo, notes: slide05Notes },
-  { component: Slide06ValueProps, notes: slide06Notes },
-  { component: Slide07TechStack, notes: slide07Notes },
-  { component: Slide08Traction, notes: slide08Notes },
-  { component: Slide09Closing, notes: slide09Notes },
+  { component: Slide05Proposition, notes: slide05PropNotes },
+  { component: Slide06Demo, notes: slide06DemoNotes },
+  { component: Slide07ValueProps, notes: slide07ValueNotes },
+  { component: Slide08TechStack, notes: slide08TechNotes },
+  { component: Slide09Traction, notes: slide09TractionNotes },
+  { component: Slide10Closing, notes: slide10ClosingNotes },
 ];
 
 export function PitchDeck() {
@@ -129,9 +136,21 @@ export function PitchDeck() {
   const currentNotes = slides[currentSlide].notes;
 
   return (
-    <div className="relative min-h-screen bg-white">
+    <div className="relative h-screen bg-white overflow-hidden">
+      {/* Home button - appears on hover */}
+      <Link
+        href="/"
+        className="group fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full border-2 border-gray-200 opacity-0 hover:opacity-100 transition-all duration-300 hover:border-orange-300 hover:shadow-lg"
+        title="Back to Home"
+      >
+        <Home className="w-5 h-5 text-gray-600 group-hover:text-orange-600 transition-colors" />
+        <span className="text-sm font-medium text-gray-600 group-hover:text-orange-600 transition-colors">
+          Home
+        </span>
+      </Link>
+
       {/* Current slide */}
-      <div className="pb-20">
+      <div className="h-full pb-16">
         <CurrentSlideComponent />
       </div>
 

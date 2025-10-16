@@ -35,7 +35,7 @@ export function Slide04Solution() {
 
   return (
     <SlideContainer background="gradient">
-      <div className="space-y-12">
+      <div className="space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -43,7 +43,7 @@ export function Slide04Solution() {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h2 className="text-6xl md:text-7xl font-black mb-6">
+          <h2 className="text-4xl md:text-5xl font-black mb-3 leading-tight">
             <span className="text-gray-900">BitPay</span>{" "}
             <GradientText>Turns Payment Moments</GradientText>
             <br />
@@ -51,14 +51,14 @@ export function Slide04Solution() {
             <GradientText gradient="accent">Relationships</GradientText>
           </h2>
 
-          <p className="text-2xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Smart contracts guarantee continuous payments.
             No trust needed.
           </p>
         </motion.div>
 
         {/* How it works */}
-        <div className="grid md:grid-cols-4 gap-6 mt-12">
+        <div className="grid md:grid-cols-4 gap-4 mt-6">
           {steps.map((step, index) => (
             <motion.div
               key={index}
@@ -69,26 +69,26 @@ export function Slide04Solution() {
             >
               {/* Connection line */}
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-16 left-full w-full h-0.5 bg-gradient-to-r from-orange-300 to-pink-300 -z-10" />
+                <div className="hidden md:block absolute top-12 left-full w-full h-0.5 bg-gradient-to-r from-orange-300 to-pink-300 -z-10" />
               )}
 
-              <div className="bg-white rounded-2xl p-6 border-2 border-gray-100 hover:border-orange-200 hover:shadow-xl transition-all duration-300">
+              <div className="bg-white rounded-2xl p-4 border-2 border-gray-100 hover:border-orange-200 hover:shadow-xl transition-all duration-300">
                 {/* Number badge */}
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-orange-500 to-pink-600 text-white text-xl font-black mb-4">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-pink-600 text-white text-lg font-black mb-3">
                   {step.number}
                 </div>
 
                 {/* Icon */}
-                <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-orange-100 to-pink-100 mb-4">
-                  <step.icon className="w-8 h-8 text-orange-600" />
+                <div className="inline-flex p-2 rounded-xl bg-gradient-to-br from-orange-100 to-pink-100 mb-3">
+                  <step.icon className="w-6 h-6 text-orange-600" />
                 </div>
 
                 {/* Content */}
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
                   {step.title}
                 </h3>
 
-                <p className="text-lg text-gray-600">
+                <p className="text-sm text-gray-600">
                   {step.description}
                 </p>
               </div>
@@ -101,10 +101,10 @@ export function Slide04Solution() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 1 }}
-          className="text-center pt-8"
+          className="text-center pt-4"
         >
-          <div className="inline-block px-8 py-6 bg-white rounded-2xl border-2 border-orange-200 shadow-lg">
-            <p className="text-3xl font-bold">
+          <div className="inline-block px-6 py-4 bg-white rounded-2xl border-2 border-orange-200 shadow-lg">
+            <p className="text-2xl font-bold">
               <GradientText>Trust-minimized</GradientText>{" "}
               <span className="text-gray-900">•</span>{" "}
               <GradientText gradient="accent">Continuous</GradientText>{" "}

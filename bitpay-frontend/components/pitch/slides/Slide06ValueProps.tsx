@@ -44,7 +44,7 @@ export function Slide06ValueProps() {
 
   return (
     <SlideContainer background="subtle">
-      <div className="space-y-12">
+      <div className="space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -52,41 +52,41 @@ export function Slide06ValueProps() {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h2 className="text-6xl md:text-7xl font-black mb-6">
+          <h2 className="text-5xl md:text-6xl font-black mb-3">
             <GradientText>Why BitPay Wins</GradientText>
           </h2>
 
-          <p className="text-2xl text-gray-600">
+          <p className="text-xl text-gray-600">
             Value for everyone in the ecosystem
           </p>
         </motion.div>
 
         {/* Value prop columns */}
-        <div className="grid md:grid-cols-3 gap-8 mt-12">
+        <div className="grid md:grid-cols-3 gap-4 mt-6">
           {sections.map((section, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 + index * 0.2 }}
-              className="bg-white rounded-2xl p-8 border-2 border-gray-100 hover:shadow-xl transition-all duration-300"
+              className="bg-white rounded-2xl p-5 border-2 border-gray-100 hover:shadow-xl transition-all duration-300"
             >
               {/* Icon */}
-              <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${section.color} mb-6`}>
-                <section.icon className="w-10 h-10 text-white" />
+              <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${section.color} mb-4`}>
+                <section.icon className="w-7 h-7 text-white" />
               </div>
 
               {/* Title */}
-              <h3 className="text-3xl font-black text-gray-900 mb-6">
+              <h3 className="text-2xl font-black text-gray-900 mb-4">
                 {section.title}
               </h3>
 
               {/* Benefits list */}
-              <ul className="space-y-4">
+              <ul className="space-y-2.5">
                 {section.benefits.map((benefit, idx) => (
-                  <li key={idx} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-lg text-gray-700 leading-relaxed">
+                  <li key={idx} className="flex items-start gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-gray-700 leading-relaxed">
                       {benefit}
                     </span>
                   </li>
@@ -101,9 +101,9 @@ export function Slide06ValueProps() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 1.2 }}
-          className="text-center pt-8"
+          className="text-center pt-4"
         >
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-2xl font-bold text-gray-900">
             Not just an app —{" "}
             <GradientText>a new financial primitive</GradientText>
           </p>

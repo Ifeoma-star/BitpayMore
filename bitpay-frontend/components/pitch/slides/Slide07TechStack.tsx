@@ -27,7 +27,7 @@ export function Slide07TechStack() {
 
   return (
     <SlideContainer background="gradient">
-      <div className="space-y-12">
+      <div className="space-y-5">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -35,37 +35,37 @@ export function Slide07TechStack() {
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h2 className="text-6xl md:text-7xl font-black mb-6">
+          <h2 className="text-4xl md:text-5xl font-black mb-3 leading-tight">
             <GradientText>Production-Ready</GradientText>
             <br />
             <span className="text-gray-900">Tech Stack</span>
           </h2>
 
-          <p className="text-2xl text-gray-600">
+          <p className="text-lg text-gray-600">
             7 smart contracts • Full-stack application • Real-time infrastructure
           </p>
         </motion.div>
 
         {/* Smart Contracts Grid */}
         <div>
-          <h3 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+          <h3 className="text-2xl font-bold text-gray-900 mb-3 text-center">
             Smart Contracts (Clarity)
           </h3>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {contracts.map((contract, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
-                className="bg-white rounded-xl p-4 border-2 border-gray-100 hover:shadow-lg transition-all"
+                className="bg-white rounded-lg p-3 border-2 border-gray-100 hover:shadow-lg transition-all"
               >
-                <div className={`h-2 rounded-full bg-gradient-to-r ${contract.color} mb-3`} />
-                <p className="font-mono text-sm font-bold text-gray-900 mb-1">
+                <div className={`h-1.5 rounded-full bg-gradient-to-r ${contract.color} mb-2`} />
+                <p className="font-mono text-xs font-bold text-gray-900 mb-1">
                   {contract.name}
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-[10px] text-gray-600">
                   {contract.desc}
                 </p>
               </motion.div>
@@ -74,24 +74,24 @@ export function Slide07TechStack() {
         </div>
 
         {/* Tech Stack Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {stack.map((tech, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.8 + index * 0.1 }}
-              className="bg-white rounded-xl p-6 border-2 border-gray-100 hover:border-orange-200 hover:shadow-lg transition-all"
+              className="bg-white rounded-lg p-4 border-2 border-gray-100 hover:border-orange-200 hover:shadow-lg transition-all"
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-gradient-to-br from-orange-100 to-pink-100 rounded-lg">
-                  <tech.icon className="w-6 h-6 text-orange-600" />
+              <div className="flex items-center gap-2 mb-1">
+                <div className="p-1.5 bg-gradient-to-br from-orange-100 to-pink-100 rounded-lg">
+                  <tech.icon className="w-5 h-5 text-orange-600" />
                 </div>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-lg font-bold text-gray-900">
                   {tech.name}
                 </p>
               </div>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs text-gray-600">
                 {tech.desc}
               </p>
             </motion.div>
@@ -105,9 +105,9 @@ export function Slide07TechStack() {
           transition={{ duration: 0.8, delay: 1.5 }}
           className="text-center"
         >
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-white rounded-full border-2 border-purple-200 shadow-sm">
-            <Box className="w-5 h-5 text-purple-600" />
-            <span className="text-lg font-semibold">
+          <div className="inline-flex items-center gap-2 px-5 py-2 bg-white rounded-full border-2 border-purple-200 shadow-sm">
+            <Box className="w-4 h-4 text-purple-600" />
+            <span className="text-base font-semibold">
               <GradientText gradient="accent">Built with Claude + Cursor</GradientText>
               <span className="text-gray-600"> (Vibe Coding)</span>
             </span>

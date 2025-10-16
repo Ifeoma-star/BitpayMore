@@ -31,16 +31,16 @@ export function IconCard({
       transition={{ duration: 0.5, delay }}
       className="group relative"
     >
-      <div className="relative p-8 bg-white rounded-2xl border-2 border-gray-100 hover:border-gray-200 transition-all duration-300 hover:shadow-xl">
-        <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${gradients[gradient]} mb-4`}>
-          <Icon className="w-8 h-8 text-white" />
+      <div className="relative p-5 bg-white rounded-2xl border-2 border-gray-100 hover:border-gray-200 transition-all duration-300 hover:shadow-xl">
+        <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${gradients[gradient]} mb-3`}>
+          <Icon className="w-6 h-6 text-white" />
         </div>
 
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+        <h3 className="text-xl font-bold text-gray-900 mb-2">
           {title}
         </h3>
 
-        <p className="text-lg text-gray-600 leading-relaxed">
+        <p className="text-base text-gray-600 leading-relaxed">
           {description}
         </p>
       </div>

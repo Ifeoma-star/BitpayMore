@@ -8,19 +8,19 @@ import { Bitcoin, Zap } from "lucide-react";
 export function Slide01Title() {
   return (
     <SlideContainer background="gradient">
-      <div className="text-center space-y-8">
+      <div className="text-center space-y-4">
         {/* Logo */}
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.6, ease: "backOut" }}
-          className="flex justify-center mb-8"
+          className="flex justify-center mb-4"
         >
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-pink-600 rounded-full blur-3xl opacity-30 animate-pulse" />
-            <div className="relative flex items-center gap-3 px-8 py-4 bg-white rounded-2xl shadow-xl">
-              <Bitcoin className="w-12 h-12 text-orange-500" />
-              <Zap className="w-8 h-8 text-pink-600" />
+            <div className="relative flex items-center gap-2 px-6 py-3 bg-white rounded-2xl shadow-xl">
+              <Bitcoin className="w-10 h-10 text-orange-500" />
+              <Zap className="w-7 h-7 text-pink-600" />
             </div>
           </div>
         </motion.div>
@@ -31,11 +31,11 @@ export function Slide01Title() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
         >
-          <h1 className="text-8xl md:text-9xl font-black mb-6">
+          <h1 className="text-7xl md:text-8xl font-black mb-3">
             <GradientText>BitPay</GradientText>
           </h1>
 
-          <p className="text-3xl md:text-4xl text-gray-700 font-medium mb-4">
+          <p className="text-2xl md:text-3xl text-gray-700 font-medium mb-3">
             Bitcoin Streaming & Vesting Vaults
           </p>
 
@@ -43,7 +43,7 @@ export function Slide01Title() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-2xl md:text-3xl font-bold"
+            className="text-xl md:text-2xl font-bold"
           >
             <GradientText gradient="accent">
               "Netflix for Money, Secured by Bitcoin"
@@ -56,22 +56,22 @@ export function Slide01Title() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.9 }}
-          className="flex flex-wrap items-center justify-center gap-4 mt-12"
+          className="flex flex-wrap items-center justify-center gap-3 mt-6"
         >
-          <div className="px-6 py-3 bg-white rounded-full border-2 border-orange-200 shadow-sm">
-            <span className="text-lg font-semibold text-gray-700">
+          <div className="px-5 py-2 bg-white rounded-full border-2 border-orange-200 shadow-sm">
+            <span className="text-base font-semibold text-gray-700">
               Built on Stacks
             </span>
           </div>
 
-          <div className="px-6 py-3 bg-white rounded-full border-2 border-pink-200 shadow-sm">
-            <span className="text-lg font-semibold text-gray-700">
+          <div className="px-5 py-2 bg-white rounded-full border-2 border-pink-200 shadow-sm">
+            <span className="text-base font-semibold text-gray-700">
               Powered by sBTC
             </span>
           </div>
 
-          <div className="px-6 py-3 bg-white rounded-full border-2 border-purple-200 shadow-sm">
-            <span className="text-lg font-semibold text-gray-700">
+          <div className="px-5 py-2 bg-white rounded-full border-2 border-purple-200 shadow-sm">
+            <span className="text-base font-semibold text-gray-700">
               Production Ready
             </span>
           </div>

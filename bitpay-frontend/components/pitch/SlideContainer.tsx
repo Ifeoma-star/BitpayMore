@@ -26,9 +26,9 @@ export function SlideContainer({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className={`min-h-screen flex items-center justify-center ${backgrounds[background]} ${className}`}
+      className={`h-screen flex items-center justify-center overflow-hidden ${backgrounds[background]} ${className}`}
     >
-      <div className="w-full max-w-7xl mx-auto px-8 py-16">
+      <div className="w-full max-w-7xl mx-auto px-6 py-6">
         {children}
       </div>
     </motion.div>
