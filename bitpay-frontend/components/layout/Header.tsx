@@ -82,11 +82,17 @@ export function Header() {
             >
               Dashboard
             </Link>
-            <Link 
-              href="/docs" 
+            <Link
+              href="/docs"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Documentation
+            </Link>
+            <Link
+              href="/pitch"
+              className="text-sm font-medium bg-gradient-to-r from-orange-500 to-pink-600 bg-clip-text text-transparent hover:from-orange-600 hover:to-pink-700 transition-all"
+            >
+              Pitch
             </Link>
           </nav>
 
