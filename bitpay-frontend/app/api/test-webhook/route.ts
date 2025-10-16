@@ -3,7 +3,7 @@
  * Test endpoint to simulate a chainhook webhook call
  */
 
-import { NextResponse } from 'next/request';
+import { NextResponse } from 'next/server';
 import { saveStreamCreated } from '@/lib/webhooks/database-handlers';
 
 export async function POST(request: Request) {
