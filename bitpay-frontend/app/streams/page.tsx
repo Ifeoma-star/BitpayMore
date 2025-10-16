@@ -20,13 +20,13 @@ import {
   Sparkles
 } from "lucide-react";
 import Link from "next/link";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useUserEvents } from "@/hooks/use-realtime";
 
 export default function StreamsExplorerPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
-  const { events } = useWebSocket();
+  const { events, isConnected } = useUserEvents();
 
   // Mock data - replace with real API calls
   const globalStats = {
