@@ -628,11 +628,14 @@ export async function saveAdminProposalApproval(data: {
 export async function saveAdminProposalExecution(data: {
   proposalId: string;
   executor: string;
+  action: 'add' | 'remove';
+  targetAdmin: string;
   context: WebhookContext;
 }) {
   return retryOperation(async () => {
     const db = await getDb();
 
+    // Update proposal status
     await db.collection('admin_proposals').updateOne(
       { proposalId: data.proposalId },
       {
@@ -646,6 +649,39 @@ export async function saveAdminProposalExecution(data: {
       }
     );
 
+    // Update admins collection - maintain list of current active admins
+    if (data.action === 'add') {
+      await db.collection('treasury_admins').updateOne(
+        { address: data.targetAdmin },
+        {
+          $set: {
+            address: data.targetAdmin,
+            addedAt: new Date(data.context.timestamp * 1000),
+            addedByProposal: data.proposalId,
+            addedTxHash: data.context.txHash,
+            isActive: true,
+            updatedAt: new Date(),
+          },
+        },
+        { upsert: true }
+      );
+      console.log(`➕ Added admin to treasury_admins collection: ${data.targetAdmin}`);
+    } else {
+      await db.collection('treasury_admins').updateOne(
+        { address: data.targetAdmin },
+        {
+          $set: {
+            isActive: false,
+            removedAt: new Date(data.context.timestamp * 1000),
+            removedByProposal: data.proposalId,
+            removedTxHash: data.context.txHash,
+            updatedAt: new Date(),
+          },
+        }
+      );
+      console.log(`➖ Removed admin from treasury_admins collection: ${data.targetAdmin}`);
+    }
+
     // Log event
     await db.collection('blockchain_events').insertOne({
       type: 'admin-proposal-executed',
@@ -655,7 +691,7 @@ export async function saveAdminProposalExecution(data: {
       processedAt: new Date(),
     });
 
-    console.log(`✅ Saved admin-proposal-executed: ${data.proposalId}`);
+    console.log(`✅ Saved admin-proposal-executed: ${data.proposalId} (${data.action} ${data.targetAdmin})`);
   });
 }
 

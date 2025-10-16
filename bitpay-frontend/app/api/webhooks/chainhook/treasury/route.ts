@@ -687,10 +687,16 @@ async function handleTreasuryEvent(
     case 'treasury-admin-proposal-executed':
       console.log(`👥 Admin proposal executed: ${event.event}`);
 
-      // Save execution to database
+      // Extract action and target from event
+      const executedAction = (event as any).action as 'add' | 'remove';
+      const executedTarget = (event as any)['target-admin'];
+
+      // Save execution to database (includes updating treasury_admins collection)
       await saveAdminProposalExecution({
         proposalId: event['proposal-id'].toString(),
         executor: (event as any).executor || context.sender,
+        action: executedAction,
+        targetAdmin: executedTarget,
         context,
       });
 
@@ -777,25 +783,31 @@ async function handleTreasuryEvent(
  */
 async function getTreasuryAdmins(): Promise<string[]> {
   try {
-    const network = getStacksNetwork();
-    const result = await fetchCallReadOnlyFunction({
-      contractAddress: BITPAY_DEPLOYER_ADDRESS,
-      contractName: CONTRACT_NAMES.TREASURY,
-      functionName: 'get-admins',
-      functionArgs: [],
-      network,
-      senderAddress: BITPAY_DEPLOYER_ADDRESS,
-    });
+    const mongoose = await connectToDatabase();
+    const db = mongoose.connection.db;
 
-    const adminsValue = cvToValue(result);
-    if (Array.isArray(adminsValue)) {
-      return adminsValue.map((admin: any) => admin.value || admin);
+    if (!db) {
+      console.warn('⚠️ getTreasuryAdmins: Database connection failed, using fallback');
+      return [BITPAY_DEPLOYER_ADDRESS];
     }
 
-    // Fallback to deployer address
+    // Query active admins from database
+    const admins = await db
+      .collection('treasury_admins')
+      .find({ isActive: true })
+      .toArray();
+
+    if (admins.length > 0) {
+      const adminAddresses = admins.map((admin: any) => admin.address);
+      console.log(`✅ getTreasuryAdmins: Found ${adminAddresses.length} active admins from database`);
+      return adminAddresses;
+    }
+
+    // Fallback: No admins in database yet (bootstrap scenario)
+    console.warn('⚠️ getTreasuryAdmins: No admins in database, using deployer as fallback');
     return [BITPAY_DEPLOYER_ADDRESS];
   } catch (error) {
-    console.error('Failed to fetch treasury admins:', error);
+    console.error('❌ getTreasuryAdmins: Error fetching from database:', error);
     return [BITPAY_DEPLOYER_ADDRESS];
   }
 }

@@ -162,6 +162,32 @@ export default function TreasuryPage() {
     setShowProposeAdminModal(true);
   };
 
+  const handleBootstrapAdmins = async () => {
+    try {
+      toast.info("Bootstrapping admin list...");
+      const response = await fetch('/api/admin/bootstrap-admins', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("Admin list bootstrapped!", {
+          description: data.message,
+        });
+      } else {
+        toast.error("Bootstrap failed", {
+          description: data.error,
+        });
+      }
+    } catch (error) {
+      console.error('Bootstrap error:', error);
+      toast.error("Bootstrap failed", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
   // Helper function to safely extract numeric values from contract responses
   const extractValue = (data: any): any => {
     if (data === null || data === undefined) return null;
@@ -421,6 +447,31 @@ export default function TreasuryPage() {
 
         {/* Multi-Sig Tab */}
         <TabsContent value="multisig" className="space-y-6">
+          {/* Bootstrap Button - Only show for deployer */}
+          {userAddress === 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7' && (
+            <Card className="border-dashed border-2 border-yellow-500/50 bg-yellow-500/5">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-yellow-500" />
+                  Admin List Bootstrap
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Click once to initialize the treasury admins database. Required for notifications to work properly.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={handleBootstrapAdmins}
+                  variant="outline"
+                  size="sm"
+                  className="bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/50"
+                >
+                  Initialize Admin List
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           <MultiSigAdminList
             admins={displayAdmins}
             totalSlots={5}
