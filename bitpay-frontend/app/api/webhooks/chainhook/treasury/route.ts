@@ -774,7 +774,18 @@ async function handleTreasuryEvent(
       break;
 
     default:
-      console.warn(`Unknown treasury event: ${(event as any).event}`);
+      // Check if this is a misrouted stream event
+      const eventName = (event as any).event;
+      if (eventName && eventName.startsWith('stream-')) {
+        console.log(`🔀 Forwarding misrouted stream event: ${eventName}`);
+
+        // Import stream handler and process the event
+        const { handleStreamEvent } = await import('../streams/stream-handlers');
+        await handleStreamEvent(event, context);
+        return;
+      }
+
+      console.warn(`Unknown treasury event: ${eventName}`);
   }
 }
 
