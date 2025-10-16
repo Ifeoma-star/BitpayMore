@@ -279,11 +279,12 @@ async function handleTreasuryEvent(
         });
 
         // Notify admin and recipient
+        const amountInSBTC = (Number(event.amount) / 100000000).toFixed(8).replace(/\.?0+$/, '');
         await NotificationService.createNotification(
           event.admin,
           'treasury_withdrawal',
           '💸 Treasury Withdrawal',
-          `Withdrew ${event.amount} sats to ${event.recipient.slice(0, 8)}...`,
+          `Withdrew ${amountInSBTC} sBTC to ${event.recipient.slice(0, 8)}...`,
           { amount: event.amount.toString(), recipient: event.recipient, txHash: context.txHash },
           { priority: 'normal' }
         );
@@ -306,6 +307,13 @@ async function handleTreasuryEvent(
           type: 'withdrawal',
           role: 'recipient',
           data: withdrawalData,
+        });
+
+        // Broadcast to treasury page for balance update
+        broadcastToTreasury('treasury:balance-updated', {
+          newBalance: event['new-balance'].toString(),
+          withdrawal: event.amount.toString(),
+          txHash: context.txHash,
         });
       }
       break;

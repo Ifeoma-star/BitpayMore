@@ -49,7 +49,7 @@ export default function TreasuryPage() {
   const [showProposeAdminModal, setShowProposeAdminModal] = useState(false);
 
   // WebSocket real-time updates
-  const { proposals: realtimeProposals, admins: realtimeAdmins, isConnected } = useTreasuryEvents();
+  const { proposals: realtimeProposals, admins: realtimeAdmins, balanceUpdate, isConnected } = useTreasuryEvents();
 
   // Listen for WebSocket events and show toast notifications
   useEffect(() => {
@@ -82,10 +82,22 @@ export default function TreasuryPage() {
     }
   }, [realtimeAdmins.length, userAddress]);
 
+  // Refetch treasury balance when it updates via WebSocket
+  useEffect(() => {
+    if (balanceUpdate) {
+      console.log('💵 Treasury balance updated, refetching...', balanceUpdate);
+      refetchBalance();
+      refetchFees();
+      toast.success('Treasury Updated', {
+        description: 'Balance has been updated',
+      });
+    }
+  }, [balanceUpdate, refetchBalance, refetchFees]);
+
   // Read treasury data
   const { data: feeBps } = useTreasuryFeeBps();
-  const { data: totalFees } = useTotalFeesCollected();
-  const { data: treasuryBalance } = useBitPayRead(
+  const { data: totalFees, refetch: refetchFees } = useTotalFeesCollected();
+  const { data: treasuryBalance, refetch: refetchBalance } = useBitPayRead(
     CONTRACT_NAMES.TREASURY,
     'get-treasury-balance'
   );

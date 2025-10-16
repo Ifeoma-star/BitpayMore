@@ -240,6 +240,7 @@ export function useTreasuryEvents() {
   const [proposals, setProposals] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [feeCollections, setFeeCollections] = useState<any[]>([]);
+  const [balanceUpdate, setBalanceUpdate] = useState<any>(null);
 
   useEffect(() => {
     if (!isConnected) return;
@@ -290,6 +291,11 @@ export function useTreasuryEvents() {
         console.log('💰 Fee collected:', data);
         setFeeCollections((prev) => [data, ...prev].slice(0, 50));
       }),
+
+      subscribe('treasury:balance-updated', (data: any) => {
+        console.log('💵 Treasury balance updated:', data);
+        setBalanceUpdate(data);
+      }),
     ];
 
     return () => {
@@ -297,5 +303,5 @@ export function useTreasuryEvents() {
     };
   }, [isConnected, joinTreasury, subscribe]);
 
-  return { proposals, admins, feeCollections, isConnected };
+  return { proposals, admins, feeCollections, balanceUpdate, isConnected };
 }
