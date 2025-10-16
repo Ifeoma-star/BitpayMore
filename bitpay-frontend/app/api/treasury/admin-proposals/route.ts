@@ -19,11 +19,15 @@ export async function GET(request: Request) {
     }
 
     // Fetch all pending (non-executed) admin proposals
+    console.log('🔍 Querying admin_proposals collection for pending proposals...');
     const proposals = await db
       .collection('admin_proposals')
       .find({ status: 'pending' })
       .sort({ createdAt: -1 })
       .toArray();
+
+    console.log(`📊 Found ${proposals.length} admin proposals in database`);
+    console.log('📋 Raw proposals:', JSON.stringify(proposals, null, 2));
 
     // Transform MongoDB documents to match expected format
     const formattedProposals = proposals.map((p) => ({
@@ -40,6 +44,8 @@ export async function GET(request: Request) {
       blockHeight: p.blockHeight,
       createdAt: p.createdAt,
     }));
+
+    console.log(`✅ Returning ${formattedProposals.length} formatted proposals`);
 
     return NextResponse.json({
       success: true,

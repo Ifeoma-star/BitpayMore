@@ -115,6 +115,18 @@ export function useAdminCount() {
   );
 }
 
+/**
+ * Get current required signatures (dynamic based on admin count)
+ */
+export function useRequiredSignatures() {
+  return useBitPayRead<number>(
+    CONTRACT_NAMES.TREASURY,
+    'get-required-signatures',
+    [],
+    true
+  );
+}
+
 // ============================================
 // WRITE HOOKS
 // ============================================

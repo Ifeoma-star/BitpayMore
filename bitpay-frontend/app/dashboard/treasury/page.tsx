@@ -23,6 +23,7 @@ import {
   useMultiSigConfig,
   useIsMultiSigAdmin,
   useAdminCount,
+  useRequiredSignatures,
   useApproveWithdrawal,
   useExecuteWithdrawal,
   useProposeAddAdmin,
@@ -94,6 +95,7 @@ export default function TreasuryPage() {
   const { data: multiSigConfig } = useMultiSigConfig();
   const { data: isMultiSigAdmin } = useIsMultiSigAdmin(userAddress);
   const { data: adminCount } = useAdminCount();
+  const { data: requiredSignatures } = useRequiredSignatures();
   const { approve: approveProposal, isLoading: isApproving } = useApproveWithdrawal();
   const { execute: executeProposal, isLoading: isExecuting } = useExecuteWithdrawal();
   const { proposeAdd: proposeAddAdmin } = useProposeAddAdmin();
@@ -433,7 +435,7 @@ export default function TreasuryPage() {
           <AdminProposalsList
             currentUserAddress={userAddress}
             isCurrentUserAdmin={!!isMultiSigAdmin}
-            requiredSignatures={3}
+            requiredSignatures={requiredSignatures || 1}
           />
 
           {multiSigConfig && <MultiSigConfigCard config={multiSigConfig} />}

@@ -49,40 +49,53 @@ export function AdminProposalsList({
   const { execute: executeProposal, isLoading: isExecuting } = useExecuteAdminProposal();
 
   // Fetch all admin proposals from database
-  useEffect(() => {
-    async function fetchProposals() {
-      console.log('🔍 AdminProposalsList: Fetching from database...');
-      setIsLoading(true);
+  const fetchProposals = async () => {
+    console.log('🔍 AdminProposalsList: Fetching from database...');
+    setIsLoading(true);
 
-      try {
-        const response = await fetch('/api/treasury/admin-proposals');
-        console.log('📄 Admin proposals API response:', response.status);
+    try {
+      const response = await fetch('/api/treasury/admin-proposals', {
+        cache: 'no-store', // Force fresh data
+      });
+      console.log('📄 Admin proposals API response:', response.status);
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('📋 Admin proposals data:', data);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 Admin proposals data:', data);
 
-          if (data.success && data.proposals) {
-            setProposals(data.proposals);
-            console.log(`✅ Fetched ${data.proposals.length} pending proposals from database`);
-          } else {
-            console.log('⚠️ No proposals found or API error');
-            setProposals([]);
-          }
+        if (data.success && data.proposals) {
+          setProposals(data.proposals);
+          console.log(`✅ Fetched ${data.proposals.length} pending proposals from database`);
         } else {
-          console.error('❌ Failed to fetch proposals:', response.statusText);
+          console.log('⚠️ No proposals found or API error');
           setProposals([]);
         }
-      } catch (error) {
-        console.error('❌ Error fetching admin proposals:', error);
+      } else {
+        console.error('❌ Failed to fetch proposals:', response.statusText);
         setProposals([]);
-      } finally {
-        setIsLoading(false);
       }
+    } catch (error) {
+      console.error('❌ Error fetching admin proposals:', error);
+      setProposals([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
+  // Fetch on mount
+  useEffect(() => {
     fetchProposals();
-  }, []); // Only fetch on mount, webhook will broadcast updates
+  }, []);
+
+  // Refetch every 10 seconds (since WebSocket is failing)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refetching admin proposals...');
+      fetchProposals();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleApprove = async (proposalId: number) => {
     try {
