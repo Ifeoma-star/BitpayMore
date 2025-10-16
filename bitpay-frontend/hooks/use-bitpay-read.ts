@@ -165,58 +165,18 @@ export function useStream(streamId: bigint | number | null): UseContractReadRetu
 
 /**
  * Get all streams for a user (both sent and received)
+ * Now fetches from database API instead of blockchain for better performance
  */
 export function useUserStreams(userAddress: string | null): UseContractReadReturn<StreamWithId[]> {
   const { blockHeight } = useBlockHeight();
-
-  // Get sender streams
-  const { data: senderStreamIds } = useBitPayRead<bigint[]>(
-    CONTRACT_NAMES.CORE,
-    CORE_FUNCTIONS.GET_SENDER_STREAMS,
-    userAddress ? [principalCV(userAddress)] : [],
-    !!userAddress
-  );
-
-  // Get recipient streams
-  const { data: recipientStreamIds } = useBitPayRead<bigint[]>(
-    CONTRACT_NAMES.CORE,
-    CORE_FUNCTIONS.GET_RECIPIENT_STREAMS,
-    userAddress ? [principalCV(userAddress)] : [],
-    !!userAddress
-  );
-
   const [streams, setStreams] = useState<StreamWithId[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAllStreams = useCallback(async () => {
-    if (!userAddress || !blockHeight) {
+    if (!userAddress) {
       setStreams([]);
-      return;
-    }
-
-    console.log('🔍 Fetching streams for user:', userAddress);
-    console.log('📤 Sender stream IDs:', senderStreamIds);
-    console.log('📥 Recipient stream IDs:', recipientStreamIds);
-
-    const allStreamIds = [
-      ...(senderStreamIds || []),
-      ...(recipientStreamIds || []),
-    ];
-
-    // Remove duplicates and convert to BigInt
-    // cvToJSON might return objects like {type: 'uint', value: '123'} or primitive values
-    const uniqueStreamIds = Array.from(new Set(allStreamIds.map((id: any) => {
-      // Handle if id is an object with a value property
-      if (typeof id === 'object' && id !== null && 'value' in id) {
-        return String((id as any).value);
-      }
-      // Handle if id is already a primitive
-      return String(id);
-    }))).map(id => BigInt(id));
-
-    if (uniqueStreamIds.length === 0) {
-      setStreams([]);
+      setIsLoading(false);
       return;
     }
 
@@ -224,85 +184,90 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
       setIsLoading(true);
       setError(null);
 
-      const network = getStacksNetwork();
-      const currentBlock = BigInt(blockHeight);
+      console.log('🔍 Fetching streams from database for user:', userAddress);
 
-      const streamPromises = uniqueStreamIds.map(async (streamId) => {
-        try {
-          const result = await fetchCallReadOnlyFunction({
-            network,
-            contractAddress: BITPAY_DEPLOYER_ADDRESS,
-            contractName: CONTRACT_NAMES.CORE,
-            functionName: CORE_FUNCTIONS.GET_STREAM,
-            functionArgs: [uintCV(streamId)],
-            senderAddress: BITPAY_DEPLOYER_ADDRESS,
-          });
-
-          const jsonResult = cvToJSON(result);
-
-          // Handle optional response - get-stream returns (optional stream-data)
-          let rawData = jsonResult.value;
-
-          if (!rawData) return null;
-
-          // cvToJSON returns nested structure: the tuple has a 'value' property with all fields
-          const tupleData = rawData.value || rawData;
-
-          console.log('Raw stream data from contract:', streamId, tupleData);
-
-          // Extract values from cvToJSON response (handles nested objects)
-          const extractValue = (val: any) => {
-            if (val === null || val === undefined) return val;
-            if (typeof val === 'object' && 'value' in val) return val.value;
-            return val;
-          };
-
-          const streamData: StreamData = {
-            sender: extractValue(tupleData.sender),
-            recipient: extractValue(tupleData.recipient),
-            amount: extractValue(tupleData.amount),
-            'start-block': extractValue(tupleData['start-block']),
-            'end-block': extractValue(tupleData['end-block']),
-            withdrawn: extractValue(tupleData.withdrawn),
-            cancelled: extractValue(tupleData.cancelled),
-            'cancelled-at-block': extractValue(tupleData['cancelled-at-block']),
-          };
-
-          console.log('Processed stream data:', streamData);
-
-          const vestedAmount = calculateVestedAmount(streamData, currentBlock);
-          const withdrawableAmount = calculateWithdrawableAmount(streamData, currentBlock);
-          const status = getStreamStatus(
-            streamData['start-block'],
-            streamData['end-block'],
-            currentBlock,
-            streamData.cancelled
-          );
-
-          return {
-            ...streamData,
-            id: streamId,
-            status,
-            vestedAmount,
-            withdrawableAmount,
-          } as StreamWithId;
-        } catch (err) {
-          console.error(`Error fetching stream ${streamId}:`, err);
-          return null;
-        }
+      // Fetch from database API
+      const response = await fetch(`/api/streams?address=${userAddress}`, {
+        credentials: 'include',
       });
 
-      const results = await Promise.all(streamPromises);
-      const validStreams = results.filter((s): s is StreamWithId => s !== null);
+      if (!response.ok) {
+        throw new Error('Failed to fetch streams');
+      }
 
-      setStreams(validStreams);
+      const data = await response.json();
+      const dbStreams = data.streams || [];
+
+      console.log('📊 Streams fetched from database:', dbStreams.length);
+
+      // Calculate dynamic values if we have block height
+      if (blockHeight) {
+        const currentBlock = BigInt(blockHeight);
+
+        const enrichedStreams = dbStreams.map((stream: any) => {
+          try {
+            const streamData: StreamData = {
+              sender: stream.sender,
+              recipient: stream.recipient,
+              amount: BigInt(stream.amount),
+              'start-block': BigInt(stream.startBlock || stream['start-block']),
+              'end-block': BigInt(stream.endBlock || stream['end-block']),
+              withdrawn: BigInt(stream.withdrawn || '0'),
+              cancelled: stream.cancelled || false,
+              'cancelled-at-block': stream.cancelledAtBlock ? BigInt(stream.cancelledAtBlock) : BigInt(0),
+            };
+
+            const vestedAmount = calculateVestedAmount(streamData, currentBlock);
+            const withdrawableAmount = calculateWithdrawableAmount(streamData, currentBlock);
+            const status = getStreamStatus(
+              streamData['start-block'],
+              streamData['end-block'],
+              currentBlock,
+              streamData.cancelled
+            );
+
+            return {
+              ...streamData,
+              id: BigInt(stream.streamId || stream.id),
+              status,
+              vestedAmount,
+              withdrawableAmount,
+            } as StreamWithId;
+          } catch (err) {
+            console.error('Error processing stream:', stream.streamId, err);
+            return null;
+          }
+        });
+
+        const validStreams = enrichedStreams.filter((s: any): s is StreamWithId => s !== null);
+        setStreams(validStreams);
+      } else {
+        // No block height yet, return basic stream data
+        const basicStreams = dbStreams.map((stream: any) => ({
+          sender: stream.sender,
+          recipient: stream.recipient,
+          amount: BigInt(stream.amount),
+          'start-block': BigInt(stream.startBlock || stream['start-block']),
+          'end-block': BigInt(stream.endBlock || stream['end-block']),
+          withdrawn: BigInt(stream.withdrawn || '0'),
+          cancelled: stream.cancelled || false,
+          'cancelled-at-block': stream.cancelledAtBlock ? BigInt(stream.cancelledAtBlock) : BigInt(0),
+          id: BigInt(stream.streamId || stream.id),
+          status: 'active',
+          vestedAmount: BigInt(0),
+          withdrawableAmount: BigInt(0),
+        } as StreamWithId));
+
+        setStreams(basicStreams);
+      }
     } catch (err) {
       console.error('Error fetching user streams:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch streams');
+      setStreams([]);
     } finally {
       setIsLoading(false);
     }
-  }, [userAddress, blockHeight, senderStreamIds, recipientStreamIds]);
+  }, [userAddress, blockHeight]);
 
   useEffect(() => {
     fetchAllStreams();

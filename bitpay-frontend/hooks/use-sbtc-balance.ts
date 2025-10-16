@@ -1,14 +1,9 @@
 /**
  * Hook to fetch sBTC balance from the bitpay-sbtc-helper contract
+ * Now uses backend API proxy to avoid CORS and rate limiting
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  fetchCallReadOnlyFunction,
-  cvToJSON,
-  principalCV,
-} from '@stacks/transactions';
-import { getStacksNetwork, BITPAY_DEPLOYER_ADDRESS, CONTRACT_NAMES } from '@/lib/contracts/config';
 
 export interface UseSBTCBalanceReturn {
   balance: bigint | null;
@@ -38,45 +33,24 @@ export function useSBTCBalance(address: string | null): UseSBTCBalanceReturn {
       setIsLoading(true);
       setError(null);
 
-      const network = getStacksNetwork();
+      console.log('📞 Fetching sBTC balance from API for:', address);
 
-      console.log('📞 Fetching sBTC balance from bitpay-sbtc-helper-v3:', {
-        address,
-        contractAddress: BITPAY_DEPLOYER_ADDRESS,
-        contractName: CONTRACT_NAMES.SBTC_HELPER,
+      // Use backend API route to avoid CORS and rate limiting
+      const response = await fetch(`/api/stacks/balance/${address}`, {
+        credentials: 'include',
       });
 
-      // Call get-user-balance function on OUR bitpay-sbtc-helper contract
-      const result = await fetchCallReadOnlyFunction({
-        network,
-        contractAddress: BITPAY_DEPLOYER_ADDRESS,
-        contractName: CONTRACT_NAMES.SBTC_HELPER,
-        functionName: 'get-user-balance',
-        functionArgs: [principalCV(address)],
-        senderAddress: address,
-      });
-
-      console.log('📞 Raw result:', result);
-      const jsonResult = cvToJSON(result);
-      console.log('📞 JSON result:', jsonResult);
-
-      // Extract balance from response
-      // Response format: (ok uint) or { type: 'ok', value: { type: 'uint', value: '...' } }
-      let balanceValue: bigint = BigInt(0);
-
-      if (jsonResult && typeof jsonResult === 'object') {
-        if ('value' in jsonResult) {
-          // Handle nested response (ok uint)
-          const innerValue = jsonResult.value;
-          if (typeof innerValue === 'object' && 'value' in innerValue) {
-            balanceValue = BigInt(innerValue.value);
-          } else if (typeof innerValue === 'string' || typeof innerValue === 'number') {
-            balanceValue = BigInt(innerValue);
-          }
-        } else if (typeof jsonResult === 'string' || typeof jsonResult === 'number') {
-          balanceValue = BigInt(jsonResult);
-        }
+      if (!response.ok) {
+        throw new Error('Failed to fetch balance');
       }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch balance');
+      }
+
+      const balanceValue = BigInt(data.balance);
 
       console.log('✅ sBTC Balance:', balanceValue.toString(), 'satoshis');
       setBalance(balanceValue);
