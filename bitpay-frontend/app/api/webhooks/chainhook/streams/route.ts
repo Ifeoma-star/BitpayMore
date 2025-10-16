@@ -42,23 +42,40 @@ import { broadcastToUser, broadcastToStream } from '@/lib/socket/client-broadcas
 
 export async function POST(request: Request) {
   try {
+    console.log('🚀 ========== STREAM WEBHOOK CALLED ==========');
+    console.log('📍 Environment:', process.env.NODE_ENV);
+    console.log('🔗 MongoDB URI exists:', !!process.env.MONGODB_URI);
+
     // Rate limiting
     const clientId = request.headers.get('x-forwarded-for') || 'chainhook';
     if (!webhookRateLimiter.check(clientId)) {
+      console.error('❌ Rate limit exceeded for:', clientId);
       return errorResponse('Rate limit exceeded', 429);
     }
 
     // Verify authorization
     const authResult = verifyWebhookAuth(request);
     if (!authResult.valid) {
+      console.error('❌ Auth verification failed:', authResult.error);
       return errorResponse(authResult.error || 'Unauthorized', 401);
     }
+    console.log('✅ Auth verified');
 
     // Parse and validate payload
     const payload: ChainhookPayload = await request.json();
+    console.log('📦 Payload structure:', {
+      hasApply: !!payload.apply,
+      applyLength: payload.apply?.length || 0,
+      hasRollback: !!payload.rollback,
+      rollbackLength: payload.rollback?.length || 0,
+      chainhookUuid: payload.chainhook?.uuid,
+    });
+
     if (!validatePayload(payload)) {
+      console.error('❌ Payload validation failed');
       return errorResponse('Invalid payload structure', 400);
     }
+    console.log('✅ Payload validated');
 
     console.log('📨 Stream events webhook received:', {
       apply: payload.apply?.length || 0,

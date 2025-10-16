@@ -146,8 +146,8 @@ export default function CreateStreamPage() {
         },
       });
 
-      // Save to database
-      saveStreamToDatabase(txId);
+      // Note: Stream will be saved to database automatically by chainhook
+      // when the transaction is confirmed on the blockchain
 
       // Log for easy copy-paste
       console.log('✅ Stream created!');
@@ -174,60 +174,9 @@ export default function CreateStreamPage() {
     }
   }, [createError]);
 
-  // Save stream to database after blockchain confirmation
-  const saveStreamToDatabase = async (transactionId: string) => {
-    try {
-      const formValues = form.getValues();
-
-      // Convert duration to blocks
-      let durationInBlocks = 0;
-      const duration = parseInt(formValues.duration);
-
-      switch (formValues.durationType) {
-        case "blocks":
-          durationInBlocks = duration;
-          break;
-        case "days":
-          durationInBlocks = duration * BLOCKS_PER_DAY;
-          break;
-        case "weeks":
-          durationInBlocks = duration * BLOCKS_PER_WEEK;
-          break;
-        case "months":
-          durationInBlocks = duration * BLOCKS_PER_MONTH;
-          break;
-      }
-
-      const startBlock = (blockHeight || 0) + 1;
-      const endBlock = startBlock + durationInBlocks;
-
-      const response = await fetch('/api/streams', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          recipient: formValues.recipient,
-          amount: formValues.amount,
-          startBlock,
-          endBlock,
-          description: formValues.description,
-          txHash: transactionId,
-          status: 'pending',
-        }),
-      });
-
-      if (response.ok) {
-        console.log('✅ Stream saved to database');
-      } else {
-        console.error('Failed to save stream to database');
-      }
-    } catch (error) {
-      console.error('Error saving stream to database:', error);
-      // Don't show error to user - stream is created on chain, DB is just cache
-    }
-  };
+  // Note: We no longer manually save streams to the database
+  // The chainhook will automatically save the stream when the transaction
+  // is confirmed on the blockchain
 
   // Calculate estimated values
   const calculateEstimates = () => {

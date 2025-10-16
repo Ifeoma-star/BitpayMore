@@ -9,12 +9,25 @@ import type { WebhookContext } from '@/types/chainhook';
 
 // Get MongoDB connection
 async function getDb() {
-  const mongoose = await connectToDatabase();
-  const db = mongoose.connection.db;
-  if (!db) {
-    throw new Error('Failed to connect to database');
+  console.log('🔌 Attempting MongoDB connection...');
+  console.log('📍 MONGODB_URI exists:', !!process.env.MONGODB_URI);
+
+  try {
+    const mongoose = await connectToDatabase();
+    console.log('✅ Mongoose connected, readyState:', mongoose.connection.readyState);
+
+    const db = mongoose.connection.db;
+    if (!db) {
+      console.error('❌ Database instance is null');
+      throw new Error('Failed to connect to database');
+    }
+
+    console.log('✅ Database instance acquired:', db.databaseName);
+    return db;
+  } catch (error) {
+    console.error('❌ MongoDB connection error:', error);
+    throw error;
   }
-  return db;
 }
 
 // ============================================================================
@@ -30,8 +43,21 @@ export async function saveStreamCreated(data: {
   endBlock: string;
   context: WebhookContext;
 }) {
+  console.log('💾 saveStreamCreated called for stream:', data.streamId);
+  console.log('📊 Stream data:', {
+    streamId: data.streamId,
+    sender: data.sender,
+    recipient: data.recipient,
+    amount: data.amount,
+    startBlock: data.startBlock,
+    endBlock: data.endBlock,
+  });
+
   return retryOperation(async () => {
+    console.log('🔄 Inside retryOperation for stream:', data.streamId);
+
     const db = await getDb();
+    console.log('✅ Got DB connection for stream:', data.streamId);
 
     const streamEvent = {
       streamId: data.streamId,
@@ -48,8 +74,9 @@ export async function saveStreamCreated(data: {
       blockHash: data.context.blockHash,
     };
 
+    console.log('💾 Upserting stream document...');
     // Upsert stream document
-    await db.collection('streams').updateOne(
+    const upsertResult = await db.collection('streams').updateOne(
       { streamId: data.streamId },
       {
         $set: streamEvent,
@@ -58,8 +85,16 @@ export async function saveStreamCreated(data: {
       { upsert: true }
     );
 
+    console.log('✅ Upsert result:', {
+      matched: upsertResult.matchedCount,
+      modified: upsertResult.modifiedCount,
+      upserted: upsertResult.upsertedCount,
+      upsertedId: upsertResult.upsertedId,
+    });
+
+    console.log('💾 Inserting blockchain event...');
     // Log event in transaction history
-    await db.collection('blockchain_events').insertOne({
+    const insertResult = await db.collection('blockchain_events').insertOne({
       type: 'stream-created',
       streamId: data.streamId,
       data: streamEvent,
@@ -67,7 +102,8 @@ export async function saveStreamCreated(data: {
       processedAt: new Date(),
     });
 
-    console.log(`✅ Saved stream-created event: ${data.streamId}`);
+    console.log('✅ Blockchain event inserted:', insertResult.insertedId);
+    console.log(`✅ ✅ ✅ Saved stream-created event: ${data.streamId}`);
   });
 }
 
