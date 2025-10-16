@@ -103,18 +103,24 @@ export default function StreamsPage() {
       }
 
       if (txId) {
-        toast.success("Withdrawal transaction submitted! Waiting for confirmation...", {
+        // Close modal immediately on successful transaction submission
+        setIsWithdrawModalOpen(false);
+
+        toast.success("Withdrawal transaction submitted!", {
           description: `Transaction ID: ${txId.slice(0, 8)}...${txId.slice(-8)}`
         });
-        setIsWithdrawModalOpen(false);
+
+        // Refresh data after a delay
         setTimeout(() => {
           refetch();
-          toast.info("Stream data refreshed");
         }, 3000);
       }
     } catch (error) {
       console.error("Withdraw error:", error);
-      toast.error("Failed to withdraw from stream");
+      toast.error("Failed to withdraw from stream", {
+        description: error instanceof Error ? error.message : "Please try again"
+      });
+      // Modal stays open on error so user can try again
     }
   };
 

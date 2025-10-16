@@ -66,7 +66,7 @@ export async function saveStreamCreated(data: {
       amount: data.amount,
       startBlock: data.startBlock,
       endBlock: data.endBlock,
-      withdrawn: '0',
+      withdrawn: 0, // Initialize as number, not string
       status: 'active',
       createdAt: new Date(data.context.timestamp * 1000),
       txHash: data.context.txHash,
@@ -115,6 +115,15 @@ export async function saveStreamWithdrawal(data: {
 }) {
   return retryOperation(async () => {
     const db = await getDb();
+
+    // First, ensure withdrawn field is a number (fix legacy string values)
+    const stream = await db.collection('streams').findOne({ streamId: data.streamId });
+    if (stream && typeof stream.withdrawn === 'string') {
+      await db.collection('streams').updateOne(
+        { streamId: data.streamId },
+        { $set: { withdrawn: parseFloat(stream.withdrawn) || 0 } }
+      );
+    }
 
     // Update stream's withdrawn amount
     await db.collection('streams').updateOne(

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Logo, DashboardLogo, LoadingLogo } from "@/components/ui/logo";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
+import {
   Sheet,
   SheetContent,
   SheetTrigger,
@@ -45,6 +45,10 @@ import Link from "next/link";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { useSBTCBalance } from "@/hooks/use-sbtc-balance";
 import { Bitcoin } from "lucide-react";
+import { useBitPayRead } from "@/hooks/use-bitpay-read";
+import { useIsMultiSigAdmin } from "@/hooks/use-multisig-treasury";
+import { CONTRACT_NAMES } from "@/lib/contracts/config";
+import { principalCV } from "@stacks/transactions";
 
 interface User {
   id: string;
@@ -73,6 +77,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { balanceDisplay, isLoading: balanceLoading, error: balanceError } = useSBTCBalance(
     user?.authMethod === 'wallet' && user.walletAddress ? user.walletAddress : null
   );
+
+  // Check if user is admin on smart contracts (for Treasury access)
+  const DEPLOYER_ADDRESS = 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7';
+  const isDeployer = user?.walletAddress === DEPLOYER_ADDRESS;
+
+  const { data: isAdminData } = useBitPayRead(
+    CONTRACT_NAMES.ACCESS_CONTROL,
+    'is-admin',
+    user?.walletAddress ? [principalCV(user.walletAddress)] : [],
+    !!user?.walletAddress
+  );
+
+  const { data: isMultiSigAdmin } = useIsMultiSigAdmin(user?.walletAddress || null);
+
+  // User has treasury access if: deployer, legacy admin, or multisig admin
+  const hasTreasuryAccess = isDeployer || !!isAdminData || !!isMultiSigAdmin;
 
   // Debug sBTC balance
   useEffect(() => {
@@ -174,7 +194,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: Users, label: "Marketplace", href: "/dashboard/marketplace", active: pathname === "/dashboard/marketplace" },
     { icon: BarChart3, label: "Analytics", href: "/dashboard/analytics", active: pathname === "/dashboard/analytics" },
     { icon: Bell, label: "Notifications", href: "/dashboard/notifications", active: pathname.startsWith("/dashboard/notifications") },
-    ...(user?.role === 'admin' ? [
+    ...(hasTreasuryAccess ? [
       { icon: DollarSign, label: "Treasury", href: "/dashboard/treasury", active: pathname === "/dashboard/treasury" },
     ] : []),
     { icon: Settings, label: "Settings", href: "/dashboard/settings", active: pathname === "/dashboard/settings" },

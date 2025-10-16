@@ -224,6 +224,25 @@ export default function TreasuryPage() {
         { address: "", isActive: false },
       ];
 
+  // Check if user is the contract deployer (hardcoded deployer address)
+  const DEPLOYER_ADDRESS = 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7';
+  const isDeployer = userAddress === DEPLOYER_ADDRESS;
+
+  // Extract properly from contract responses
+  const extractedIsAdmin = extractValue(isAdminData);
+  const extractedIsMultiSigAdmin = extractValue(isMultiSigAdmin);
+
+  // Debug logging
+  console.log('🏛️ Treasury Page Render:', {
+    userAddress,
+    isDeployer,
+    isAdmin,
+    isMultiSigAdmin,
+    extractedIsAdmin,
+    extractedIsMultiSigAdmin,
+    hasAccess: isDeployer || isAdmin || !!isMultiSigAdmin || !!extractedIsAdmin || !!extractedIsMultiSigAdmin,
+  });
+
   if (!userAddress) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -233,12 +252,11 @@ export default function TreasuryPage() {
     );
   }
 
-  // Check if user is the contract deployer (hardcoded deployer address)
-  const DEPLOYER_ADDRESS = 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7';
-  const isDeployer = userAddress === DEPLOYER_ADDRESS;
-
   // Admin-only access guard (allow deployer, legacy admin, or multi-sig admin)
-  if (!isAdmin && !isMultiSigAdmin && !isDeployer) {
+  // Use both state values AND extracted values to handle async loading
+  const hasAdminAccess = isDeployer || isAdmin || !!isMultiSigAdmin || !!extractedIsAdmin || !!extractedIsMultiSigAdmin;
+
+  if (!hasAdminAccess) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Shield className="h-16 w-16 text-red-500" />
@@ -250,6 +268,14 @@ export default function TreasuryPage() {
           <p className="text-xs text-muted-foreground mt-2">
             Current address: {userAddress?.slice(0, 10)}...
           </p>
+          <div className="text-xs text-muted-foreground mt-4 font-mono">
+            <p>Debug Info:</p>
+            <p>isDeployer: {String(isDeployer)}</p>
+            <p>isAdmin: {String(isAdmin)}</p>
+            <p>isMultiSigAdmin: {String(!!isMultiSigAdmin)}</p>
+            <p>extractedIsAdmin: {String(!!extractedIsAdmin)}</p>
+            <p>extractedIsMultiSigAdmin: {String(!!extractedIsMultiSigAdmin)}</p>
+          </div>
         </div>
       </div>
     );
