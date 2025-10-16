@@ -115,10 +115,23 @@ export default function TreasuryPage() {
   }, []);
 
   useEffect(() => {
+    const extractedAdminValue = extractValue(isAdminData);
+    const extractedMultiSigValue = extractValue(isMultiSigAdmin);
+
+    console.log('🔍 Treasury Access Check:', {
+      userAddress,
+      rawIsAdminData: isAdminData,
+      rawIsMultiSigAdmin: isMultiSigAdmin,
+      extractedAdminValue,
+      extractedMultiSigValue,
+      finalAdminStatus: !!extractedAdminValue,
+      finalMultiSigStatus: !!extractedMultiSigValue,
+    });
+
     if (isAdminData !== null && isAdminData !== undefined) {
-      setIsAdmin(!!isAdminData);
+      setIsAdmin(!!extractedAdminValue);
     }
-  }, [isAdminData]);
+  }, [isAdminData, isMultiSigAdmin, userAddress]);
 
   const handleApprove = async (proposalId: number) => {
     const txId = await approveProposal(proposalId);
@@ -220,8 +233,12 @@ export default function TreasuryPage() {
     );
   }
 
-  // Admin-only access guard
-  if (!isAdmin && !isMultiSigAdmin) {
+  // Check if user is the contract deployer (hardcoded deployer address)
+  const DEPLOYER_ADDRESS = 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7';
+  const isDeployer = userAddress === DEPLOYER_ADDRESS;
+
+  // Admin-only access guard (allow deployer, legacy admin, or multi-sig admin)
+  if (!isAdmin && !isMultiSigAdmin && !isDeployer) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Shield className="h-16 w-16 text-red-500" />
@@ -229,6 +246,9 @@ export default function TreasuryPage() {
           <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
           <p className="text-muted-foreground">
             You must be an admin to access the Treasury page.
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Current address: {userAddress?.slice(0, 10)}...
           </p>
         </div>
       </div>
@@ -250,7 +270,7 @@ export default function TreasuryPage() {
       />
 
       {/* Withdraw Fees Button - Only for admins */}
-      {(isAdmin || isMultiSigAdmin) && parseFloat(treasuryBalanceDisplay) > 0 && (
+      {(isAdmin || isMultiSigAdmin || isDeployer) && parseFloat(treasuryBalanceDisplay) > 0 && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -296,7 +316,7 @@ export default function TreasuryPage() {
             <BarChart3 className="h-4 w-4 mr-2" />
             Overview
           </TabsTrigger>
-          {isAdmin && (
+          {(isAdmin || isDeployer) && (
             <TabsTrigger
               value="access-control"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-brand-pink data-[state=active]:bg-transparent"
@@ -396,7 +416,7 @@ export default function TreasuryPage() {
         </TabsContent>
 
         {/* Access Control Tab */}
-        {isAdmin && (
+        {(isAdmin || isDeployer) && (
           <TabsContent value="access-control">
             <AccessControlPanel />
           </TabsContent>
