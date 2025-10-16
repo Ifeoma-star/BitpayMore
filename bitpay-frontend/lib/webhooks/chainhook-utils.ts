@@ -82,8 +82,24 @@ export function getWebhookContext(
  * Extract print events from a transaction
  */
 export function extractPrintEvents(tx: ChainhookTransaction): ChainhookEvent[] {
+  console.log('🔍 Transaction metadata:', JSON.stringify({
+    hasEvents: !!tx.metadata.events,
+    eventsLength: tx.metadata.events?.length || 0,
+    hasReceipt: !!tx.metadata.receipt,
+    receiptEventsLength: tx.metadata.receipt?.events?.length || 0,
+  }));
+
   const events = tx.metadata.events || tx.metadata.receipt?.events || [];
-  return events.filter((event) => event.type === 'print_event');
+  console.log('📋 Total events found:', events.length);
+
+  if (events.length > 0) {
+    console.log('📋 Event types:', events.map(e => e.type));
+  }
+
+  const printEvents = events.filter((event) => event.type === 'print_event');
+  console.log('🖨️ Print events filtered:', printEvents.length);
+
+  return printEvents;
 }
 
 /**
