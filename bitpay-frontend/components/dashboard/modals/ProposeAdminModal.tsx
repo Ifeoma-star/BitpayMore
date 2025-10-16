@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, UserPlus, UserMinus, AlertTriangle, Info } from "lucide-react";
 import { toast } from "sonner";
+import { useProposeAddAdmin, useProposeRemoveAdmin } from "@/hooks/use-multisig-treasury";
 
 interface ProposeAdminModalProps {
   isOpen: boolean;
@@ -32,8 +33,12 @@ export function ProposeAdminModal({
 }: ProposeAdminModalProps) {
   const [activeTab, setActiveTab] = useState<"add" | "remove">("add");
   const [address, setAddress] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const { proposeAdd, isLoading: isAddLoading } = useProposeAddAdmin();
+  const { proposeRemove, isLoading: isRemoveLoading } = useProposeRemoveAdmin();
+
+  const isLoading = isAddLoading || isRemoveLoading;
 
   const handlePropose = async () => {
     setError("");
@@ -60,36 +65,35 @@ export function ProposeAdminModal({
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      // TODO: Call the appropriate contract function
+      let txId: string | null = null;
+
       if (activeTab === "add") {
-        // Call useProposeAddAdmin
         console.log("Proposing to add admin:", address);
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        toast.success("Proposal created!", {
-          description: `Proposed to add ${address.slice(0, 8)}... as admin`,
-        });
+        toast.info("Opening wallet to propose admin addition...");
+        txId = await proposeAdd(address);
       } else {
-        // Call useProposeRemoveAdmin
         console.log("Proposing to remove admin:", address);
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        toast.info("Opening wallet to propose admin removal...");
+        txId = await proposeRemove(address);
+      }
+
+      if (txId) {
         toast.success("Proposal created!", {
-          description: `Proposed to remove ${address.slice(0, 8)}... from admins`,
+          description: `Transaction ID: ${txId.slice(0, 8)}...${txId.slice(-8)}`,
         });
-      }
 
-      if (onSuccess) {
-        onSuccess();
-      }
+        if (onSuccess) {
+          onSuccess();
+        }
 
-      handleClose();
+        handleClose();
+      } else {
+        setError("Transaction was cancelled or failed");
+      }
     } catch (err) {
       console.error("Error proposing admin change:", err);
-      setError("Failed to create proposal. Please try again.");
-    } finally {
-      setIsLoading(false);
+      setError(err instanceof Error ? err.message : "Failed to create proposal. Please try again.");
     }
   };
 
