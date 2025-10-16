@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { SlideContainer } from "../SlideContainer";
 import { Sparkles, TrendingUp, Bitcoin, Rocket } from "lucide-react";
 
-export function Slide05Proposition() {
+export function Slide06Proposition() {
   return (
     <SlideContainer background="white">
       <div className="space-y-5">
@@ -165,7 +165,7 @@ export function Slide05Proposition() {
   );
 }
 
-export const slide05Notes = {
+export const slide06Notes = {
   timing: "45 seconds",
   notes: [
     "VALUE PROPOSITION - Why this matters: $800B payroll + $1.5T freelance markets run on broken rails",

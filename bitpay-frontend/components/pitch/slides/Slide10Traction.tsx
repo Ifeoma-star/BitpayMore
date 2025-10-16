@@ -6,7 +6,7 @@ import { GradientText } from "../shared/GradientText";
 import { StatCard } from "../shared/StatCard";
 import { CheckCircle2 } from "lucide-react";
 
-export function Slide08Traction() {
+export function Slide10Traction() {
   const features = [
     "Core streaming with per-second vesting",
     "NFT marketplace for trading future income",
@@ -84,7 +84,7 @@ export function Slide08Traction() {
   );
 }
 
-export const slide08Notes = {
+export const slide10Notes = {
   timing: "35 seconds",
   notes: [
     "This is NOT just a hackathon demo - it's a production-ready product",

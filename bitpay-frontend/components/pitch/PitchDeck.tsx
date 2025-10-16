@@ -22,41 +22,46 @@ import {
   slide04Notes
 } from "./slides/Slide04Solution";
 import {
-  Slide05Proposition,
-  slide05Notes as slide05PropNotes
-} from "./slides/Slide05Proposition";
+  Slide05HowItWorks,
+  slide05Notes
+} from "./slides/Slide05HowItWorks";
 import {
-  Slide05Demo as Slide06Demo,
-  slide05Notes as slide06DemoNotes
-} from "./slides/Slide06Demo";
+  Slide06Proposition,
+  slide06Notes
+} from "./slides/Slide06Proposition";
 import {
-  Slide06ValueProps as Slide07ValueProps,
-  slide06Notes as slide07ValueNotes
-} from "./slides/Slide06ValueProps";
+  Slide07ValueProps,
+  slide07Notes
+} from "./slides/Slide07ValueProps";
 import {
-  Slide07TechStack as Slide08TechStack,
-  slide07Notes as slide08TechNotes
-} from "./slides/Slide07TechStack";
+  Slide08Demo,
+  slide08Notes
+} from "./slides/Slide08Demo";
 import {
-  Slide08Traction as Slide09Traction,
-  slide08Notes as slide09TractionNotes
-} from "./slides/Slide08Traction";
+  Slide09TechStack,
+  slide09Notes
+} from "./slides/Slide09TechStack";
 import {
-  Slide09Closing as Slide10Closing,
-  slide09Notes as slide10ClosingNotes
-} from "./slides/Slide09Closing";
+  Slide10Traction,
+  slide10Notes
+} from "./slides/Slide10Traction";
+import {
+  Slide11Closing,
+  slide11Notes
+} from "./slides/Slide11Closing";
 
 const slides = [
   { component: Slide01Title, notes: slide01Notes },
   { component: Slide02TwitterPitch, notes: slide02Notes },
   { component: Slide03Problem, notes: slide03Notes },
   { component: Slide04Solution, notes: slide04Notes },
-  { component: Slide05Proposition, notes: slide05PropNotes },
-  { component: Slide06Demo, notes: slide06DemoNotes },
-  { component: Slide07ValueProps, notes: slide07ValueNotes },
-  { component: Slide08TechStack, notes: slide08TechNotes },
-  { component: Slide09Traction, notes: slide09TractionNotes },
-  { component: Slide10Closing, notes: slide10ClosingNotes },
+  { component: Slide05HowItWorks, notes: slide05Notes },
+  { component: Slide06Proposition, notes: slide06Notes },
+  { component: Slide07ValueProps, notes: slide07Notes },
+  { component: Slide08Demo, notes: slide08Notes },
+  { component: Slide09TechStack, notes: slide09Notes },
+  { component: Slide10Traction, notes: slide10Notes },
+  { component: Slide11Closing, notes: slide11Notes },
 ];
 
 export function PitchDeck() {

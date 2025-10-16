@@ -5,7 +5,7 @@ import { SlideContainer } from "../SlideContainer";
 import { GradientText } from "../shared/GradientText";
 import { Code2, Database, Zap, Shield, Wallet, Globe, Box } from "lucide-react";
 
-export function Slide07TechStack() {
+export function Slide09TechStack() {
   const contracts = [
     { name: "bitpay-core", desc: "Streaming engine", color: "from-orange-500 to-pink-600" },
     { name: "bitpay-treasury", desc: "Multi-sig DAO", color: "from-cyan-500 to-teal-600" },
@@ -118,7 +118,7 @@ export function Slide07TechStack() {
   );
 }
 
-export const slide07Notes = {
+export const slide09Notes = {
   timing: "35 seconds",
   notes: [
     "We built a complete production system with 7 smart contracts",

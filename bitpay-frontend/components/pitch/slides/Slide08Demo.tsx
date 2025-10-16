@@ -6,7 +6,7 @@ import { GradientText } from "../shared/GradientText";
 import { Play, ExternalLink, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-export function Slide05Demo() {
+export function Slide08Demo() {
   return (
     <SlideContainer background="white">
       <div className="space-y-6">
@@ -100,7 +100,7 @@ export function Slide05Demo() {
   );
 }
 
-export const slide05Notes = {
+export const slide08Notes = {
   timing: "30 seconds",
   notes: [
     "This is a LIVE demo - everything you see is actually deployed and working",

@@ -5,7 +5,7 @@ import { SlideContainer } from "../SlideContainer";
 import { GradientText } from "../shared/GradientText";
 import { UserCheck, Send, Rocket, CheckCircle2 } from "lucide-react";
 
-export function Slide06ValueProps() {
+export function Slide07ValueProps() {
   const sections = [
     {
       title: "For Recipients",
@@ -113,7 +113,7 @@ export function Slide06ValueProps() {
   );
 }
 
-export const slide06Notes = {
+export const slide07Notes = {
   timing: "35 seconds",
   notes: [
     "BitPay creates value for three key stakeholder groups:",
