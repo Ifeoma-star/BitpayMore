@@ -26,14 +26,43 @@ interface ListingCardProps {
 export function ListingCard({ listing, onBuyDirect, onBuyViaGateway }: ListingCardProps) {
   const { user } = useAuth();
   const isOwnListing = user?.walletAddress === listing.seller;
+
+  // Format discount to 1 decimal place
+  const discountDisplay = listing.discount.toFixed(1);
+
+  // Format listed date
+  const formatListedDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      // Check if valid date
+      if (isNaN(date.getTime()) || date.getFullYear() === 1970) {
+        return "Recently";
+      }
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString();
+    } catch {
+      return "Recently";
+    }
+  };
+
+  const listedDisplay = formatListedDate(listing.listed);
+
   return (
     <Card className="overflow-hidden hover:border-brand-pink/50 transition-colors">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between mb-2">
           <Badge className="bg-brand-pink text-white">
-            {listing.discount}% OFF
+            {discountDisplay}% OFF
           </Badge>
-          <span className="text-xs text-muted-foreground">{listing.listed}</span>
+          <span className="text-xs text-muted-foreground">{listedDisplay}</span>
         </div>
         <CardTitle className="text-lg">Stream #{listing.streamId}</CardTitle>
         <CardDescription className="font-mono text-xs">

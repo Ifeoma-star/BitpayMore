@@ -210,7 +210,8 @@ async function handleNFTListed(
       seller: event.seller,
       price: event.price.toString(),
       status: 'active',
-      listedAt: new Date(event['listed-at'].toString()),
+      listedAtBlock: event['listed-at'], // Block number when listed
+      listedAt: new Date(context.timestamp * 1000), // Actual timestamp
       createdAt: new Date(context.timestamp * 1000),
       blockHeight: context.blockHeight,
       txHash: context.txHash,

@@ -130,17 +130,30 @@ export default function MarketplacePage() {
 
       const totalAmount = Number(microToDisplay(listing.stream.amount || 0));
       const withdrawn = Number(microToDisplay(listing.stream.withdrawn || 0));
-      const remainingAmount = totalAmount - withdrawn;
       const price = Number(microToDisplay(listing.price || 0));
+
+      // Calculate vested amount based on time progression
+      const currentBlock = blockHeight || 0;
+      const startBlock = Number(listing.stream.startBlock || 0);
+      const endBlock = Number(listing.stream.endBlock || 0);
+      const totalBlocks = endBlock - startBlock;
+      const blocksElapsed = Math.max(0, Math.min(currentBlock - startBlock, totalBlocks));
+
+      // Vested amount = (total amount * blocks elapsed) / total blocks
+      const vestedAmount = totalBlocks > 0
+        ? (totalAmount * blocksElapsed) / totalBlocks
+        : 0;
+
+      // Remaining amount = total - vested (this is what the buyer will receive)
+      const remainingAmount = Math.max(0, totalAmount - vestedAmount);
+
       const discount = totalAmount > 0 ? ((totalAmount - price) / totalAmount) * 100 : 0;
 
       // Calculate time remaining
-      const currentBlock = blockHeight || 0;
-      const endBlock = Number(listing.stream.endBlock || 0);
       const blocksRemaining = Math.max(0, endBlock - currentBlock);
       const daysRemaining = Math.ceil(blocksRemaining / 144); // ~144 blocks per day
 
-      // Calculate APR
+      // Calculate APR based on remaining amount
       const profit = remainingAmount - price;
       const apr = price > 0 && daysRemaining > 0
         ? (profit / price) * (365 / daysRemaining) * 100
