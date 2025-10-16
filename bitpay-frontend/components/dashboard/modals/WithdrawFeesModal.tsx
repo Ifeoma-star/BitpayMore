@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, DollarSign, AlertTriangle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useWithdraw } from "@/hooks/use-multisig-treasury";
+import { useAuth } from "@/hooks/use-auth";
 
 interface WithdrawFeesModalProps {
   isOpen: boolean;
@@ -30,8 +32,10 @@ export function WithdrawFeesModal({
   onSuccess,
 }: WithdrawFeesModalProps) {
   const [amount, setAmount] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const { user } = useAuth();
+  const { withdraw, isLoading } = useWithdraw();
 
   const handleWithdraw = async () => {
     setError("");
@@ -50,32 +54,39 @@ export function WithdrawFeesModal({
       return;
     }
 
-    setIsLoading(true);
+    if (!user?.walletAddress) {
+      setError("Wallet address not found");
+      return;
+    }
 
     try {
-      // TODO: Call bitpay-treasury.withdraw-fees(amount)
+      // Convert to micro-units (1 sBTC = 1,000,000 micro-sats)
+      const amountMicro = BigInt(Math.floor(withdrawAmount * 1_000_000));
+
       console.log("Withdrawing fees:", {
         amount: withdrawAmount,
-        amountInMicro: withdrawAmount * 1_000_000,
+        amountMicro: amountMicro.toString(),
+        recipient: user.walletAddress,
       });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const txId = await withdraw(amountMicro, user.walletAddress);
 
-      toast.success("Fees withdrawn successfully!", {
-        description: `${amount} sBTC has been transferred to your wallet`,
-      });
+      if (txId) {
+        toast.success("Withdrawal transaction submitted!", {
+          description: `Transaction ID: ${txId.slice(0, 10)}...`,
+        });
 
-      if (onSuccess) {
-        onSuccess();
+        if (onSuccess) {
+          onSuccess();
+        }
+
+        handleClose();
+      } else {
+        setError("Transaction failed. Please try again.");
       }
-
-      handleClose();
     } catch (err) {
       console.error("Error withdrawing fees:", err);
-      setError("Failed to withdraw fees. Please try again.");
-    } finally {
-      setIsLoading(false);
+      setError(err instanceof Error ? err.message : "Failed to withdraw fees. Please try again.");
     }
   };
 

@@ -181,7 +181,11 @@ export default function StreamDetailPage() {
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Cancelled At Block</p>
-                <p className="text-lg font-semibold text-red-500">{stream["cancelled-at-block"].toString()}</p>
+                <p className="text-lg font-semibold text-red-500">
+                  {typeof stream["cancelled-at-block"] === 'object'
+                    ? String((stream["cancelled-at-block"] as any)?.value || stream["cancelled-at-block"])
+                    : stream["cancelled-at-block"]?.toString()}
+                </p>
               </div>
             </>
           )}

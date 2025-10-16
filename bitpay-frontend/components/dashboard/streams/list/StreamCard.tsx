@@ -20,6 +20,8 @@ interface StreamCardProps {
     "start-block": bigint;
     "end-block": bigint;
     status: StreamStatus;
+    vestedPaid?: string;
+    unvestedReturned?: string;
   };
   isRecipient: boolean;
   progress: number;
@@ -97,28 +99,51 @@ export function StreamCard({
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
         {/* Amounts */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Total Amount</p>
-            <p className="text-lg font-semibold">{microToDisplay(stream.amount)} sBTC</p>
+        {stream.status === StreamStatus.CANCELLED ? (
+          // Show cancellation breakdown
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Total Amount</p>
+              <p className="text-lg font-semibold">{microToDisplay(stream.amount)} sBTC</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Vested (Paid to Recipient)</p>
+              <p className="text-lg font-semibold text-green-600">
+                {stream.vestedPaid ? microToDisplay(BigInt(stream.vestedPaid)) : '0.00000000'} sBTC
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Unvested (Returned to Sender)</p>
+              <p className="text-lg font-semibold text-blue-600">
+                {stream.unvestedReturned ? microToDisplay(BigInt(stream.unvestedReturned)) : '0.00000000'} sBTC
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Vested</p>
-            <p className="text-lg font-semibold text-brand-teal">
-              {microToDisplay(stream.vestedAmount)} sBTC
-            </p>
+        ) : (
+          // Show normal stream breakdown
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Total Amount</p>
+              <p className="text-lg font-semibold">{microToDisplay(stream.amount)} sBTC</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Vested</p>
+              <p className="text-lg font-semibold text-brand-teal">
+                {microToDisplay(stream.vestedAmount)} sBTC
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Withdrawn</p>
+              <p className="text-lg font-semibold">{microToDisplay(stream.withdrawn)} sBTC</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Available</p>
+              <p className="text-lg font-semibold text-brand-pink">
+                {microToDisplay(stream.withdrawableAmount)} sBTC
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Withdrawn</p>
-            <p className="text-lg font-semibold">{microToDisplay(stream.withdrawn)} sBTC</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Available</p>
-            <p className="text-lg font-semibold text-brand-pink">
-              {microToDisplay(stream.withdrawableAmount)} sBTC
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* Progress Bar */}
         <div className="space-y-2">

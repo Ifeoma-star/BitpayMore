@@ -132,6 +132,28 @@ export function useRequiredSignatures() {
 // ============================================
 
 /**
+ * Direct admin withdrawal (single-sig)
+ */
+export function useWithdraw() {
+  const { write, isLoading, error } = useBitPayWrite(
+    CONTRACT_NAMES.TREASURY,
+    'withdraw'
+  );
+
+  const withdraw = async (
+    amount: bigint,
+    recipient: string
+  ): Promise<string | null> => {
+    return write(
+      uintCV(amount),
+      principalCV(recipient)
+    );
+  };
+
+  return { withdraw, isLoading, error };
+}
+
+/**
  * Propose a multi-sig withdrawal
  */
 export function useProposeWithdrawal() {

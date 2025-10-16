@@ -52,11 +52,17 @@ export async function GET(request: Request) {
       startBlock: stream.startBlock,
       endBlock: stream.endBlock,
       withdrawn: stream.withdrawn || '0',
-      cancelled: stream.cancelled || false,
+      cancelled: stream.status === 'cancelled' || stream.cancelled || false,
       status: stream.status || 'active',
       txHash: stream.txHash,
       createdAt: stream.createdAt,
       updatedAt: stream.updatedAt,
+      // Cancellation data
+      'cancelled-at-block': stream.cancelledAtBlock || null,
+      cancelledAtBlock: stream.cancelledAtBlock || null,
+      vestedPaid: stream.vestedPaid || '0',
+      unvestedReturned: stream.unvestedReturned || '0',
+      cancelledAt: stream.cancelledAt || null,
       // Note: vested, withdrawable, progress calculated on frontend with current block
     }));
 
