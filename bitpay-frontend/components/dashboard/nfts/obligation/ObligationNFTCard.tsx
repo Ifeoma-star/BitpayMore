@@ -30,6 +30,8 @@ export function ObligationNFTCard({ stream, displayAmount, onTransfer, onListMar
   // Fetch the actual NFT owner from blockchain
   const { data: nftOwnerData } = useObligationNFTOwner(Number(stream.id));
   const [nftOwner, setNftOwner] = useState<string | null>(null);
+  const [isListed, setIsListed] = useState(false);
+  const [isCheckingListing, setIsCheckingListing] = useState(true);
 
   useEffect(() => {
     if (nftOwnerData) {
@@ -42,6 +44,33 @@ export function ObligationNFTCard({ stream, displayAmount, onTransfer, onListMar
       setNftOwner(owner);
     }
   }, [nftOwnerData, stream.id]);
+
+  // Check if this NFT is already listed on marketplace
+  useEffect(() => {
+    async function checkIfListed() {
+      try {
+        setIsCheckingListing(true);
+        const response = await fetch('/api/marketplace/listings');
+        const data = await response.json();
+
+        if (data.success && data.listings) {
+          const listed = data.listings.some((listing: any) =>
+            listing.streamId === stream.id.toString() &&
+            listing.seller.toLowerCase() === userAddress?.toLowerCase()
+          );
+          setIsListed(listed);
+        }
+      } catch (error) {
+        console.error('Failed to check listing status:', error);
+      } finally {
+        setIsCheckingListing(false);
+      }
+    }
+
+    if (userAddress && stream.id) {
+      checkIfListed();
+    }
+  }, [stream.id, userAddress]);
 
   // Check if NFT has been transferred: NFT owner != current user
   const isTransferred = userAddress && nftOwner && typeof nftOwner === 'string' && nftOwner.toLowerCase() !== userAddress.toLowerCase();
@@ -158,16 +187,28 @@ export function ObligationNFTCard({ stream, displayAmount, onTransfer, onListMar
                 </Button>
               </div>
               {onListMarketplace && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
-                  onClick={onListMarketplace}
-                  disabled={stream.status !== StreamStatus.ACTIVE}
-                >
-                  <Store className="h-4 w-4 mr-2" />
-                  List on Marketplace
-                </Button>
+                isListed ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-brand-pink/50 text-brand-pink cursor-default"
+                    disabled
+                  >
+                    <Store className="h-4 w-4 mr-2" />
+                    Already Listed
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
+                    onClick={onListMarketplace}
+                    disabled={stream.status !== StreamStatus.ACTIVE || isCheckingListing}
+                  >
+                    <Store className="h-4 w-4 mr-2" />
+                    {isCheckingListing ? 'Checking...' : 'List on Marketplace'}
+                  </Button>
+                )
               )}
             </>
           )}

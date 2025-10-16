@@ -80,7 +80,7 @@
         )
         (begin
             ;; Check protocol not paused
-            (try! (contract-call? .bitpay-access-control-v4 assert-not-paused))
+            (try! (contract-call? .bitpay-access-control-v5 assert-not-paused))
 
             ;; Validate inputs
             (asserts! (> amount u0) ERR_INVALID_AMOUNT)
@@ -91,7 +91,7 @@
             (asserts! (>= duration MIN_STREAM_DURATION) ERR_INVALID_DURATION)
 
             ;; Transfer sBTC to vault
-            (try! (contract-call? .bitpay-sbtc-helper-v4 transfer-to-vault amount
+            (try! (contract-call? .bitpay-sbtc-helper-v5 transfer-to-vault amount
                 tx-sender
             ))
 
@@ -125,10 +125,10 @@
             (var-set next-stream-id (+ stream-id u1))
 
             ;; Mint recipient NFT (soul-bound proof of receipt)
-            (try! (contract-call? .bitpay-nft-v4 mint stream-id recipient))
+            (try! (contract-call? .bitpay-nft-v5 mint stream-id recipient))
 
             ;; Mint obligation NFT for sender (transferable payment obligation)
-            (try! (contract-call? .bitpay-obligation-nft-v4 mint stream-id tx-sender))
+            (try! (contract-call? .bitpay-obligation-nft-v5 mint stream-id tx-sender))
 
             (print {
                 event: "stream-created",
@@ -162,7 +162,7 @@
             (asserts! (> available u0) ERR_NOTHING_TO_WITHDRAW)
 
             ;; Transfer from vault to recipient
-            (try! (contract-call? .bitpay-sbtc-helper-v4 transfer-from-vault available
+            (try! (contract-call? .bitpay-sbtc-helper-v5 transfer-from-vault available
                 tx-sender
             ))
 
@@ -207,7 +207,7 @@
             (asserts! (<= amount available) ERR_INSUFFICIENT_BALANCE)
 
             ;; Transfer from vault to recipient
-            (try! (contract-call? .bitpay-sbtc-helper-v4 transfer-from-vault amount
+            (try! (contract-call? .bitpay-sbtc-helper-v5 transfer-from-vault amount
                 tx-sender
             ))
 
@@ -256,7 +256,7 @@
                 (begin
                     ;; 1. Transfer sBTC from vault to treasury contract via helper
                     ;; The treasury contract will receive the sBTC in its own balance
-                    (try! (contract-call? .bitpay-treasury-v4 collect-cancellation-fee
+                    (try! (contract-call? .bitpay-treasury-v5 collect-cancellation-fee
                         cancellation-fee
                     ))
                     true
@@ -266,7 +266,7 @@
 
             ;; Transfer unvested (minus fee) back to sender
             (if (> unvested-after-fee u0)
-                (try! (contract-call? .bitpay-sbtc-helper-v4 transfer-from-vault
+                (try! (contract-call? .bitpay-sbtc-helper-v5 transfer-from-vault
                     unvested-after-fee tx-sender
                 ))
                 true
@@ -274,7 +274,7 @@
 
             ;; Transfer owed amount to recipient
             (if (> owed-to-recipient u0)
-                (try! (contract-call? .bitpay-sbtc-helper-v4 transfer-from-vault
+                (try! (contract-call? .bitpay-sbtc-helper-v5 transfer-from-vault
                     owed-to-recipient (get recipient stream)
                 ))
                 true
@@ -329,7 +329,7 @@
             (asserts!
                 (or
                     (is-eq tx-sender old-sender)
-                    (is-ok (contract-call? .bitpay-access-control-v4
+                    (is-ok (contract-call? .bitpay-access-control-v5
                         assert-authorized-contract contract-caller
                     ))
                 )

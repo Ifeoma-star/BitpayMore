@@ -92,24 +92,24 @@ export function useIsMultiSigAdmin(address: string | null) {
 }
 
 /**
- * Get count of active multi-sig admins
+ * Get next proposal ID (used to fetch all proposals)
  */
-export function useAdminCount() {
+export function useNextProposalId() {
   return useBitPayRead<number>(
     CONTRACT_NAMES.TREASURY,
-    'count-admins',
+    'get-next-proposal-id',
     [],
     true
   );
 }
 
 /**
- * Get next proposal ID (for creating new proposals)
+ * Get count of active multi-sig admins
  */
-export function useNextProposalId() {
+export function useAdminCount() {
   return useBitPayRead<number>(
     CONTRACT_NAMES.TREASURY,
-    'get-next-proposal-id',
+    'count-admins',
     [],
     true
   );

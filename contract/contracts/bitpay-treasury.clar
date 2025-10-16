@@ -21,11 +21,23 @@
 (define-constant DEFAULT_FEE_BPS u50) ;; 0.5% fee
 
 ;; Multi-sig configuration (3-of-5 institutional standard)
-(define-constant REQUIRED_SIGNATURES u3)
+(define-constant TARGET_REQUIRED_SIGNATURES u3) ;; Target when fully staffed
 (define-constant TOTAL_ADMIN_SLOTS u5)
 (define-constant TIMELOCK_BLOCKS u144) ;; ~24 hours (144 blocks)
 (define-constant PROPOSAL_EXPIRY_BLOCKS u1008) ;; ~7 days
 (define-constant DAILY_WITHDRAWAL_LIMIT u100000000) ;; 100 sBTC per day
+
+;; Helper: Calculate required signatures based on current admin count
+;; Returns minimum of (target signatures OR current admin count)
+;; This allows bootstrapping with 1 admin and grows security as admins are added
+(define-read-only (get-required-signatures)
+    (let ((current-count (var-get active-admin-count)))
+        (if (<= current-count TARGET_REQUIRED_SIGNATURES)
+            current-count
+            TARGET_REQUIRED_SIGNATURES
+        )
+    )
+)
 
 ;; Data vars
 (define-data-var treasury-balance uint u0)
@@ -129,7 +141,7 @@
 ;; Check if protocol is paused via access-control
 ;; @returns: (ok true) if not paused, error if paused
 (define-private (check-not-paused)
-    (let ((paused-check (contract-call? .bitpay-access-control-v4 is-paused)))
+    (let ((paused-check (contract-call? .bitpay-access-control-v5 is-paused)))
         (asserts! (not paused-check) ERR_PAUSED)
         (ok true)
     )
@@ -155,7 +167,7 @@
 
         (let ((fee (unwrap-panic (calculate-fee amount))))
             ;; Transfer fee from sender to treasury
-            (try! (contract-call? .bitpay-sbtc-helper-v4 transfer-to-vault fee
+            (try! (contract-call? .bitpay-sbtc-helper-v5 transfer-to-vault fee
                 tx-sender
             ))
 
@@ -186,12 +198,12 @@
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)
 
         ;; Only authorized contracts (bitpay-core) can collect cancellation fees
-        (try! (contract-call? .bitpay-access-control-v4 assert-authorized-contract
+        (try! (contract-call? .bitpay-access-control-v5 assert-authorized-contract
             contract-caller
         ))
 
         ;; Transfer sBTC from vault to this treasury contract
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v4 transfer-from-vault amount
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v5 transfer-from-vault amount
             tx-sender
         )))
 
@@ -222,7 +234,7 @@
         (asserts! (> amount u0) ERR_INVALID_AMOUNT)
 
         ;; Only authorized contracts (bitpay-marketplace) can collect marketplace fees
-        (try! (contract-call? .bitpay-access-control-v4 assert-authorized-contract
+        (try! (contract-call? .bitpay-access-control-v5 assert-authorized-contract
             contract-caller
         ))
 
@@ -256,7 +268,7 @@
         (asserts! (<= amount (var-get treasury-balance)) ERR_INSUFFICIENT_BALANCE)
 
         ;; Transfer from treasury to recipient
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v4 transfer-from-vault amount
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v5 transfer-from-vault amount
             recipient
         )))
 
@@ -290,7 +302,7 @@
         (asserts! (<= amount (var-get treasury-balance)) ERR_INSUFFICIENT_BALANCE)
 
         ;; Transfer to recipient
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v4 transfer-from-vault amount
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v5 transfer-from-vault amount
             recipient
         )))
 
@@ -536,7 +548,7 @@
             proposal-id: proposal-id,
             approver: tx-sender,
             total-approvals: (+ (len current-approvals) u1),
-            required: REQUIRED_SIGNATURES,
+            required: (get-required-signatures),
         })
 
         (ok true)
@@ -558,7 +570,7 @@
         )
         ;; Checks
         (asserts! (not (get executed proposal)) ERR_ALREADY_EXECUTED)
-        (asserts! (>= approval-count REQUIRED_SIGNATURES)
+        (asserts! (>= approval-count (get-required-signatures))
             ERR_INSUFFICIENT_APPROVALS
         )
         (asserts! (>= stacks-block-height timelock-elapsed)
@@ -572,7 +584,7 @@
         (try! (check-daily-limit amount))
 
         ;; Execute withdrawal
-        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v4 transfer-from-vault amount
+        (try! (as-contract (contract-call? .bitpay-sbtc-helper-v5 transfer-from-vault amount
             (get recipient proposal)
         )))
 
@@ -769,7 +781,7 @@
         )
         ;; Checks
         (asserts! (not (get executed proposal)) ERR_ALREADY_EXECUTED)
-        (asserts! (>= approval-count REQUIRED_SIGNATURES)
+        (asserts! (>= approval-count (get-required-signatures))
             ERR_INSUFFICIENT_APPROVALS
         )
         (asserts! (< stacks-block-height (get expires-at proposal))
@@ -832,7 +844,7 @@
 ;; @returns: (ok config)
 (define-read-only (get-multisig-config)
     (ok {
-        required-signatures: REQUIRED_SIGNATURES,
+        required-signatures: (get-required-signatures), ;; Dynamic based on admin count
         total-slots: TOTAL_ADMIN_SLOTS,
         timelock-blocks: TIMELOCK_BLOCKS,
         proposal-expiry-blocks: PROPOSAL_EXPIRY_BLOCKS,

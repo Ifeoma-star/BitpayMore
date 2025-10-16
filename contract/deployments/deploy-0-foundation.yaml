@@ -20,21 +20,21 @@ plan:
     - id: 1
       transactions:
         - contract-publish:
-            contract-name: bitpay-access-control-v4
+            contract-name: bitpay-access-control-v5
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2706527
             path: contracts/bitpay-access-control.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-nft-v4
+            contract-name: bitpay-nft-v5
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2706527
             path: contracts/bitpay-nft.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: bitpay-obligation-nft-v4
+            contract-name: bitpay-obligation-nft-v5
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2708478
             path: contracts/bitpay-obligation-nft.clar

@@ -17,6 +17,7 @@ import { useTreasuryFeeBps, useTotalFeesCollected, useBitPayRead } from "@/hooks
 import { microToDisplay, CONTRACT_NAMES } from "@/lib/contracts/config";
 import { principalCV } from "@stacks/transactions";
 import { AccessControlPanel } from "@/components/dashboard/AccessControlPanel";
+import { AdminProposalsList } from "@/components/dashboard/treasury/multisig/AdminProposalsList";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import {
   useMultiSigConfig,
@@ -426,6 +427,13 @@ export default function TreasuryPage() {
             isCurrentUserAdmin={!!isMultiSigAdmin}
             onProposeAdd={handleProposeAddAdmin}
             onProposeRemove={handleProposeRemoveAdmin}
+          />
+
+          {/* Admin Proposals Section */}
+          <AdminProposalsList
+            currentUserAddress={userAddress}
+            isCurrentUserAdmin={!!isMultiSigAdmin}
+            requiredSignatures={3}
           />
 
           {multiSigConfig && <MultiSigConfigCard config={multiSigConfig} />}

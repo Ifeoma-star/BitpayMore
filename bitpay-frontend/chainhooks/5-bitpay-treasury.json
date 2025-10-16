@@ -9,7 +9,7 @@
       "decode_clarity_values": true,
       "if_this": {
         "scope": "print_event",
-        "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-treasury-v4",
+        "contract_identifier": "ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-treasury-v5",
         "contains": "treasury-"
       },
       "then_that": {

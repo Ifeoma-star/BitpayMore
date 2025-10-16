@@ -1,6 +1,6 @@
 ---
 id: 0
-name: Deploy sbtc-helper-v4
+name: Deploy sbtc-helper-v5
 network: testnet
 stacks-node: "https://api.testnet.hiro.so"
 bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
@@ -20,7 +20,7 @@ plan:
     - id: 1
       transactions:
         - contract-publish:
-            contract-name: bitpay-sbtc-helper-v4
+            contract-name: bitpay-sbtc-helper-v5
             expected-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
             cost: 2709941
             path: contracts/bitpay-sbtc-helper.clar

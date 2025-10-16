@@ -26,13 +26,13 @@ export const SBTC_TOKEN_CONTRACT = 'sbtc-token';
 
 // BitPay Contract Names (V4 - Deployed on Testnet)
 export const CONTRACT_NAMES = {
-  CORE: 'bitpay-core-v4',
-  ACCESS_CONTROL: 'bitpay-access-control-v4',
-  SBTC_HELPER: 'bitpay-sbtc-helper-v4',
-  NFT: 'bitpay-nft-v4',
-  OBLIGATION_NFT: 'bitpay-obligation-nft-v4',
-  TREASURY: 'bitpay-treasury-v4',
-  MARKETPLACE: 'bitpay-marketplace-v4',
+  CORE: 'bitpay-core-v5',
+  ACCESS_CONTROL: 'bitpay-access-control-v5',
+  SBTC_HELPER: 'bitpay-sbtc-helper-v5',
+  NFT: 'bitpay-nft-v5',
+  OBLIGATION_NFT: 'bitpay-obligation-nft-v5',
+  TREASURY: 'bitpay-treasury-v5',
+  MARKETPLACE: 'bitpay-marketplace-v5',
 } as const;
 
 // Full contract identifiers

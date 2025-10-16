@@ -175,23 +175,39 @@ async function handleNFTEvent(
           { upsert: true }
         );
 
-        // Check if NFT is listed on marketplace
+        // Check if NFT is listed on marketplace and auto-cancel
         const listing = await db.collection('marketplace_listings').findOne({
-          tokenId: event['token-id'].toString(),
+          streamId: event['token-id'].toString(), // Note: marketplace uses streamId, not tokenId
           status: 'active',
         });
 
         if (listing) {
-          // Update marketplace listing ownership or cancel it
+          // Auto-cancel listing when NFT is transferred
           await db.collection('marketplace_listings').updateOne(
-            { tokenId: event['token-id'].toString(), status: 'active' },
+            { streamId: event['token-id'].toString(), status: 'active' },
             {
               $set: {
-                seller: event.to,
+                status: 'cancelled',
+                cancelledReason: 'nft_transferred',
+                cancelledAt: new Date(context.timestamp * 1000),
+                cancelledTxHash: context.txHash,
+                transferredTo: event.to,
                 updatedAt: new Date(),
               },
             }
           );
+
+          console.log(`🗑️ Auto-cancelled marketplace listing for transferred NFT: #${event['token-id']}`);
+
+          // Broadcast listing cancellation via WebSocket
+          const { broadcastToMarketplace } = await import('@/lib/socket/client-broadcast');
+          broadcastToMarketplace('marketplace:listing-cancelled', {
+            streamId: event['token-id'].toString(),
+            seller: event.from,
+            reason: 'nft_transferred',
+            transferredTo: event.to,
+            txHash: context.txHash,
+          });
         }
 
         // Log event
