@@ -601,8 +601,9 @@ export async function markAsRead(
     return false;
   }
 
+  const { ObjectId } = require('mongodb');
   const result = await db.collection('notifications').updateOne(
-    { _id: notificationId, userId } as any,
+    { _id: new ObjectId(notificationId), userId },
     {
       $set: {
         status: 'read',
