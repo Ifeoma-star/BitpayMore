@@ -10,15 +10,16 @@ interface ConditionalLayoutProps {
 
 export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname();
-  
-  // Check if current path is dashboard or its sub-routes
+
+  // Check if current path is dashboard or pitch page (no header/footer)
   const isDashboardPage = pathname.startsWith('/dashboard');
-  
-  if (isDashboardPage) {
-    // Dashboard pages: no header/footer, just children
+  const isPitchPage = pathname.startsWith('/pitch');
+
+  if (isDashboardPage || isPitchPage) {
+    // Dashboard and pitch pages: no header/footer, just children
     return <>{children}</>;
   }
-  
+
   // Regular pages: show header and footer
   return (
     <>
