@@ -131,35 +131,50 @@ async function processStreamBlock(block: ChainhookBlock): Promise<number> {
   let processed = 0;
 
   console.log(`📦 Processing stream events from block ${block.block_identifier.index}`);
+  console.log(`📊 Block has ${block.transactions.length} transactions`);
 
   for (const tx of block.transactions) {
+    console.log(`🔍 Processing transaction ${tx.transaction_identifier.hash}`);
+    console.log(`✅ Transaction success: ${tx.metadata.success}`);
+
     if (!tx.metadata.success) {
       console.log(`⏭️ Skipping failed transaction ${tx.transaction_identifier.hash}`);
       continue;
     }
 
+    console.log(`📤 Extracting print events from transaction...`);
     const printEvents = extractPrintEvents(tx);
+    console.log(`📤 Found ${printEvents.length} print events`);
 
     for (const event of printEvents) {
+      console.log(`🔍 Print event data:`, JSON.stringify(event, null, 2));
+
       const eventData = parseEventData<CoreStreamEvent>(event);
+      console.log(`📋 Parsed event data:`, eventData);
+
       if (!eventData) {
-        console.warn('Failed to parse event data');
+        console.warn('❌ Failed to parse event data');
         continue;
       }
+
+      console.log(`✅ Event type: ${eventData.event}`);
 
       const context = getWebhookContext(tx, block);
       context.contractIdentifier = event.data.contract_identifier;
 
       try {
+        console.log(`🚀 Handling ${eventData.event} event...`);
         await handleStreamEvent(eventData, context);
         processed++;
+        console.log(`✅ Successfully handled ${eventData.event} event`);
       } catch (error) {
-        console.error(`Failed to handle event ${eventData.event}:`, error);
+        console.error(`❌ Failed to handle event ${eventData.event}:`, error);
         throw error;
       }
     }
   }
 
+  console.log(`✅ Block processing complete. Processed ${processed} events.`);
   return processed;
 }
 
