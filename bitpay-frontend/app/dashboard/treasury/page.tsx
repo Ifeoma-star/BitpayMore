@@ -82,6 +82,14 @@ export default function TreasuryPage() {
     }
   }, [realtimeAdmins.length, userAddress]);
 
+  // Read treasury data
+  const { data: feeBps } = useTreasuryFeeBps();
+  const { data: totalFees, refetch: refetchFees } = useTotalFeesCollected();
+  const { data: treasuryBalance, refetch: refetchBalance } = useBitPayRead(
+    CONTRACT_NAMES.TREASURY,
+    'get-treasury-balance'
+  );
+
   // Refetch treasury balance when it updates via WebSocket
   useEffect(() => {
     if (balanceUpdate) {
@@ -93,14 +101,6 @@ export default function TreasuryPage() {
       });
     }
   }, [balanceUpdate, refetchBalance, refetchFees]);
-
-  // Read treasury data
-  const { data: feeBps } = useTreasuryFeeBps();
-  const { data: totalFees, refetch: refetchFees } = useTotalFeesCollected();
-  const { data: treasuryBalance, refetch: refetchBalance } = useBitPayRead(
-    CONTRACT_NAMES.TREASURY,
-    'get-treasury-balance'
-  );
 
   // Multi-sig data
   const { blockHeight } = useBlockHeight(30000);
