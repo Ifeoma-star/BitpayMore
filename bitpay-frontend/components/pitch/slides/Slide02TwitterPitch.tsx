@@ -2,62 +2,71 @@
 
 import { motion } from "framer-motion";
 import { SlideContainer } from "../SlideContainer";
-import { GradientText } from "../shared/GradientText";
-import { Quote } from "lucide-react";
+import { Quote, Twitter } from "lucide-react";
 
 export function Slide02TwitterPitch() {
   return (
     <SlideContainer background="white">
-      <div className="text-center space-y-6">
-        {/* Quote icon */}
+      <div className="text-center space-y-8">
+        {/* Twitter Pitch Header */}
         <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ duration: 0.8, ease: "backOut" }}
-          className="flex justify-center"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="flex items-center justify-center gap-3"
         >
-          <div className="p-4 bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl">
-            <Quote className="w-12 h-12 text-orange-600" />
+          <Twitter className="w-8 h-8 text-blue-500" />
+          <h2 className="text-3xl font-black text-gray-900">Twitter Pitch</h2>
+        </motion.div>
+
+        {/* Main pitch - Quote style */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative max-w-5xl mx-auto"
+        >
+          {/* Quote mark */}
+          <Quote className="absolute -top-4 -left-4 w-16 h-16 text-orange-200" />
+
+          <div className="bg-gray-50 rounded-3xl p-10 border-2 border-gray-200 shadow-lg">
+            <p className="text-4xl md:text-5xl font-black leading-tight text-gray-900 mb-6">
+              Netflix for Money, Secured by Bitcoin
+            </p>
+
+            <div className="w-24 h-1 bg-orange-500 mx-auto mb-6" />
+
+            <p className="text-2xl md:text-3xl text-gray-700 font-medium leading-relaxed">
+              BitPay streams Bitcoin payments <span className="font-bold text-orange-600">per-second</span> using smart contracts—
+              no more waiting 30 days for salary or risking non-payment for freelance work.
+            </p>
           </div>
         </motion.div>
 
-        {/* Main pitch */}
+        {/* Key points */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="space-y-5"
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="flex flex-wrap items-center justify-center gap-4 max-w-4xl mx-auto"
         >
-          <h2 className="text-4xl md:text-5xl font-black leading-tight text-gray-900">
-            <GradientText gradient="primary">
-              "LinkedIn for on-chain reputation.
-            </GradientText>
-            <br />
-            <GradientText gradient="accent">
-              Kickstarter for Bitcoin apps."
-            </GradientText>
-          </h2>
+          <div className="px-6 py-3 bg-white rounded-xl border-2 border-gray-200">
+            <p className="text-lg font-bold text-gray-900">
+              🎯 First on Bitcoin
+            </p>
+          </div>
 
-          <div className="w-24 h-1.5 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 mx-auto rounded-full" />
+          <div className="px-6 py-3 bg-white rounded-xl border-2 border-gray-200">
+            <p className="text-lg font-bold text-gray-900">
+              ⚡ Per-Second Streaming
+            </p>
+          </div>
 
-          <p className="text-2xl md:text-3xl text-gray-700 font-medium max-w-4xl mx-auto leading-relaxed">
-            BitPay brings <span className="font-bold text-gray-900">continuous money streams</span> to Bitcoin—
-            enabling <span className="font-bold text-gray-900">programmable payroll</span>,{" "}
-            <span className="font-bold text-gray-900">vesting</span>, and{" "}
-            <span className="font-bold text-gray-900">subscriptions</span> powered by sBTC.
-          </p>
-        </motion.div>
-
-        {/* Highlight stat */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="inline-block px-6 py-3 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl border-2 border-orange-200"
-        >
-          <p className="text-lg font-semibold text-gray-700">
-            Netflix for money, <GradientText>secured by Bitcoin</GradientText>
-          </p>
+          <div className="px-6 py-3 bg-white rounded-xl border-2 border-gray-200">
+            <p className="text-lg font-bold text-gray-900">
+              🔒 Trust-Minimized
+            </p>
+          </div>
         </motion.div>
       </div>
     </SlideContainer>
@@ -67,9 +76,10 @@ export function Slide02TwitterPitch() {
 export const slide02Notes = {
   timing: "25 seconds",
   notes: [
-    "Our Twitter pitch: LinkedIn for on-chain reputation, Kickstarter for Bitcoin apps",
-    "BitPay is the first protocol bringing streaming payments to Bitcoin",
+    "Our Twitter pitch: Netflix for Money, Secured by Bitcoin",
+    "BitPay is the FIRST protocol bringing streaming payments to Bitcoin",
     "Just like Netflix streams video continuously, we stream Bitcoin payments per-second",
-    "Real use cases: employee payroll, token vesting, freelance payments, subscriptions"
+    "Solves real problems: no more 30-day salary waits, no freelancer payment risks",
+    "Trust-minimized through smart contracts - code guarantees, not promises"
   ]
 };

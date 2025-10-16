@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { SlideContainer } from "../SlideContainer";
-import { Bitcoin, Zap, ArrowRight, Users, Wallet } from "lucide-react";
-import Image from "next/image";
+import { Bitcoin, Zap, ArrowRight, Users, Wallet, ExternalLink } from "lucide-react";
+import Link from "next/link";
 
 export function Slide01Title() {
   return (
@@ -59,6 +59,21 @@ export function Slide01Title() {
               </span>
             </div>
           </div>
+
+          {/* Visit Website Link */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1 }}
+          >
+            <Link
+              href="/"
+              className="group inline-flex items-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold transition-all duration-300 hover:shadow-lg"
+            >
+              <span>Visit Website</span>
+              <ExternalLink className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </motion.div>
         </motion.div>
 
         {/* Right side - Illustration */}
