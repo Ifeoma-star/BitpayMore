@@ -48,70 +48,41 @@ export function AdminProposalsList({
   const { approve: approveProposal, isLoading: isApproving } = useApproveAdminProposal();
   const { execute: executeProposal, isLoading: isExecuting } = useExecuteAdminProposal();
 
-  // Fetch all admin proposals
+  // Fetch all admin proposals from database
   useEffect(() => {
     async function fetchProposals() {
-      console.log('🔍 AdminProposalsList: nextProposalId =', nextProposalId);
-      console.log('🔍 typeof nextProposalId =', typeof nextProposalId);
-      console.log('🔍 nextProposalId === 0?', nextProposalId === 0);
-      console.log('🔍 nextProposalId === null?', nextProposalId === null);
-      console.log('🔍 nextProposalId === undefined?', nextProposalId === undefined);
-
-      // Try to extract value if it's wrapped
-      let proposalCount = nextProposalId;
-      if (nextProposalId && typeof nextProposalId === 'object' && 'value' in nextProposalId) {
-        proposalCount = (nextProposalId as any).value;
-        console.log('📦 Extracted value from wrapped object:', proposalCount);
-      }
-
-      // Convert to number if needed
-      if (typeof proposalCount === 'bigint') {
-        proposalCount = Number(proposalCount);
-        console.log('🔢 Converted bigint to number:', proposalCount);
-      }
-
-      if (!proposalCount || proposalCount === 0) {
-        console.log('⚠️ No proposals to fetch (proposalCount is 0 or null)');
-        setIsLoading(false);
-        return;
-      }
-
+      console.log('🔍 AdminProposalsList: Fetching from database...');
       setIsLoading(true);
-      const fetchedProposals: AdminProposal[] = [];
 
-      console.log(`📥 Fetching ${proposalCount} admin proposals...`);
+      try {
+        const response = await fetch('/api/treasury/admin-proposals');
+        console.log('📄 Admin proposals API response:', response.status);
 
-      // Fetch all proposals from ID 0 to proposalCount-1
-      for (let i = 0; i < proposalCount; i++) {
-        try {
-          const response = await fetch(
-            `/api/treasury/admin-proposal?id=${i}`
-          );
-          console.log(`📄 Proposal ${i} response:`, response.status);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📋 Admin proposals data:', data);
 
-          if (response.ok) {
-            const data = await response.json();
-            console.log(`📋 Proposal ${i} data:`, data);
-
-            if (data.proposal && !data.proposal.executed) {
-              fetchedProposals.push({ ...data.proposal, id: i });
-              console.log(`✅ Added proposal ${i} to list`);
-            } else {
-              console.log(`⏭️ Skipping proposal ${i} (executed or null)`);
-            }
+          if (data.success && data.proposals) {
+            setProposals(data.proposals);
+            console.log(`✅ Fetched ${data.proposals.length} pending proposals from database`);
+          } else {
+            console.log('⚠️ No proposals found or API error');
+            setProposals([]);
           }
-        } catch (error) {
-          console.error(`❌ Failed to fetch proposal ${i}:`, error);
+        } else {
+          console.error('❌ Failed to fetch proposals:', response.statusText);
+          setProposals([]);
         }
+      } catch (error) {
+        console.error('❌ Error fetching admin proposals:', error);
+        setProposals([]);
+      } finally {
+        setIsLoading(false);
       }
-
-      console.log(`✅ Fetched ${fetchedProposals.length} active proposals`);
-      setProposals(fetchedProposals);
-      setIsLoading(false);
     }
 
     fetchProposals();
-  }, [nextProposalId]);
+  }, []); // Only fetch on mount, webhook will broadcast updates
 
   const handleApprove = async (proposalId: number) => {
     try {

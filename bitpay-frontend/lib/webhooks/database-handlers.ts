@@ -495,6 +495,120 @@ export async function saveWithdrawalApproval(data: {
 }
 
 // ============================================================================
+// Admin Proposal Handlers
+// ============================================================================
+
+export async function saveAdminProposal(data: {
+  proposalId: string;
+  proposer: string;
+  action: 'add' | 'remove';
+  targetAdmin: string;
+  proposedAt: string;
+  expiresAt: string;
+  context: WebhookContext;
+}) {
+  return retryOperation(async () => {
+    const db = await getDb();
+
+    const proposal = {
+      proposalId: data.proposalId,
+      type: 'admin-management',
+      action: data.action,
+      proposer: data.proposer,
+      targetAdmin: data.targetAdmin,
+      status: 'pending',
+      approvals: [data.proposer], // Proposer auto-approves
+      approvalCount: 1,
+      proposedAt: new Date(parseInt(data.proposedAt)),
+      expiresAt: new Date(parseInt(data.expiresAt)),
+      txHash: data.context.txHash,
+      blockHeight: data.context.blockHeight,
+      createdAt: new Date(data.context.timestamp * 1000),
+    };
+
+    await db.collection('admin_proposals').insertOne(proposal);
+
+    // Log event
+    await db.collection('blockchain_events').insertOne({
+      type: `admin-${data.action}-proposed`,
+      proposalId: data.proposalId,
+      data: proposal,
+      context: data.context,
+      processedAt: new Date(),
+    });
+
+    console.log(`✅ Saved admin-${data.action}-proposed: ${data.proposalId}`);
+  });
+}
+
+export async function saveAdminProposalApproval(data: {
+  proposalId: string;
+  approver: string;
+  approvalCount: string;
+  context: WebhookContext;
+}) {
+  return retryOperation(async () => {
+    const db = await getDb();
+
+    await db.collection('admin_proposals').updateOne(
+      { proposalId: data.proposalId },
+      {
+        $addToSet: { approvals: data.approver },
+        $set: {
+          approvalCount: parseInt(data.approvalCount),
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    // Log event
+    await db.collection('blockchain_events').insertOne({
+      type: 'admin-proposal-approved',
+      proposalId: data.proposalId,
+      data,
+      context: data.context,
+      processedAt: new Date(),
+    });
+
+    console.log(`✅ Saved admin-proposal-approved: ${data.proposalId}`);
+  });
+}
+
+export async function saveAdminProposalExecution(data: {
+  proposalId: string;
+  executor: string;
+  context: WebhookContext;
+}) {
+  return retryOperation(async () => {
+    const db = await getDb();
+
+    await db.collection('admin_proposals').updateOne(
+      { proposalId: data.proposalId },
+      {
+        $set: {
+          status: 'executed',
+          executedBy: data.executor,
+          executedAt: new Date(data.context.timestamp * 1000),
+          executedTxHash: data.context.txHash,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    // Log event
+    await db.collection('blockchain_events').insertOne({
+      type: 'admin-proposal-executed',
+      proposalId: data.proposalId,
+      data,
+      context: data.context,
+      processedAt: new Date(),
+    });
+
+    console.log(`✅ Saved admin-proposal-executed: ${data.proposalId}`);
+  });
+}
+
+// ============================================================================
 // Reorg Handlers
 // ============================================================================
 

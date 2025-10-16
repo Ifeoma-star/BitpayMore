@@ -26,6 +26,9 @@ import {
   saveFeeCollected,
   saveWithdrawalProposal,
   saveWithdrawalApproval,
+  saveAdminProposal,
+  saveAdminProposalApproval,
+  saveAdminProposalExecution,
 } from '@/lib/webhooks/database-handlers';
 import { notifyWithdrawalProposal } from '@/lib/notifications/notification-service';
 import connectToDatabase from '@/lib/db';
@@ -594,9 +597,29 @@ async function handleTreasuryEvent(
     case 'treasury-remove-admin-proposed':
       console.log(`👥 Admin proposal: ${event.event}`);
 
+      // Determine target admin based on event type
+      const targetAdmin = event.event === 'treasury-add-admin-proposed'
+        ? (event as any)['new-admin']
+        : (event as any)['target-admin'];
+
+      // Save proposal to database
+      await saveAdminProposal({
+        proposalId: event['proposal-id'].toString(),
+        proposer: event.proposer,
+        action: event.event === 'treasury-add-admin-proposed' ? 'add' : 'remove',
+        targetAdmin: targetAdmin,
+        proposedAt: context.blockHeight.toString(),
+        expiresAt: (context.blockHeight + 1008).toString(), // 7 days
+        context,
+      });
+
       const adminsList = await getTreasuryAdmins();
       const adminProposalData = {
         event: event.event,
+        proposalId: event['proposal-id'].toString(),
+        action: event.event === 'treasury-add-admin-proposed' ? 'add' : 'remove',
+        targetAdmin: targetAdmin,
+        proposer: event.proposer,
         txHash: context.txHash,
       };
 
@@ -608,11 +631,12 @@ async function handleTreasuryEvent(
           `A new admin management proposal has been created. Action required.`,
           {
             event: event.event,
+            proposalId: event['proposal-id'].toString(),
             txHash: context.txHash,
           },
           {
             priority: 'high',
-            actionUrl: `/dashboard/treasury/admin-proposals`,
+            actionUrl: `/dashboard/treasury`,
             actionText: 'Review Proposal',
           }
         );
@@ -623,15 +647,29 @@ async function handleTreasuryEvent(
           data: adminProposalData,
         });
       }
+
+      // Broadcast to treasury room
+      broadcastToTreasury('treasury:admin-proposal-created', adminProposalData);
       break;
 
     case 'treasury-admin-proposal-approved':
       console.log(`👥 Admin proposal approved: ${event.event}`);
 
+      // Save approval to database
+      await saveAdminProposalApproval({
+        proposalId: event['proposal-id'].toString(),
+        approver: event.approver,
+        approvalCount: event['approval-count'].toString(),
+        context,
+      });
+
       // Broadcast approval to all admins
       const adminsApproved = await getTreasuryAdmins();
       const approvalData = {
         event: event.event,
+        proposalId: event['proposal-id'].toString(),
+        approver: event.approver,
+        approvalCount: event['approval-count'].toString(),
         txHash: context.txHash,
       };
 
@@ -641,14 +679,26 @@ async function handleTreasuryEvent(
           data: approvalData,
         });
       }
+
+      // Broadcast to treasury room
+      broadcastToTreasury('treasury:admin-proposal-approved', approvalData);
       break;
 
     case 'treasury-admin-proposal-executed':
       console.log(`👥 Admin proposal executed: ${event.event}`);
 
+      // Save execution to database
+      await saveAdminProposalExecution({
+        proposalId: event['proposal-id'].toString(),
+        executor: (event as any).executor || context.sender,
+        context,
+      });
+
       const allAdmins = await getTreasuryAdmins();
       const executedProposalData = {
         event: event.event,
+        proposalId: event['proposal-id'].toString(),
+        executor: (event as any).executor || context.sender,
         txHash: context.txHash,
       };
 
@@ -660,6 +710,7 @@ async function handleTreasuryEvent(
           `An admin management proposal has been executed.`,
           {
             event: event.event,
+            proposalId: event['proposal-id'].toString(),
             txHash: context.txHash,
           },
           {
@@ -675,6 +726,9 @@ async function handleTreasuryEvent(
           data: executedProposalData,
         });
       }
+
+      // Broadcast to treasury room
+      broadcastToTreasury('treasury:admin-proposal-executed', executedProposalData);
       break;
 
     case 'treasury-admin-transfer-proposed':
