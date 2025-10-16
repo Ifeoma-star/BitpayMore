@@ -23,6 +23,7 @@ export async function POST(request: Request) {
         blockHeight: 3603788,
         blockHash: 'test-block-hash',
         timestamp: Math.floor(Date.now() / 1000),
+        sender: 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7',
         contractIdentifier: 'ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-core-v4',
       },
     };
