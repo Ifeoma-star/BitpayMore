@@ -35,11 +35,15 @@ export function AdminProposalsList({
   isCurrentUserAdmin,
   requiredSignatures,
 }: AdminProposalsListProps) {
+  console.log('🎯 AdminProposalsList component mounted!');
+
   const [proposals, setProposals] = useState<AdminProposal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Get next proposal ID to know how many proposals exist
   const { data: nextProposalId } = useNextProposalId();
+
+  console.log('📊 useNextProposalId raw data:', nextProposalId);
 
   const { approve: approveProposal, isLoading: isApproving } = useApproveAdminProposal();
   const { execute: executeProposal, isLoading: isExecuting } = useExecuteAdminProposal();
@@ -47,7 +51,27 @@ export function AdminProposalsList({
   // Fetch all admin proposals
   useEffect(() => {
     async function fetchProposals() {
-      if (!nextProposalId || nextProposalId === 0) {
+      console.log('🔍 AdminProposalsList: nextProposalId =', nextProposalId);
+      console.log('🔍 typeof nextProposalId =', typeof nextProposalId);
+      console.log('🔍 nextProposalId === 0?', nextProposalId === 0);
+      console.log('🔍 nextProposalId === null?', nextProposalId === null);
+      console.log('🔍 nextProposalId === undefined?', nextProposalId === undefined);
+
+      // Try to extract value if it's wrapped
+      let proposalCount = nextProposalId;
+      if (nextProposalId && typeof nextProposalId === 'object' && 'value' in nextProposalId) {
+        proposalCount = (nextProposalId as any).value;
+        console.log('📦 Extracted value from wrapped object:', proposalCount);
+      }
+
+      // Convert to number if needed
+      if (typeof proposalCount === 'bigint') {
+        proposalCount = Number(proposalCount);
+        console.log('🔢 Converted bigint to number:', proposalCount);
+      }
+
+      if (!proposalCount || proposalCount === 0) {
+        console.log('⚠️ No proposals to fetch (proposalCount is 0 or null)');
         setIsLoading(false);
         return;
       }
@@ -55,23 +79,33 @@ export function AdminProposalsList({
       setIsLoading(true);
       const fetchedProposals: AdminProposal[] = [];
 
-      // Fetch all proposals from ID 0 to nextProposalId-1
-      for (let i = 0; i < nextProposalId; i++) {
+      console.log(`📥 Fetching ${proposalCount} admin proposals...`);
+
+      // Fetch all proposals from ID 0 to proposalCount-1
+      for (let i = 0; i < proposalCount; i++) {
         try {
           const response = await fetch(
             `/api/treasury/admin-proposal?id=${i}`
           );
+          console.log(`📄 Proposal ${i} response:`, response.status);
+
           if (response.ok) {
             const data = await response.json();
+            console.log(`📋 Proposal ${i} data:`, data);
+
             if (data.proposal && !data.proposal.executed) {
               fetchedProposals.push({ ...data.proposal, id: i });
+              console.log(`✅ Added proposal ${i} to list`);
+            } else {
+              console.log(`⏭️ Skipping proposal ${i} (executed or null)`);
             }
           }
         } catch (error) {
-          console.error(`Failed to fetch proposal ${i}:`, error);
+          console.error(`❌ Failed to fetch proposal ${i}:`, error);
         }
       }
 
+      console.log(`✅ Fetched ${fetchedProposals.length} active proposals`);
       setProposals(fetchedProposals);
       setIsLoading(false);
     }
