@@ -55,6 +55,18 @@ export default function StreamsPage() {
     }
   }, [events, refetch]);
 
+  // Fallback: Poll for updates if WebSocket not connected
+  useEffect(() => {
+    if (isConnected || !userAddress) return;
+
+    console.log('⚠️ WebSocket not connected, using polling fallback');
+    const interval = setInterval(() => {
+      refetch();
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [isConnected, userAddress, refetch]);
+
   const filteredStreams = streams?.filter((stream) => {
     const matchesSearch =
       stream.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||

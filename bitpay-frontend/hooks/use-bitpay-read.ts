@@ -213,7 +213,7 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
               'start-block': BigInt(stream.startBlock || stream['start-block']),
               'end-block': BigInt(stream.endBlock || stream['end-block']),
               withdrawn: BigInt(stream.withdrawn || '0'),
-              cancelled: stream.cancelled || false,
+              cancelled: stream.status === 'cancelled' || stream.cancelled || false,
               'cancelled-at-block': stream.cancelledAtBlock ? BigInt(stream.cancelledAtBlock) : BigInt(0),
             };
 
@@ -250,10 +250,10 @@ export function useUserStreams(userAddress: string | null): UseContractReadRetur
           'start-block': BigInt(stream.startBlock || stream['start-block']),
           'end-block': BigInt(stream.endBlock || stream['end-block']),
           withdrawn: BigInt(stream.withdrawn || '0'),
-          cancelled: stream.cancelled || false,
+          cancelled: stream.status === 'cancelled' || stream.cancelled || false,
           'cancelled-at-block': stream.cancelledAtBlock ? BigInt(stream.cancelledAtBlock) : BigInt(0),
           id: BigInt(stream.streamId || stream.id),
-          status: 'active',
+          status: stream.status || 'active',
           vestedAmount: BigInt(0),
           withdrawableAmount: BigInt(0),
         } as StreamWithId));
