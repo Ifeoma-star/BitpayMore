@@ -186,7 +186,10 @@ export default function DashboardPage() {
   // Calculate role-specific stats
   const totalSending = outgoingStreams.reduce((sum, s) => sum + toBigInt(s.amount), BigInt(0));
   const totalReceiving = incomingStreams.reduce((sum, s) => sum + toBigInt(s.vestedAmount), BigInt(0));
-  const availableToWithdraw = incomingStreams.reduce((sum, s) => sum + toBigInt(s.withdrawableAmount), BigInt(0));
+  // Exclude cancelled streams (funds already distributed), but include completed/active (still need withdrawal)
+  const availableToWithdraw = incomingStreams
+    .filter(s => s.status !== StreamStatus.CANCELLED)
+    .reduce((sum, s) => sum + toBigInt(s.withdrawableAmount), BigInt(0));
 
   const stats = [
     {
