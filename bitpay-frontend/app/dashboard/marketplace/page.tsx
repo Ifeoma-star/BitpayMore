@@ -124,19 +124,39 @@ export default function MarketplacePage() {
     // Combine both sources of listings
     const allListingsMap = new Map();
 
-    // Add database listings first
+    // Add database listings first (with stream data calculations)
     dbListings.forEach((listing: any) => {
+      if (!listing.stream) return; // Skip if no stream data
+
+      const totalAmount = Number(microToDisplay(listing.stream.amount || 0));
+      const withdrawn = Number(microToDisplay(listing.stream.withdrawn || 0));
+      const remainingAmount = totalAmount - withdrawn;
+      const price = Number(microToDisplay(listing.price || 0));
+      const discount = totalAmount > 0 ? ((totalAmount - price) / totalAmount) * 100 : 0;
+
+      // Calculate time remaining
+      const currentBlock = blockHeight || 0;
+      const endBlock = Number(listing.stream.endBlock || 0);
+      const blocksRemaining = Math.max(0, endBlock - currentBlock);
+      const daysRemaining = Math.ceil(blocksRemaining / 144); // ~144 blocks per day
+
+      // Calculate APR
+      const profit = remainingAmount - price;
+      const apr = price > 0 && daysRemaining > 0
+        ? (profit / price) * (365 / daysRemaining) * 100
+        : 0;
+
       allListingsMap.set(listing.streamId, {
         streamId: listing.streamId,
         seller: listing.seller,
-        price: Number(microToDisplay(listing.price || 0)),
-        discount: 0, // Will calculate from stream data
-        totalAmount: 0,
-        vestedAmount: 0,
-        remainingAmount: 0,
-        endBlock: 0,
-        daysRemaining: 0,
-        apr: 0,
+        price,
+        discount,
+        totalAmount,
+        vestedAmount: withdrawn,
+        remainingAmount,
+        endBlock,
+        daysRemaining,
+        apr,
         listed: listing.listedAt || "Recently",
         blockHeight: listing.blockHeight,
         txHash: listing.txHash,
@@ -161,7 +181,7 @@ export default function MarketplacePage() {
     });
 
     return Array.from(allListingsMap.values());
-  }, [dbListings, realtimeListings]);
+  }, [dbListings, realtimeListings, blockHeight]);
 
   // Filter active obligation NFTs that can be listed
   const listableNFTs = outgoingStreams.filter(

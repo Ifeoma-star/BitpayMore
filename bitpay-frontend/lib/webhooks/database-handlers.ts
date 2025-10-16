@@ -169,6 +169,24 @@ export async function saveStreamCancelled(data: {
       }
     );
 
+    // Auto-cancel any active marketplace listing for this cancelled stream
+    const listingUpdateResult = await db.collection('marketplace_listings').updateOne(
+      { streamId: data.streamId, status: 'active' },
+      {
+        $set: {
+          status: 'cancelled',
+          cancelledReason: 'stream_cancelled',
+          cancelledAt: new Date(data.context.timestamp * 1000),
+          cancelledTxHash: data.context.txHash,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    if (listingUpdateResult.modifiedCount > 0) {
+      console.log(`🗑️ Auto-cancelled marketplace listing for cancelled stream: ${data.streamId}`);
+    }
+
     // Log cancellation event
     await db.collection('blockchain_events').insertOne({
       type: 'stream-cancelled',

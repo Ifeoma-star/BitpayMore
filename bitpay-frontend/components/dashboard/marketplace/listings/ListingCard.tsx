@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, ArrowUpRight, DollarSign, Percent, Calendar, TrendingUp, CreditCard } from "lucide-react";
+import { ShoppingCart, ArrowUpRight, DollarSign, Percent, Calendar, TrendingUp, CreditCard, Tag } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ListingCardProps {
   listing: {
@@ -23,6 +24,8 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ listing, onBuyDirect, onBuyViaGateway }: ListingCardProps) {
+  const { user } = useAuth();
+  const isOwnListing = user?.walletAddress === listing.seller;
   return (
     <Card className="overflow-hidden hover:border-brand-pink/50 transition-colors">
       <CardHeader className="pb-3">
@@ -90,36 +93,62 @@ export function ListingCard({ listing, onBuyDirect, onBuyViaGateway }: ListingCa
 
         {/* Actions */}
         <div className="space-y-2 pt-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              onClick={onBuyDirect}
-              className="bg-brand-pink hover:bg-brand-pink/90"
-              size="sm"
-            >
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              Buy Direct
-            </Button>
-            <Button
-              onClick={onBuyViaGateway}
-              variant="outline"
-              className="border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
-              size="sm"
-            >
-              <CreditCard className="h-4 w-4 mr-1" />
-              Via Gateway
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            asChild
-            className="w-full"
-            size="sm"
-          >
-            <Link href={`/dashboard/streams/${listing.streamId}`}>
-              <ArrowUpRight className="h-4 w-4 mr-2" />
-              View Details
-            </Link>
-          </Button>
+          {isOwnListing ? (
+            // Show seller-specific actions
+            <>
+              <div className="p-3 bg-muted rounded-lg border border-dashed">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Tag className="h-4 w-4" />
+                  <span>Your Listing</span>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                asChild
+                className="w-full"
+                size="sm"
+              >
+                <Link href={`/dashboard/streams/${listing.streamId}`}>
+                  <ArrowUpRight className="h-4 w-4 mr-2" />
+                  Manage Listing
+                </Link>
+              </Button>
+            </>
+          ) : (
+            // Show buyer actions
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={onBuyDirect}
+                  className="bg-brand-pink hover:bg-brand-pink/90"
+                  size="sm"
+                >
+                  <ShoppingCart className="h-4 w-4 mr-1" />
+                  Buy Direct
+                </Button>
+                <Button
+                  onClick={onBuyViaGateway}
+                  variant="outline"
+                  className="border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
+                  size="sm"
+                >
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  Via Gateway
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                asChild
+                className="w-full"
+                size="sm"
+              >
+                <Link href={`/dashboard/streams/${listing.streamId}`}>
+                  <ArrowUpRight className="h-4 w-4 mr-2" />
+                  View Details
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>

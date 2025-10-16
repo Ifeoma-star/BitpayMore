@@ -18,14 +18,25 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fetch all active listings from database
+    // Fetch all active listings with stream data using aggregation
     const listings = await db
       .collection('marketplace_listings')
-      .find({ status: 'active' })
-      .sort({ createdAt: -1 })
+      .aggregate([
+        { $match: { status: 'active' } },
+        {
+          $lookup: {
+            from: 'streams',
+            localField: 'streamId',
+            foreignField: 'streamId',
+            as: 'stream',
+          },
+        },
+        { $unwind: '$stream' },
+        { $sort: { createdAt: -1 } },
+      ])
       .toArray();
 
-    console.log(`📊 Fetched ${listings.length} active marketplace listings`);
+    console.log(`📊 Fetched ${listings.length} active marketplace listings with stream data`);
 
     return NextResponse.json({
       success: true,
@@ -36,6 +47,15 @@ export async function GET(request: Request) {
         listedAt: listing.listedAt,
         blockHeight: listing.blockHeight,
         txHash: listing.txHash,
+        // Include stream data
+        stream: {
+          amount: listing.stream.amount,
+          startBlock: listing.stream.startBlock,
+          endBlock: listing.stream.endBlock,
+          recipient: listing.stream.recipient,
+          withdrawn: listing.stream.withdrawn || '0',
+          status: listing.stream.status,
+        },
       })),
     });
   } catch (error) {

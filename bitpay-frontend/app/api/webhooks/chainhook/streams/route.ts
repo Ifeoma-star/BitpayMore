@@ -336,11 +336,12 @@ async function handleStreamCancelled(
     context,
   });
 
-  // Fetch recipient from database
+  // Fetch recipient and check if listing existed
   const mongoose = await connectToDatabase();
   const db = mongoose.connection.db;
 
   let recipient = '';
+  let hadActiveListing = false;
 
   if (db) {
     const stream = await db.collection('streams').findOne({
@@ -349,6 +350,28 @@ async function handleStreamCancelled(
 
     if (stream) {
       recipient = stream.recipient || '';
+    }
+
+    // Check if there was an active listing that got auto-cancelled
+    const cancelledListing = await db.collection('marketplace_listings').findOne({
+      streamId: event['stream-id'].toString(),
+      status: 'cancelled',
+      cancelledReason: 'stream_cancelled',
+    });
+
+    if (cancelledListing) {
+      hadActiveListing = true;
+
+      // Broadcast marketplace listing cancellation
+      const { broadcastToMarketplace } = await import('@/lib/socket/client-broadcast');
+      broadcastToMarketplace('marketplace:listing-cancelled', {
+        streamId: event['stream-id'].toString(),
+        seller: event.sender,
+        reason: 'stream_cancelled',
+        txHash: context.txHash,
+      });
+
+      console.log(`📢 Broadcasted auto-cancelled listing for stream: ${event['stream-id']}`);
     }
   }
 
