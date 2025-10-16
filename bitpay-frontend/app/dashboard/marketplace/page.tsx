@@ -60,6 +60,27 @@ export default function MarketplacePage() {
   const { data: allListings, isLoading: listingsLoading } = useAllMarketplaceListings();
   const { blockHeight } = useBlockHeight(30000);
 
+  // Fetch initial listings from database
+  const [dbListings, setDbListings] = useState<any[]>([]);
+  const [dbLoading, setDbLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchListings() {
+      try {
+        const response = await fetch('/api/marketplace/listings');
+        const data = await response.json();
+        if (data.success && data.listings) {
+          setDbListings(data.listings);
+        }
+      } catch (error) {
+        console.error('Failed to fetch marketplace listings:', error);
+      } finally {
+        setDbLoading(false);
+      }
+    }
+    fetchListings();
+  }, []);
+
   // WebSocket real-time updates
   const { listings: realtimeListings, sales: realtimeSales, isConnected } = useMarketplaceEvents();
 
@@ -98,23 +119,49 @@ export default function MarketplacePage() {
     }
   }, [realtimeSales.length, userAddress]);
 
-  // Use WebSocket real-time listings
-  // These come from chainhook events broadcasted through WebSocket
+  // Merge database listings with WebSocket real-time updates
   const marketplaceListings = useMemo(() => {
-    return realtimeListings.map((listing: any) => ({
-      streamId: listing.streamId?.toString() || "",
-      seller: listing.seller || "",
-      price: Number(microToDisplay(listing.price || 0)),
-      discount: listing.discount || 0,
-      totalAmount: Number(microToDisplay(listing.totalAmount || 0)),
-      vestedAmount: Number(microToDisplay(listing.vestedAmount || 0)),
-      remainingAmount: Number(microToDisplay(listing.remainingAmount || 0)),
-      endBlock: listing.endBlock || 0,
-      daysRemaining: listing.daysRemaining || 0,
-      apr: listing.apr || 0,
-      listed: listing.listedAt || "Recently",
-    }));
-  }, [realtimeListings]);
+    // Combine both sources of listings
+    const allListingsMap = new Map();
+
+    // Add database listings first
+    dbListings.forEach((listing: any) => {
+      allListingsMap.set(listing.streamId, {
+        streamId: listing.streamId,
+        seller: listing.seller,
+        price: Number(microToDisplay(listing.price || 0)),
+        discount: 0, // Will calculate from stream data
+        totalAmount: 0,
+        vestedAmount: 0,
+        remainingAmount: 0,
+        endBlock: 0,
+        daysRemaining: 0,
+        apr: 0,
+        listed: listing.listedAt || "Recently",
+        blockHeight: listing.blockHeight,
+        txHash: listing.txHash,
+      });
+    });
+
+    // Overlay WebSocket listings (newer data)
+    realtimeListings.forEach((listing: any) => {
+      allListingsMap.set(listing.streamId?.toString() || "", {
+        streamId: listing.streamId?.toString() || "",
+        seller: listing.seller || "",
+        price: Number(microToDisplay(listing.price || 0)),
+        discount: listing.discount || 0,
+        totalAmount: Number(microToDisplay(listing.totalAmount || 0)),
+        vestedAmount: Number(microToDisplay(listing.vestedAmount || 0)),
+        remainingAmount: Number(microToDisplay(listing.remainingAmount || 0)),
+        endBlock: listing.endBlock || 0,
+        daysRemaining: listing.daysRemaining || 0,
+        apr: listing.apr || 0,
+        listed: listing.listedAt || "Recently",
+      });
+    });
+
+    return Array.from(allListingsMap.values());
+  }, [dbListings, realtimeListings]);
 
   // Filter active obligation NFTs that can be listed
   const listableNFTs = outgoingStreams.filter(
@@ -157,7 +204,7 @@ export default function MarketplacePage() {
     return ((totalAmount - price) / totalAmount) * 100;
   };
 
-  const isLoading = userStreamsLoading || listingsLoading;
+  const isLoading = userStreamsLoading || listingsLoading || dbLoading;
 
   if (isLoading) {
     return (
