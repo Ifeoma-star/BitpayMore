@@ -108,7 +108,9 @@ async function processNFTBlock(block: ChainhookBlock): Promise<number> {
 
     // Handle both print events and NFT events
     const printEvents = extractPrintEvents(tx);
-    const nftEvents = tx.metadata.events?.filter((e) => e.type === 'nft_event') || [];
+    const nftEvents = tx.metadata.events?.filter((e) =>
+      e.type === 'nft_event' || e.type === 'NFTMintEvent' || e.type === 'NFTTransferEvent' || e.type === 'NFTBurnEvent'
+    ) || [];
 
     // Process obligation NFT print events (transfers, mints)
     for (const event of printEvents) {

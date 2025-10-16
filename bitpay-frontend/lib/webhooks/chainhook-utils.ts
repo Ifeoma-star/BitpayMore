@@ -96,8 +96,15 @@ export function extractPrintEvents(tx: ChainhookTransaction): ChainhookEvent[] {
     console.log('📋 Event types:', events.map(e => e.type));
   }
 
-  const printEvents = events.filter((event) => event.type === 'print_event');
+  // Filter for SmartContractEvent (which includes print events from contracts)
+  const printEvents = events.filter((event) =>
+    event.type === 'print_event' || event.type === 'SmartContractEvent'
+  );
   console.log('🖨️ Print events filtered:', printEvents.length);
+
+  if (printEvents.length > 0) {
+    console.log('🖨️ Print event details:', JSON.stringify(printEvents, null, 2));
+  }
 
   return printEvents;
 }
