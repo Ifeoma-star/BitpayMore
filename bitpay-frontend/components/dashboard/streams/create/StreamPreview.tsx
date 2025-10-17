@@ -68,6 +68,21 @@ export function StreamPreview({ amount, duration, durationType, estimates }: Str
                 </div>
               </div>
             </div>
+
+            <Separator />
+
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-2">
+              <div className="flex items-start gap-2">
+                <Clock className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-orange-900">Stream Starting Soon</p>
+                  <p className="text-xs text-orange-700 leading-relaxed">
+                    Your stream will start vesting very soon - keep an eye on it! Blocks are syncing.
+                    Check the stream details to see current and start block.
+                  </p>
+                </div>
+              </div>
+            </div>
           </>
         ) : (
           <div className="text-center py-12">
