@@ -478,7 +478,6 @@ Comprehensive documentation is available in the `/docs` directory:
 | --------------------------------------- | ---------------------------------------------------------------- |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, component interaction, data flow diagrams   |
 | [CONTRACTS.md](docs/CONTRACTS.md)       | Smart contract documentation, function references, flow diagrams |
-| [FRONTEND.md](docs/FRONTEND.md)         | Frontend architecture, component structure, state management     |
 | [WEBHOOKS.md](docs/WEBHOOKS.md)         | Chainhook integration, webhook processing, event handlers        |
 | [WEBSOCKET.md](docs/WEBSOCKET.md)       | Real-time communication, room management, event broadcasting     |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md)     | Production deployment guide, monitoring, troubleshooting         |
