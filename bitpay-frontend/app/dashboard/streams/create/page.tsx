@@ -29,6 +29,7 @@ import { ImportantNotes } from "@/components/dashboard/streams/create/ImportantN
 import { useCreateStream } from "@/hooks/use-bitpay-write";
 import { useBlockHeight } from "@/hooks/use-block-height";
 import { BLOCKS_PER_DAY, BLOCKS_PER_WEEK, BLOCKS_PER_MONTH } from "@/lib/contracts/config";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const createStreamSchema = z.object({
   recipient: z.string().min(1, "Recipient address is required"),
@@ -246,7 +247,7 @@ export default function CreateStreamPage() {
       // Calculate start and end blocks
       // Add buffer of 20 blocks for testnet (blocks can be 30-60 seconds each)
       // This ensures the start block hasn't passed by the time the transaction is mined
-      const startBlock = blockHeight + 1;
+      const startBlock = blockHeight + 20;
       const endBlock = startBlock + durationInBlocks;
 
       // Convert amount to satoshis for display
@@ -298,6 +299,15 @@ export default function CreateStreamPage() {
             <p className="text-muted-foreground mt-1">Set up a continuous Bitcoin payment stream</p>
           </div>
         </div>
+
+        <Alert className="border-orange-200 bg-orange-50">
+  <Clock className="h-4 w-4 text-orange-600" />
+  <AlertTitle className="text-orange-900">Stream Starting Soon</AlertTitle>
+  <AlertDescription className="text-orange-700">
+    Your stream will start vesting very soon - keep an eye on it! 
+    Blocks are syncing. Check the stream details to see current and start block.
+  </AlertDescription>
+</Alert>
 
         <div className="grid gap-8 lg:grid-cols-[1fr,400px] xl:grid-cols-[1fr,450px]">
           {/* Main Form Section */}
