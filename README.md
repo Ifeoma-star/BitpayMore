@@ -137,29 +137,76 @@ BitPay turns **payment moments into payment relationships**:
 
 BitPay consists of three main components that work together to provide a seamless streaming payment experience:
 
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        A[Next.js 15 App]
+        B[React Components]
+        C[Turnkey Wallet]
+    end
+
+    subgraph "Real-time Communication"
+        D[WebSocket Server]
+        E[Socket.io Rooms]
+    end
+
+    subgraph "Backend Services"
+        F[MongoDB Database]
+        G[REST API Routes]
+        H[Chainhook Webhooks]
+    end
+
+    subgraph "Blockchain Layer"
+        I[Stacks Blockchain]
+        J[Smart Contracts]
+        K[sBTC Token]
+    end
+
+    A <--> D
+    A <--> G
+    A --> C
+    D <--> E
+    G <--> F
+    H --> D
+    H --> F
+    I --> H
+    J --> I
+    K --> J
+    C --> J
+
+    style A fill:#ff6b35
+    style D fill:#4ecdc4
+    style F fill:#45b7d1
+    style J fill:#f7931a
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         BitPay System                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐ │
-│  │   Frontend   │◄────►│ WebSocket    │◄────►│   Smart      │ │
-│  │   (Next.js)  │      │   Server     │      │  Contracts   │ │
-│  │              │      │ (Socket.io)  │      │  (Clarity)   │ │
-│  └──────┬───────┘      └──────────────┘      └──────┬───────┘ │
-│         │                                             │          │
-│         │              ┌──────────────┐              │          │
-│         └─────────────►│  Chainhook   │◄─────────────┘          │
-│                        │   Webhooks   │                         │
-│                        └──────────────┘                         │
-│                                                                  │
-│  ┌──────────────┐      ┌──────────────┐      ┌──────────────┐ │
-│  │   MongoDB    │      │    Stacks    │      │     sBTC     │ │
-│  │   Database   │      │  Blockchain  │      │    Token     │ │
-│  └──────────────┘      └──────────────┘      └──────────────┘ │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+
+### System Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Wallet
+    participant Blockchain
+    participant Chainhook
+    participant WebSocket
+    participant Database
+
+    User->>Frontend: Create Stream
+    Frontend->>Wallet: Request Transaction
+    Wallet->>Blockchain: Submit Contract Call
+    Blockchain->>Chainhook: Emit Event
+    Chainhook->>Database: Update Stream Data
+    Chainhook->>WebSocket: Broadcast Event
+    WebSocket->>Frontend: Real-time Update
+    Frontend->>User: Show Confirmation
 ```
+
+### Chainhook Event Processing
+
+![Chainhook Architecture](docs/chainhook.png)
+
+The diagram above shows how Chainhook monitors the Stacks blockchain for BitPay contract events and processes them in real-time.
 
 ### Component Overview
 
@@ -248,6 +295,38 @@ bitpay/
 
 BitPay includes **7 production-ready Clarity smart contracts**:
 
+```mermaid
+graph LR
+    subgraph "Core Protocol"
+        A[bitpay-core<br/>Streaming Engine]
+        B[bitpay-sbtc-helper<br/>sBTC Integration]
+    end
+
+    subgraph "NFT System"
+        C[bitpay-obligation-nft<br/>Stream Tokens]
+        D[bitpay-nft<br/>Claim Receipts]
+        E[bitpay-marketplace<br/>NFT Trading]
+    end
+
+    subgraph "Governance"
+        F[bitpay-treasury<br/>Multi-sig DAO]
+        G[bitpay-access-control<br/>Role Management]
+    end
+
+    A --> B
+    A --> C
+    A --> D
+    C --> E
+    A --> F
+    G --> A
+    G --> F
+
+    style A fill:#ff6b35
+    style E fill:#4ecdc4
+    style F fill:#45b7d1
+    style G fill:#f7931a
+```
+
 ### 1. **bitpay-core** - Streaming Engine
 
 The heart of BitPay. Handles stream creation, vesting calculations, withdrawals, and cancellations.
@@ -315,8 +394,8 @@ See [docs/CONTRACTS.md](docs/CONTRACTS.md) for detailed contract documentation a
 #### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/bitpay.git
-cd bitpay
+git clone https://github.com/Ifeoma-star/BitpayMore.git
+cd BitpayMore
 ```
 
 #### 2. Setup Smart Contracts
@@ -576,8 +655,8 @@ We welcome contributions from the community! Here's how you can help:
 
 ```bash
 # Fork and clone the repo
-git clone https://github.com/your-username/bitpay.git
-cd bitpay
+git clone https://github.com/Ifeoma-star/BitpayMore.git
+cd BitpayMore
 
 # Create a feature branch
 git checkout -b feature/your-feature-name
@@ -620,17 +699,19 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 📞 Contact
 
-**Team:** THEOPHILUS UCHECHUKWU | TeSofTech
+**Team:**
+- **Lead Developer:** THEOPHILUS UCHECHUKWU | TeSofTech | thesoftnode@gmail.com
+- **Co-Developer:** Naomi Ujah | ujahnaomi104@gmail.com
+
 **Location:** Lagos, Nigeria
-**Email:** theomatthewipt@gmail.com
 
 **Links:**
 
 - 🌐 **Website:** [bitpay-more.vercel.app](https://bitpay-more.vercel.app)
 - 📚 **Documentation:** [bitpay-more.vercel.app/docs](https://bitpay-more.vercel.app/docs)
-- 🐦 **Twitter:** [@BitPayBTC](#)
-- 💬 **Discord:** [Join our community](#)
-- 📺 **Demo Video:** [YouTube](#)
+- 💻 **GitHub:** [github.com/Ifeoma-star/BitpayMore](https://github.com/Ifeoma-star/BitpayMore)
+- 📺 **Demo Video:** [Loom Video](https://www.loom.com/share/74202e61407143009db5f5c4724951e3)
+- 🐦 **Twitter:** [@TheSoft_Theo](https://x.com/TheSoft_Theo) | [@zibahvalerie](https://x.com/zibahvalerie)
 
 ---
 
