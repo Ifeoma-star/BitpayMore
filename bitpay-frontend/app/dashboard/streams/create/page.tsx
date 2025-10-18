@@ -245,7 +245,7 @@ export default function CreateStreamPage() {
       }
 
       // Calculate start and end blocks
-      // Add buffer of 20 blocks for testnet (blocks can be 30-60 seconds each)
+      // Add buffer of 2 blocks for testnet (blocks can be 30-60 seconds each)
       // This ensures the start block hasn't passed by the time the transaction is mined
       const startBlock = blockHeight + 2;
       const endBlock = startBlock + durationInBlocks;

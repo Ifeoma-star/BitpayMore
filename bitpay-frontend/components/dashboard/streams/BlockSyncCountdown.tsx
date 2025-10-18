@@ -11,8 +11,8 @@ interface BlockSyncCountdownProps {
 }
 
 export function BlockSyncCountdown({ startBlock, currentBlock, className = "" }: BlockSyncCountdownProps) {
-  const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [blocksRemaining, setBlocksRemaining] = useState<number>(0);
+  const [isVisible, setIsVisible] = useState<boolean>(true);
 
   useEffect(() => {
     if (!currentBlock) return;
@@ -20,35 +20,33 @@ export function BlockSyncCountdown({ startBlock, currentBlock, className = "" }:
     const startBlockNum = Number(startBlock);
     const remaining = startBlockNum - currentBlock;
 
-    // Only show countdown if stream hasn't started yet and is within 20 blocks
-    if (remaining <= 0 || remaining > 20) {
+    // Only show countdown if stream hasn't started yet and is within 2 blocks
+    if (remaining <= 0) {
       setBlocksRemaining(0);
+      // Fade out animation
+      setIsVisible(false);
+      return;
+    }
+
+    if (remaining > 2) {
+      setBlocksRemaining(0);
+      setIsVisible(true);
       return;
     }
 
     setBlocksRemaining(remaining);
-
-    // Calculate approximate time (10 minutes per block)
-    const minutesRemaining = remaining * 10;
-    const hours = Math.floor(minutesRemaining / 60);
-    const minutes = minutesRemaining % 60;
-
-    if (hours > 0) {
-      setTimeRemaining(`~${hours}h ${minutes}m`);
-    } else {
-      setTimeRemaining(`~${minutes}m`);
-    }
+    setIsVisible(true);
   }, [startBlock, currentBlock]);
 
-  if (blocksRemaining === 0) return null;
+  if (blocksRemaining === 0 || !isVisible) return null;
 
   return (
-    <Alert className={`border-blue-500/50 bg-blue-500/5 ${className}`}>
-      <Clock className="h-4 w-4 text-blue-600" />
+    <Alert className={`border-blue-500/50 bg-blue-500/5 transition-all duration-500 animate-in fade-in-50 ${className}`}>
+      <Clock className="h-4 w-4 text-blue-600 animate-pulse" />
       <AlertDescription className="text-sm">
         <span className="font-medium text-blue-800">Stream starting soon!</span>
         <span className="text-muted-foreground ml-2">
-          Waiting for block synchronization: {blocksRemaining} block{blocksRemaining !== 1 ? 's' : ''} ({timeRemaining})
+          Waiting for block synchronization: <span className="font-semibold text-blue-700 tabular-nums">{blocksRemaining}</span> block{blocksRemaining !== 1 ? 's' : ''} remaining
         </span>
       </AlertDescription>
     </Alert>
