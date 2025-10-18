@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Clock, CheckCircle, XCircle, Pause, ArrowUpRight, Loader2 } from "lucide-react";
 import { microToDisplay, StreamStatus } from "@/lib/contracts/config";
+import { BlockSyncCountdown } from "@/components/dashboard/streams/BlockSyncCountdown";
 
 interface StreamCardProps {
   stream: {
@@ -25,6 +26,7 @@ interface StreamCardProps {
   };
   isRecipient: boolean;
   progress: number;
+  currentBlock: number | null;
   onWithdraw?: (streamId: bigint) => void;
   onCancel?: (streamId: bigint) => void;
   isWithdrawing?: boolean;
@@ -65,6 +67,7 @@ export function StreamCard({
   stream,
   isRecipient,
   progress,
+  currentBlock,
   onWithdraw,
   onCancel,
   isWithdrawing,
@@ -98,6 +101,9 @@ export function StreamCard({
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
+        {/* Block Sync Countdown */}
+        <BlockSyncCountdown startBlock={stream["start-block"]} currentBlock={currentBlock} />
+
         {/* Amounts */}
         {stream.status === StreamStatus.CANCELLED ? (
           // Show cancellation breakdown

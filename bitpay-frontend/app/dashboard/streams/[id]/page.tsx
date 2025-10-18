@@ -28,6 +28,7 @@ import { StreamProgress } from "@/components/dashboard/streams/detail/StreamProg
 import { StreamAmounts } from "@/components/dashboard/streams/detail/StreamAmounts";
 import { StreamAddresses } from "@/components/dashboard/streams/detail/StreamAddresses";
 import { StreamNFTSection } from "@/components/dashboard/streams/detail/StreamNFTSection";
+import { BlockSyncCountdown } from "@/components/dashboard/streams/BlockSyncCountdown";
 
 export default function StreamDetailPage() {
   const params = useParams();
@@ -182,6 +183,12 @@ export default function StreamDetailPage() {
   return (
     <div className="space-y-6">
       <StreamHeader streamId={streamId?.toString() || "0"} status={stream.status} />
+
+      {/* Block Sync Countdown */}
+      <BlockSyncCountdown
+        startBlock={BigInt(stream.startBlock || stream["start-block"])}
+        currentBlock={blockHeight}
+      />
 
       {/* Main Info Card */}
       <Card>

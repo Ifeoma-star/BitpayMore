@@ -203,6 +203,7 @@ export default function StreamsPage() {
                   stream={stream}
                   isRecipient={isRecipient}
                   progress={progress}
+                  currentBlock={blockHeight}
                   onWithdraw={handleWithdraw}
                   onCancel={handleCancel}
                   isWithdrawing={isWithdrawing}
