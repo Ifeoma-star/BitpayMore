@@ -64,7 +64,7 @@ plan:
             emulated-sender: SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9
             path: "./.cache/requirements/SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.nft-trait.clar"
             clarity-version: 1
-      epoch: "2.0"
+      epoch: "2.1"
     - id: 1
       transactions:
         - emulated-contract-publish:
@@ -86,43 +86,38 @@ plan:
     - id: 2
       transactions:
         - emulated-contract-publish:
-            contract-name: bitpay-access-control
-            emulated-sender: ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7
-            path: "./.cache/requirements/ST2F3J1PK46D6XVRBB9SQ66PY89P8G0EBDW5E05M7.bitpay-access-control.clar"
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: bitpay-access-control
+            contract-name: bitpay-access-control-v5
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/bitpay-access-control.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: bitpay-core
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/bitpay-core.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: bitpay-marketplace
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/bitpay-marketplace.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: bitpay-nft
+            contract-name: bitpay-nft-v5
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/bitpay-nft.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: bitpay-obligation-nft
+            contract-name: bitpay-obligation-nft-v5
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/bitpay-obligation-nft.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: bitpay-sbtc-helper
+            contract-name: bitpay-sbtc-helper-v5
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/bitpay-sbtc-helper.clar
             clarity-version: 3
         - emulated-contract-publish:
-            contract-name: bitpay-treasury
+            contract-name: bitpay-treasury-v5
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/bitpay-treasury.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: bitpay-core-v5
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/bitpay-core.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: bitpay-marketplace-v5
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/bitpay-marketplace.clar
             clarity-version: 3
       epoch: "3.1"

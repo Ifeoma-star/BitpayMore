@@ -7,21 +7,21 @@ const sender = accounts.get("wallet_1")!;
 const recipient = accounts.get("wallet_2")!;
 const wallet3 = accounts.get("wallet_3")!;
 
-const CONTRACT = "bitpay-core";
+const CONTRACT = "bitpay-core-v5";
 
 describe("bitpay-core contract", () => {
   // Setup: Authorize bitpay-core and bitpay-treasury contracts
   beforeEach(() => {
     simnet.callPublicFn(
-      "bitpay-access-control",
+      "bitpay-access-control-v5",
       "authorize-contract",
-      [Cl.contractPrincipal(deployer, "bitpay-core")],
+      [Cl.contractPrincipal(deployer, "bitpay-core-v5")],
       deployer
     );
     simnet.callPublicFn(
-      "bitpay-access-control",
+      "bitpay-access-control-v5",
       "authorize-contract",
-      [Cl.contractPrincipal(deployer, "bitpay-treasury")],
+      [Cl.contractPrincipal(deployer, "bitpay-treasury-v5")],
       deployer
     );
   });
@@ -140,7 +140,7 @@ describe("bitpay-core contract", () => {
 
     it("should fail when protocol is paused", () => {
       // Pause protocol
-      simnet.callPublicFn("bitpay-access-control", "pause-protocol", [], deployer);
+      simnet.callPublicFn("bitpay-access-control-v5", "pause-protocol", [], deployer);
 
       const startBlock = simnet.blockHeight + 1;
       const { result } = simnet.callPublicFn(
@@ -158,7 +158,7 @@ describe("bitpay-core contract", () => {
       expect(result).toBeErr(Cl.uint(204)); // ERR_PAUSED
 
       // Unpause for other tests
-      simnet.callPublicFn("bitpay-access-control", "unpause-protocol", [], deployer);
+      simnet.callPublicFn("bitpay-access-control-v5", "unpause-protocol", [], deployer);
     });
 
     it("should increment stream ID counter", () => {
@@ -689,7 +689,7 @@ describe("bitpay-core contract", () => {
 
       // Get sender initial balance
       const initialBalance = simnet.callReadOnlyFn(
-        "bitpay-sbtc-helper",
+        "bitpay-sbtc-helper-v5",
         "get-user-balance",
         [Cl.principal(sender)],
         sender
@@ -718,7 +718,7 @@ describe("bitpay-core contract", () => {
 
       // Check sender balance increased by ~50%
       const finalBalance = simnet.callReadOnlyFn(
-        "bitpay-sbtc-helper",
+        "bitpay-sbtc-helper-v5",
         "get-user-balance",
         [Cl.principal(sender)],
         sender

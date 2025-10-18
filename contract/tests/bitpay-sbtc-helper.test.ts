@@ -7,15 +7,15 @@ const wallet1 = accounts.get("wallet_1")!;
 const wallet2 = accounts.get("wallet_2")!;
 
 // sBTC contract address for simnet
-const HELPER_CONTRACT = "bitpay-sbtc-helper";
+const HELPER_CONTRACT = "bitpay-sbtc-helper-v5";
 
 describe("bitpay-sbtc-helper contract", () => {
   // Setup: Authorize contracts for testing transfer-from-vault
   beforeEach(() => {
     simnet.callPublicFn(
-      "bitpay-access-control",
+      "bitpay-access-control-v5",
       "authorize-contract",
-      [Cl.contractPrincipal(deployer, "bitpay-sbtc-helper")],
+      [Cl.contractPrincipal(deployer, "bitpay-sbtc-helper-v5")],
       deployer
     );
   });

@@ -7,15 +7,15 @@ const wallet1 = accounts.get("wallet_1")!;
 const wallet2 = accounts.get("wallet_2")!;
 const wallet3 = accounts.get("wallet_3")!;
 
-const CONTRACT = "bitpay-treasury";
+const CONTRACT = "bitpay-treasury-v5";
 
 describe("bitpay-treasury contract", () => {
   // Setup: Authorize bitpay-treasury contract to call transfer-from-vault
   beforeEach(() => {
     simnet.callPublicFn(
-      "bitpay-access-control",
+      "bitpay-access-control-v5",
       "authorize-contract",
-      [Cl.contractPrincipal(deployer, "bitpay-treasury")],
+      [Cl.contractPrincipal(deployer, "bitpay-treasury-v5")],
       deployer
     );
   });
@@ -153,7 +153,7 @@ describe("bitpay-treasury contract", () => {
 
     it("should fail when protocol is paused", () => {
       // Pause protocol
-      simnet.callPublicFn("bitpay-access-control", "pause-protocol", [], deployer);
+      simnet.callPublicFn("bitpay-access-control-v5", "pause-protocol", [], deployer);
 
       const { result } = simnet.callPublicFn(
         CONTRACT,
@@ -165,7 +165,7 @@ describe("bitpay-treasury contract", () => {
       expect(result).toBeErr(Cl.uint(503)); // ERR_PAUSED
 
       // Unpause for other tests
-      simnet.callPublicFn("bitpay-access-control", "unpause-protocol", [], deployer);
+      simnet.callPublicFn("bitpay-access-control-v5", "unpause-protocol", [], deployer);
     });
   });
 

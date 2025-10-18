@@ -7,7 +7,7 @@ const sender = accounts.get("wallet_1")!;
 const recipient = accounts.get("wallet_2")!;
 const newObligationHolder = accounts.get("wallet_3")!;
 
-describe("bitpay-obligation-nft", () => {
+describe("bitpay-obligation-nft-v5", () => {
   beforeEach(() => {
     simnet.setEpoch("3.0");
   });
@@ -15,7 +15,7 @@ describe("bitpay-obligation-nft", () => {
   describe("SIP-009 Standard Functions", () => {
     it("get-last-token-id returns 0 initially", () => {
       const { result } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-last-token-id",
         [],
         deployer
@@ -25,7 +25,7 @@ describe("bitpay-obligation-nft", () => {
 
     it("get-token-uri returns none when base URI not set", () => {
       const { result } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-token-uri",
         [Cl.uint(1)],
         deployer
@@ -35,7 +35,7 @@ describe("bitpay-obligation-nft", () => {
 
     it("get-owner returns none for non-existent token", () => {
       const { result } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-owner",
         [Cl.uint(999)],
         deployer
@@ -47,7 +47,7 @@ describe("bitpay-obligation-nft", () => {
   describe("Minting Obligation NFTs", () => {
     it("prevents unauthorized minting (not from bitpay-core)", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "mint",
         [Cl.uint(1), Cl.standardPrincipal(sender)],
         sender
@@ -62,7 +62,7 @@ describe("bitpay-obligation-nft", () => {
       const endBlock = startBlock + 100;
 
       const { result } = simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "create-stream",
         [
           Cl.standardPrincipal(recipient),
@@ -79,7 +79,7 @@ describe("bitpay-obligation-nft", () => {
       // Check obligation NFT was minted to sender
       // Token ID increments with each mint, so get it from the result
       const { result: lastTokenIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-last-token-id",
         [],
         deployer
@@ -89,7 +89,7 @@ describe("bitpay-obligation-nft", () => {
       const tokenId = Number((lastTokenIdResult as any).value.value);
 
       const { result: ownerResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-owner",
         [Cl.uint(tokenId)],
         deployer
@@ -104,7 +104,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Create stream
       const { result: createResult } = simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "create-stream",
         [
           Cl.standardPrincipal(recipient),
@@ -119,7 +119,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Get the token ID
       const { result: lastTokenIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-last-token-id",
         [],
         deployer
@@ -129,7 +129,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Check token-to-stream mapping
       const { result: streamIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-stream-id",
         [Cl.uint(tokenId)],
         deployer
@@ -138,7 +138,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Check stream-to-token mapping
       const { result: tokenIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-token-id",
         [Cl.uint(streamId)],
         deployer
@@ -155,7 +155,7 @@ describe("bitpay-obligation-nft", () => {
       const endBlock = startBlock + 100;
 
       simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "create-stream",
         [
           Cl.standardPrincipal(recipient),
@@ -169,7 +169,7 @@ describe("bitpay-obligation-nft", () => {
 
     it("allows owner to transfer obligation NFT", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "transfer",
         [
           Cl.uint(1), // token-id
@@ -182,7 +182,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Verify new owner
       const { result: ownerResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-owner",
         [Cl.uint(1)],
         deployer
@@ -194,7 +194,7 @@ describe("bitpay-obligation-nft", () => {
 
     it("prevents non-owner from transferring", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "transfer",
         [
           Cl.uint(1),
@@ -209,7 +209,7 @@ describe("bitpay-obligation-nft", () => {
     it("updates stream sender in bitpay-core after transfer (two-step process)", () => {
       // Get the current token ID
       const { result: lastTokenIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-last-token-id",
         [],
         deployer
@@ -219,7 +219,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Get the stream ID from token
       const { result: streamIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-stream-id",
         [Cl.uint(tokenId)],
         deployer
@@ -229,7 +229,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Step 1: Old sender updates stream sender (before transferring NFT)
       const { result: updateResult } = simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "update-stream-sender",
         [Cl.uint(streamId), Cl.standardPrincipal(newObligationHolder)],
         sender // OLD sender calls this
@@ -238,7 +238,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Step 2: Transfer obligation NFT
       const { result: transferResult } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "transfer",
         [
           Cl.uint(tokenId),
@@ -251,7 +251,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Check stream sender was updated
       const { result: streamResult } = simnet.callReadOnlyFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "get-stream",
         [Cl.uint(streamId)],
         deployer
@@ -263,7 +263,7 @@ describe("bitpay-obligation-nft", () => {
 
     it("prevents transfer of non-existent token", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "transfer",
         [
           Cl.uint(999), // Non-existent token
@@ -277,7 +277,7 @@ describe("bitpay-obligation-nft", () => {
 
     it("emits event when obligation is transferred", () => {
       const { result, events } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "transfer",
         [
           Cl.uint(1),
@@ -303,7 +303,7 @@ describe("bitpay-obligation-nft", () => {
       const endBlock = startBlock + 100;
 
       simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "create-stream",
         [
           Cl.standardPrincipal(recipient),
@@ -317,7 +317,7 @@ describe("bitpay-obligation-nft", () => {
 
     it("allows owner to burn obligation NFT", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "burn",
         [Cl.uint(1), Cl.standardPrincipal(sender)],
         sender
@@ -326,7 +326,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Verify NFT no longer exists
       const { result: ownerResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-owner",
         [Cl.uint(1)],
         deployer
@@ -336,7 +336,7 @@ describe("bitpay-obligation-nft", () => {
 
     it("prevents non-owner from burning", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "burn",
         [Cl.uint(1), Cl.standardPrincipal(sender)],
         recipient // Not the owner
@@ -347,7 +347,7 @@ describe("bitpay-obligation-nft", () => {
     it("clears mappings when burned", () => {
       // Burn the NFT
       simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "burn",
         [Cl.uint(1), Cl.standardPrincipal(sender)],
         sender
@@ -355,7 +355,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Check token-to-stream mapping cleared
       const { result: streamIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-stream-id",
         [Cl.uint(1)],
         deployer
@@ -364,7 +364,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Check stream-to-token mapping cleared
       const { result: tokenIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-token-id",
         [Cl.uint(0)],
         deployer
@@ -377,7 +377,7 @@ describe("bitpay-obligation-nft", () => {
     it("allows owner to set base token URI", () => {
       const uri = "https://api.bitpay.com/nft/obligation/";
       const { result } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "set-base-token-uri",
         [Cl.stringAscii(uri)],
         deployer
@@ -386,7 +386,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Verify URI is set
       const { result: uriResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-token-uri",
         [Cl.uint(1)],
         deployer
@@ -397,7 +397,7 @@ describe("bitpay-obligation-nft", () => {
     it("prevents non-owner from setting base URI", () => {
       const uri = "https://api.bitpay.com/nft/obligation/";
       const { result } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "set-base-token-uri",
         [Cl.stringAscii(uri)],
         sender // Not the owner
@@ -414,7 +414,7 @@ describe("bitpay-obligation-nft", () => {
       const endBlock = startBlock + 100;
 
       simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "create-stream",
         [
           Cl.standardPrincipal(recipient),
@@ -427,7 +427,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Verify obligation NFT exists
       let { result: ownerResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-owner",
         [Cl.uint(1)],
         deployer
@@ -437,7 +437,7 @@ describe("bitpay-obligation-nft", () => {
       // Cancel stream
       simnet.mineEmptyBlock(); // Move forward 1 block
       simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "cancel-stream",
         [Cl.uint(0)],
         sender
@@ -445,7 +445,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Manual burn of obligation NFT (in production, this should be automatic or done by sender)
       simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "burn",
         [Cl.uint(1), Cl.standardPrincipal(sender)],
         sender
@@ -453,7 +453,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Verify obligation NFT no longer exists
       ({ result: ownerResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-owner",
         [Cl.uint(1)],
         deployer
@@ -469,7 +469,7 @@ describe("bitpay-obligation-nft", () => {
       // Create 3 streams and track their IDs
       for (let i = 0; i < 3; i++) {
         const { result } = simnet.callPublicFn(
-          "bitpay-core",
+          "bitpay-core-v5",
           "create-stream",
           [
             Cl.standardPrincipal(recipient),
@@ -484,7 +484,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Verify 3 more obligation NFTs minted (total depends on previous tests)
       const { result: lastIdResult } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-last-token-id",
         [],
         deployer
@@ -494,7 +494,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Get token ID for second stream
       const { result: token2Result } = simnet.callReadOnlyFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "get-token-id",
         [Cl.uint(streamIds[1])],
         deployer
@@ -504,7 +504,7 @@ describe("bitpay-obligation-nft", () => {
 
       // OLD sender updates stream sender BEFORE transferring
       simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "update-stream-sender",
         [Cl.uint(streamIds[1]), Cl.standardPrincipal(newObligationHolder)],
         sender // OLD sender
@@ -512,7 +512,7 @@ describe("bitpay-obligation-nft", () => {
 
       // Transfer second obligation NFT
       const { result: transferResult } = simnet.callPublicFn(
-        "bitpay-obligation-nft",
+        "bitpay-obligation-nft-v5",
         "transfer",
         [
           Cl.uint(token2Id),
@@ -525,19 +525,19 @@ describe("bitpay-obligation-nft", () => {
 
       // Verify stream senders - just check they exist
       const { result: stream1 } = simnet.callReadOnlyFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "get-stream",
         [Cl.uint(streamIds[0])],
         deployer
       );
       const { result: stream2 } = simnet.callReadOnlyFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "get-stream",
         [Cl.uint(streamIds[1])],
         deployer
       );
       const { result: stream3 } = simnet.callReadOnlyFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "get-stream",
         [Cl.uint(streamIds[2])],
         deployer

@@ -7,7 +7,7 @@ const wallet1 = accounts.get("wallet_1")!;
 const wallet2 = accounts.get("wallet_2")!;
 const wallet3 = accounts.get("wallet_3")!;
 
-const CONTRACT = "bitpay-access-control";
+const CONTRACT = "bitpay-access-control-v5";
 
 describe("bitpay-access-control contract", () => {
 

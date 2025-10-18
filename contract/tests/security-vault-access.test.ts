@@ -25,7 +25,7 @@ describe("Vault Access Control Security", () => {
 
     it("should allow admin to authorize bitpay-core contract", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -35,7 +35,7 @@ describe("Vault Access Control Security", () => {
 
       // Verify contract is authorized
       const { result: isAuthorized } = simnet.callReadOnlyFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "is-authorized-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -46,7 +46,7 @@ describe("Vault Access Control Security", () => {
 
     it("should prevent non-admin from authorizing contracts", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         alice // Not an admin
@@ -59,7 +59,7 @@ describe("Vault Access Control Security", () => {
     it("should allow admin to revoke contract authorization", () => {
       // First authorize
       simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -67,7 +67,7 @@ describe("Vault Access Control Security", () => {
 
       // Then revoke
       const { result } = simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "revoke-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -77,7 +77,7 @@ describe("Vault Access Control Security", () => {
 
       // Verify contract is no longer authorized
       const { result: isAuthorized } = simnet.callReadOnlyFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "is-authorized-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -101,7 +101,7 @@ describe("Vault Access Control Security", () => {
 
       // Authorize bitpay-core
       simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -110,7 +110,7 @@ describe("Vault Access Control Security", () => {
       // Alice creates a stream to Bob (locks funds in vault)
       const currentBlock = simnet.blockHeight;
       simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "create-stream",
         [
           Cl.principal(bob),
@@ -127,7 +127,7 @@ describe("Vault Access Control Security", () => {
       // For this test, simulate an unauthorized contract call
 
       const { result } = simnet.callPublicFn(
-        "bitpay-sbtc-helper",
+        "bitpay-sbtc-helper-v5",
         "transfer-from-vault",
         [
           Cl.uint(5000000), // Try to steal 5M sats
@@ -156,7 +156,7 @@ describe("Vault Access Control Security", () => {
 
       // Bob (recipient) withdraws through legitimate bitpay-core function
       const { result } = simnet.callPublicFn(
-        "bitpay-core",
+        "bitpay-core-v5",
         "withdraw-from-stream",
         [Cl.uint(1)], // Stream ID
         bob
@@ -181,7 +181,7 @@ describe("Vault Access Control Security", () => {
     it.skip("should PREVENT even admin from calling transfer-from-vault directly", () => {
       // Even the deployer (admin) cannot bypass the contract authorization
       const { result } = simnet.callPublicFn(
-        "bitpay-sbtc-helper",
+        "bitpay-sbtc-helper-v5",
         "transfer-from-vault",
         [
           Cl.uint(5000000),
@@ -199,7 +199,7 @@ describe("Vault Access Control Security", () => {
 
     it("should allow authorizing bitpay-treasury for fee collection", () => {
       const { result } = simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-treasury`)],
         deployer
@@ -209,7 +209,7 @@ describe("Vault Access Control Security", () => {
 
       // Verify treasury is authorized
       const { result: isAuthorized } = simnet.callReadOnlyFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "is-authorized-contract",
         [Cl.principal(`${deployer}.bitpay-treasury`)],
         deployer
@@ -224,14 +224,14 @@ describe("Vault Access Control Security", () => {
     it("should maintain separate authorization for core and treasury", () => {
       // Authorize both
       simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
       );
 
       simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-treasury`)],
         deployer
@@ -239,14 +239,14 @@ describe("Vault Access Control Security", () => {
 
       // Verify both are authorized
       const { result: coreAuth } = simnet.callReadOnlyFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "is-authorized-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
       );
 
       const { result: treasuryAuth } = simnet.callReadOnlyFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "is-authorized-contract",
         [Cl.principal(`${deployer}.bitpay-treasury`)],
         deployer
@@ -257,7 +257,7 @@ describe("Vault Access Control Security", () => {
 
       // Revoke only core
       simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "revoke-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -265,14 +265,14 @@ describe("Vault Access Control Security", () => {
 
       // Verify core revoked but treasury still authorized
       const { result: coreAuthAfter } = simnet.callReadOnlyFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "is-authorized-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
       );
 
       const { result: treasuryAuthAfter } = simnet.callReadOnlyFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "is-authorized-contract",
         [Cl.principal(`${deployer}.bitpay-treasury`)],
         deployer
@@ -287,7 +287,7 @@ describe("Vault Access Control Security", () => {
 
     it("should emit contract-authorized event when authorizing", () => {
       const { events } = simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -303,7 +303,7 @@ describe("Vault Access Control Security", () => {
     it("should emit contract-revoked event when revoking", () => {
       // First authorize
       simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "authorize-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
@@ -311,7 +311,7 @@ describe("Vault Access Control Security", () => {
 
       // Then revoke
       const { events } = simnet.callPublicFn(
-        "bitpay-access-control",
+        "bitpay-access-control-v5",
         "revoke-contract",
         [Cl.principal(`${deployer}.bitpay-core`)],
         deployer
